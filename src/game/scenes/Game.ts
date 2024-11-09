@@ -145,6 +145,7 @@ export class Game extends Phaser.Scene {
 
     // Launch UI Scene
     this.scene.launch('UIGameScene');
+    EventBus.emit('current-scene-ready', this);
   }
 
   // General function to create animations for all NPCs - Bør også flyttes - er bare for doven nu. 
