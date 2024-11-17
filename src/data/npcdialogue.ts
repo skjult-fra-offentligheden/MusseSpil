@@ -1,6 +1,7 @@
 // src/data/npcDialogues.ts
 
 import { DialogueNode } from '../game/classes/dialogues';
+import { Clue } from "../game/classes/clue";
 
 export const npcDialogues: { [npcId: string]: DialogueNode[] } = {
     placeholderDialogue: [
@@ -39,11 +40,20 @@ export const npcDialogues: { [npcId: string]: DialogueNode[] } = {
             id: 'need_help_yes',
             text: 'Copper Manlyman: Just look at the corpse, maybe you get a clue',
             options: [
-                { 
-                    id: 'quest_yes', 
-                    text: 'Tell me more.', 
+                {
+                    id: 'quest_yes',
+                    text: 'Tell me more.',
                     nextDialogueId: 'quest_details',
-                    callback: () => { console.log('Quest Started!');}
+                    callback: () => { console.log('Quest Started!');
+                    clue: {
+                        id: "someone_died",
+                        title: 'Corpse Inspection',
+                        description: "Inspect the corpse",
+                        foundAt: 'Alleyway',
+                        relatedNPCs: ["cop1"],
+                        discovered: false,
+                    }
+                }
                 },
                 { id: 'quest_no', text: 'Maybe later.' },
             ],

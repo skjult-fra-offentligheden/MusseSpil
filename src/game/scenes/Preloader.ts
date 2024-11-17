@@ -39,7 +39,10 @@ export class Preloader extends Scene
 
         //spritesheet
         this.load.spritesheet('player', 'characterSprite/newPlayerSpritesheet.png', {frameWidth: 48, frameHeight: 48});        
-
+        this.load.json("npc_dialogues", "dialogue/npcdialogue.json");
+        this.load.json("objects_dialogues", "dialogue/objectsDialogue.json");
+        this.load.json("scene_1_clues", "dialogue/clues.json");
+        this.load.json('suspectsData', 'dialogue/suspects.json');
 
         
     }

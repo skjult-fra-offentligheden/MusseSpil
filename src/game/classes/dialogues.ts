@@ -1,11 +1,11 @@
 // src/interfaces/Dialogues.ts
-import { Body } from '../classes/body';
-
+import { Clue } from "../classes/clue"
 export interface DialogueOption {
     id: string;
     text: string;
     nextDialogueId?: string;
-    callback?: (this: Body) => void; // Optional: For triggering events like starting a quest
+    callbackId?: string; 
+    clue?: Clue;
 }
 
 export interface DialogueNode {

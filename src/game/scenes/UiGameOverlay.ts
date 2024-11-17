@@ -6,24 +6,63 @@ export class UIGameOverlay extends Scene {
         super({key: "UIGameScene", active: false})
     }
     create(): void {
-        console.log("I am in the ui over lay. It actually ran")
-        const gameScene = this.scene.get("Game") as any
+        console.log("I am in the UI overlay. It actually ran");
+        const gameScene = this.scene.get("Game") as any;
 
-        new Button(this,
-            { x: this.scale.width - 100, y: 50, width: 120, height: 40 },
-            { text: "Inventory", textColor: '#ffffff', strokeColor: '#000000', fontSize: 24, fontFamily: "Arial", align: "center" },
-            { backgroundColor: 0x000343, transparency: 0.8 },
-            { linewidth: 2, linecolor: 0xffffff },
-            () => gameScene.showInventory(),
-            'I')
+        // Define button configurations
+        const buttonsConfig = [
+            {
+                text: "Inventory",
+                callback: () => gameScene.showInventory(),
+                key: 'I'
+            },
+            {
+                text: "Guide",
+                callback: () => gameScene.showGuide(),
+                key: 'G'
+            },
+            {
+                text: "Clue Journal",
+                callback: () => gameScene.showJournal(),
+                key: 'J'
+            },
+            {
+                text: "Accuse",
+                callback: () => gameScene.showAccusation(),
+                key: 'A'
+            }
+        ];
 
-        new Button(this,             
-            { x: this.scale.width - 240, y: 50, width: 120, height: 40 },
-            { text: "Guide", textColor: '#ffffff', strokeColor: '#000000', fontSize: 24, fontFamily: "Arial", align: "center" },
-            { backgroundColor: 0x000343, transparency: 0.8 },
-            { linewidth: 2, linecolor: 0xffffff },
-            () => gameScene.showGuide(),
-            'G')
-      
+        const buttonWidth = 140;
+        const buttonHeight = 40;
+        const spacing = 10; // Space between buttons
+
+        // Calculate total width of all buttons including spacing
+        const totalWidth = buttonsConfig.length * buttonWidth + (buttonsConfig.length - 1) * spacing;
+
+        // Calculate starting X position to center the buttons
+        const startX = (this.scale.width - totalWidth) / 2 + buttonWidth / 2;
+
+        // Position and create each button
+        buttonsConfig.forEach((btnConfig, index) => {
+            const x = startX + index * (buttonWidth + spacing);
+            const y = 50; // Y position for all buttons
+
+            new Button(this,
+                { x: x, y: y, width: buttonWidth, height: buttonHeight },
+                {
+                    text: btnConfig.text,
+                    textColor: '#ffffff',
+                    strokeColor: '#000000',
+                    fontSize: 24,
+                    fontFamily: "Arial",
+                    align: "center"
+                },
+                { backgroundColor: 0x000343, transparency: 0.8 },
+                { linewidth: 2, linecolor: 0xffffff },
+                btnConfig.callback,
+                btnConfig.key
+            );
+        });
     }
 }

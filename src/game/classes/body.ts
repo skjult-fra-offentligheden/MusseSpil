@@ -1,13 +1,13 @@
 // src/classes/body.ts
 
 import Phaser from 'phaser';
-import { NPC } from './npc'; // If you decide to extend NPC
 import { DialogueNode } from './dialogues';
 import { DialogueManager } from '../managers/dialogueManager';
 import { InventoryManager } from '../managers/itemMananger';
 import { Item } from '../managers/itemDatastruct';
 import { Player } from './player';
 import { Interactable } from '../managers/interactables';
+import { NPC } from './npc';
 
 export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
     itemName: string;
@@ -40,7 +40,7 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
     
         // Enable physics body
         scene.physics.world.enable(this);
-        this.body.setImmovable(true);
+        this.body.setImmovable(true)
     
         // Assign parameters to class properties
         this.dialogueData = dialogueData;
@@ -52,7 +52,6 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
         this.itemDescription = itemDescription || '';
         this.iconKey = iconKey || texture;
         this.isCollectible = isCollectible;
-    
         this.setInteractive();
     }
 
@@ -90,8 +89,8 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
       }
 
       public initiateDialogue(): void {
-        this.bindCallbacks();
-        this.dialogueManager.startDialogue(this.dialogueData, "greeting", this.itemId);
+          this.bindCallbacks();
+          this.dialogueManager.startDialogue(this.itemId, "greeting", undefined, this.dialogueData);
     }
 
     private bindCallbacks(): void {

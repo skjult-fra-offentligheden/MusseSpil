@@ -6,4 +6,4 @@ export interface Clue {
     foundAt?: string;
     relatedNPCs?: string[];
     discovered: boolean;
-  }
+}

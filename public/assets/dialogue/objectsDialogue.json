@@ -1,0 +1,164 @@
+{
+    "DeadBody": [
+        {
+            "id": "greeting",
+            "text": "You see a lifeless body lying on the ground.",
+            "options": [
+                {
+                    "id": "inspectCloser",
+                    "text": "Inspect the body closer.",
+                    "nextDialogueId": "inspectionDetails"
+                },
+                {
+                    "id": "leaveBody",
+                    "text": "Leave the body alone."
+                }
+            ]
+        },
+        {
+            "id": "inspectionDetails",
+            "text": "Upon closer inspection, you notice a stab wound on the neck.",
+            "options": [
+                {
+                    "id": "takeNote",
+                    "text": "Take note: Maybe victim died of stabbing",
+                    "nextDialogueId": "inspectionEnd"
+                }
+            ]
+        },
+        {
+            "id": "inspectionEnd",
+            "text": "You step back from the body, hoping that it is really dead.",
+            "options": []
+        }
+    ],
+    "knifeBlood": [
+        {
+            "id": "greeting",
+            "text": "You see a knife lying on the ground.",
+            "options": [
+                {
+                    "id": "inspectCloser",
+                    "text": "Inspect the knife closer.",
+                    "nextDialogueId": "inspectionDetails"
+                },
+                {
+                    "id": "leaveBody",
+                    "text": "Leave the knife alone."
+                }
+            ]
+        },
+        {
+            "id": "inspectionDetails",
+            "text": "There is some blood on the knife.",
+            "options": [
+                {
+                    "id": "takeNote",
+                    "text": "Take note: This knife was used to stab someone",
+                    "nextDialogueId": "inspectionEnd"
+                },
+                {
+                    "id": "doSomething",
+                    "text": "It is probably not important, maybe someone just dropped it.",
+                    "nextDialogueId": "disregard"
+                }
+            ]
+        },
+        {
+            "id": "inspectionEnd",
+            "text": "You put the knife in your pocket.",
+            "options": []
+        },
+        {
+            "id": "disregard",
+            "text": "You leave the most obvious clue ever on the ground, you just... walk away...",
+            "options": []
+        }
+    ],
+    "gun": [
+        {
+            "id": "greeting",
+            "text": "You see a gun lying on the ground.",
+            "options": [
+                {
+                    "id": "inspectCloser",
+                    "text": "Inspect the gun closer.",
+                    "nextDialogueId": "inspectionDetails"
+                },
+                {
+                    "id": "leaveBody",
+                    "text": "Leave the gun alone, it is probably ok."
+                }
+            ]
+        },
+        {
+            "id": "inspectionDetails",
+            "text": "The gun has been fired recently.",
+            "options": [
+                {
+                    "id": "takeNote",
+                    "text": "Take note: the gun is a gun",
+                    "nextDialogueId": "inspectionEnd"
+                },
+                {
+                    "id": "doSomething",
+                    "text": "It is probably not important, maybe someone just dropped it.",
+                    "nextDialogueId": "disregard"
+                }
+            ]
+        },
+        {
+            "id": "inspectionEnd",
+            "text": "You put the gun in your pocket.",
+            "options": []
+        },
+        {
+            "id": "disregard",
+            "text": "Who even uses a gun, just leave it.",
+            "options": []
+        }
+    ],
+    "grannyBag": [
+        {
+            "id": "greeting",
+            "text": "You see a bag lying on the ground.",
+            "options": [
+                {
+                    "id": "inspectCloser",
+                    "text": "Inspect the bag.",
+                    "nextDialogueId": "inspectionDetails"
+                },
+                {
+                    "id": "leaveBody",
+                    "text": "Pfff It is just a bag."
+                }
+            ]
+        },
+        {
+            "id": "inspectionDetails",
+            "text": "Yep, after an inspection it is really a bag.",
+            "options": [
+                {
+                    "id": "takeNote",
+                    "text": "Pick up: Pick up the bag",
+                    "nextDialogueId": "inspectionEnd"
+                },
+                {
+                    "id": "doSomething",
+                    "text": "It is probably not important, maybe someone just dropped it.",
+                    "nextDialogueId": "disregard"
+                }
+            ]
+        },
+        {
+            "id": "inspectionEnd",
+            "text": "You pick up the bag.",
+            "options": []
+        },
+        {
+            "id": "disregard",
+            "text": "You walk away from the bag.",
+            "options": []
+        }
+    ]
+}

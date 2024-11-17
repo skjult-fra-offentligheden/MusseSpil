@@ -6,7 +6,10 @@ import { GuideScene } from './scenes/GameScriptScenes/guide';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
-
+import { ClueJournal } from "./scenes/GameScriptScenes/clueScene"
+import { AccusationScene } from "./scenes/GameScriptScenes/AccusationScene"
+import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene"
+import { GameOver } from "./scenes/GameScriptScenes/GameOver"
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config: Phaser.Types.Core.GameConfig = {
@@ -36,7 +39,11 @@ const config: Phaser.Types.Core.GameConfig = {
         MainGame,
         UIGameOverlay,
         InventoryScene,
-        GuideScene
+        GuideScene,
+        ClueJournal,
+        AccusationScene,
+        VictoryScene,
+        GameOver
     ]
 };
 

@@ -174,7 +174,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return; // Prevent multiple dialogues
         this.setVelocity(0);
         this.isDialogueActive = true;
-        this.dialogueManager.startDialogue(this.dialogues, 'greeting', this.npcId, this); // Pass NPC ID
+        this.dialogueManager.startDialogue(this.npcId, 'greeting', this); // Pass NPC ID
     }
 
     // Handler for when dialogue ends
@@ -264,7 +264,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     // Clean up event listeners when NPC is destroyed
     public destroy(fromScene?: boolean): void {
-        this.scene.events.off('dialogueEnded', this.onDialogueEnded, this);
+        //this.scene.events.off('dialogueEnded', this.onDialogueEnded, this);
         super.destroy(fromScene);
     }
 

@@ -1,0 +1,23 @@
+{
+    "mouseRocker": {
+        "id": "mouseRocker",
+        "name": "Rocky Mouse",
+        "description": "A local musician with a mysterious past.",
+        "imageKey": "rockerMouseImage",
+        "isCulprit": false
+    },
+    "grannyMouse": {
+        "id": "grannyMouse",
+        "name": "Granny Mouse",
+        "description": "An elderly mouse known for her kindness.",
+        "imageKey": "grannyMouseImage",
+        "isCulprit": false
+    },
+    "cop1": {
+        "id": "cop1",
+        "name": "Officer Whiskers",
+        "description": "A dedicated officer with a sharp eye.",
+        "imageKey": "cop1Image",
+        "isCulprit": true
+    }
+}

@@ -3,7 +3,8 @@
 import Phaser from 'phaser';
 import { DialogueNode, DialogueOption } from '../classes/dialogues';
 import { NPC } from '../classes/npc';
-
+import { ClueManager } from "../managers/clueManager";
+import { Clue } from  '../classes/clue'
 export class DialogueManager {
     private scene: Phaser.Scene;
     private dialogueBox: Phaser.GameObjects.Container;
@@ -15,21 +16,27 @@ export class DialogueManager {
     private ignoreInitialClicks: boolean = true; 
     private currentNpcId: string = ''; 
     private currentNpc: NPC | null = null;
-
+    private clueManager: ClueManager;
+    private cluesData: { [key: string]: Clue };
+    private currentDialogueNode!: DialogueNode;
     //Vælg mulighed
     private selectedOptionIndex: number = 0;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private spaceKey: Phaser.Input.Keyboard.Key;
     private Enter: Phaser.Input.Keyboard.Key;
+    private exitButton: Phaser.GameObjects.Text;
+    private dialoguesData: { [npcId: string]: DialogueNode };
 
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: Phaser.Scene, dialoguesData: any, clueManager: ClueManager, cluesData: any) {
         this.scene = scene;
-
+        this.dialoguesData = dialoguesData;
+        this.clueManager = clueManager;
+        this.cluesData = cluesData;
+        console.log("cluesdata " + this.cluesData);
         // Create dialogue box container
         this.dialogueBox = this.scene.add.container(0, 0).setDepth(1000); // High depth to overlay other elements
         this.dialogueBox.setVisible(false);
-
         // Create dialogue box background and rect
         const width = this.scene.cameras.main.width;
         const height = 200 // Adjust height as needed
@@ -66,37 +73,46 @@ export class DialogueManager {
         this.dialogueText.setWordWrapWidth(width - 40);
     }
 
-    public startDialogue(dialogues: DialogueNode[], startDialogueId: string = 'greeting', npcId: string, npcInstance?: NPC) {
-        if (this.isActive) return; 
-        this.isActive = true;
-        this.currentDialogues = dialogues;
-        this.currentNpcId = npcId; 
-        this.currentNpc = npcInstance;
-        const startDialogue = this.getDialogueById(startDialogueId);
-        if (startDialogue) {
+    public startDialogue(npcId: string, startDialogueId: string = 'greeting', npcInstance?: NPC, dialogues?: DialogueNode[]) {
+        try {
+            if (this.isActive) return;
+            this.isActive = true;
+            this.currentNpcId = npcId;
+            this.currentNpc = npcInstance;
 
-            this.dialogueBox.setVisible(true);
-            this.displayDialogue(startDialogue);
+            // Use dialogues from the NPC instance if available
+            if (npcInstance && npcInstance.dialogues) {
+                this.currentDialogues = npcInstance.dialogues;
+            } else {
+                this.currentDialogues = this.dialoguesData[npcId] || [];
+            }
 
-            this.ignoreInitialClicks = true;
-            this.scene.time.delayedCall(200, () => { // 200ms delay
-                this.ignoreInitialClicks = false;
-            }, [], this);
-        } else {
-            console.log(`Dialogue ID "${startDialogueId}" not found.`);
-            this.isActive = false;
+            const startDialogue = this.getDialogueById(startDialogueId);
+            if (startDialogue) {
+                // Display the dialogue
+                this.dialogueBox.setVisible(true);
+                this.displayDialogue(startDialogue);
+            } else {
+                console.log(`Dialogue ID "${startDialogueId}" not found for NPC "${npcId}". NPC instance "${npcInstance}"`);
+                this.isActive = false;
+            }
+        } catch (error) {
+            console.error("startDialogue error:", error);
         }
     }
+
 
     private getDialogueById(id: string): DialogueNode | undefined {
         //los problemos muerdo
         // d=> dialogue node
         // d.id=> dialogue Index
         // id == diaglogue node id
+        console.log(`getDialogueById called with id: ${id}  stringify ${JSON.stringify(id,null,2)}`);
         return this.currentDialogues.find(d => d.id === id);
     }
 
     private displayDialogue(dialogue: DialogueNode) {
+        this.currentDialogueNode = dialogue;
         this.dialogueText.setText(dialogue.text);
         //console.log(`Displaying dialogue: ${dialogue.id} - ${dialogue.text}`);
         this.clearOptions();
@@ -117,19 +133,56 @@ export class DialogueManager {
             buttonText.setScrollFactor(0);
             // Attach event listener immediately
             buttonText.on('pointerup', () => {
-              this.handleOptionSelection(option);
+                console.log("selectedOption " + this.currentDialogueNode.options[this.selectedOptionIndex])
+                this.handleOptionSelection(option);
+
             });
           
             this.optionButtons.push(buttonText);
             this.dialogueBox.add(buttonText);
-          });
+        });
+
+        const exitButton = this.scene.add.text(this.dialogueBackground.width - 120, this.dialogueBackground.height - 40, 'Exit Talk', {
+            fontSize: '20px',
+            color: '#ffffff',
+            backgroundColor: '#ff0000',
+            padding: { x: 10, y: 5 },
+        }).setInteractive({ useHandCursor: true });
+
+        exitButton.setScrollFactor(0);
+        exitButton.on('pointerup', () => {
+            this.handleExitTalk();
+        });
+
+        this.dialogueBox.add(exitButton);
+    }
+
+    private handleExitTalk() {
+        // Cleanup dialogue UI
+        this.clearOptions();
+        this.dialogueBox.setVisible(false);
+        this.dialogueText.setText('');
+        // Destroy any remaining buttons if necessary
+
+        // Reset dialogue state
+        this.isActive = false;
+        this.currentNpc = null;
+
+        // Optionally, emit an event if other systems need to respond
+        this.scene.events.emit('dialogueEnded', this.currentNpcId);
     }
 
     private handleOptionSelection(option: DialogueOption) {
-
+        console.log(`handleOptionSelection called with option:`, option);
+        console.log(`Type of option.nextDialogueId:`, typeof option.nextDialogueId);
+        console.log(`option.nextDialogueId: ${option.nextDialogueId}`);
         // Execute callback if present
-        if (option.callback) {
-            option.callback();
+        
+        if (option.callbackId) {
+            console.log("doing callback")
+            this.handleCallback(option.callbackId);
+
+            console.log("success callback")
         }
 
         if (option.nextDialogueId) {
@@ -139,6 +192,7 @@ export class DialogueManager {
                 this.displayDialogue(nextDialogue);
                 return;
             } else {
+                console.warn(`Next dialogue ID "${option.nextDialogueId}" not found.`);
             }
         }
 
@@ -160,15 +214,16 @@ export class DialogueManager {
             }
             this.updateOptionHighlight();
         } else if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-            const selectedOption = this.currentDialogues.find(dialogue => dialogue.id)?.options[this.selectedOptionIndex];
+            const selectedOption = this.currentDialogueNode.options[this.selectedOptionIndex];
             if (selectedOption) {
+                console.log("selectedOption " + this.currentDialogueNode.options[this.selectedOptionIndex])
                 this.handleOptionSelection(selectedOption);
             }
-        }
-        else if (Phaser.Input.Keyboard.JustDown(this.Enter)) {
-            this.endDialogue()
+        } else if (Phaser.Input.Keyboard.JustDown(this.Enter)) {
+            this.endDialogue();
         }
     }
+
 
     private updateOptionHighlight() {
         this.optionButtons.forEach((button, index) => {
@@ -183,6 +238,7 @@ export class DialogueManager {
     private clearOptions() {
         try {
             if (this.optionButtons.length === 0) {
+                console.error("Clear options length 1")
             }
             this.optionButtons.forEach((button, index) => {
                 if (!button) {
@@ -192,8 +248,26 @@ export class DialogueManager {
             });
             this.optionButtons = [];
         } catch (error) {
+            console.error("console error: " + error)
         }
     }
+
+    private handleCallback(callbackId: string) {
+        switch (callbackId) 
+        {
+            case "Investigate_body": {
+                console.log(`Adding clue ${this.cluesData}`);
+                const data = this.cluesData[callbackId];
+                console.log("added data")
+                this.clueManager.addClue({ ...data, discovered: true });
+                const message = `New Clue Collected: ${data}`;
+                // Implement your UI logic to show the message
+                console.log(message); // Replace with actual UI code
+                break
+            }
+        }
+    }
+
 
     public endDialogue() {
         this.isActive = false;
@@ -224,3 +298,4 @@ export class DialogueManager {
         }
     }
 }
+
