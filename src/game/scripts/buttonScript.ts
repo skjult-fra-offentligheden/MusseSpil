@@ -9,10 +9,10 @@ export class Button {
         outline_info: { linewidth: number, linecolor: number },
         onClick?: () => void,
         hotkey?: string
-    ) { 
+    ) {
         console.log("sizes:", sizes);
         console.log("text:", text_info);
-    
+
         // Create button outline
         const outline = scene.add.graphics();
         outline.lineStyle(outline_info.linewidth, outline_info.linecolor);
@@ -38,7 +38,7 @@ export class Button {
                 strokeThickness: 8
             }).setOrigin(1, 1);
         }
-    
+
         // Main button text
         const buttonText = scene.add.text(sizes.x, sizes.y, text_info.text, {
             fontSize: `${text_info.fontSize}px`,
@@ -48,7 +48,7 @@ export class Button {
             align: text_info.align,
             fontFamily: text_info.fontFamily
         }).setOrigin(0.5, 0.5);
-    
+
         // Set up interactivity for the button background
         buttonBackground.setInteractive({ useHandCursor: true })
             .on("pointerover", () => {
@@ -71,7 +71,7 @@ export class Button {
                 console.log("Button clicked");
                 if (onClick) onClick(); // Execute the callback if provided
             });
-    
+
         // Set up hotkey to trigger the button
         if (hotkey) {
             const key = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[hotkey.toUpperCase()]);
@@ -79,7 +79,7 @@ export class Button {
                 if (onClick) onClick();
             });
         }
-    
+
         // Group button elements as one unit
         scene.add.container(0, 0, [outline, buttonBackground, buttonText]);
     }

@@ -1,27 +1,27 @@
 import Phaser, { Geom } from 'phaser';
 import { ClueManager } from "../../managers/clueManager"
 import { Button } from '../../scripts/buttonScript';
-
+import { Suspect } from "../GameScriptScenes/suspect"
 export class AccusationScene extends Phaser.Scene {
-  private suspectsData: { [key: string]: Suspect };
-  private clueManager: ClueManager;
+    private suspectsData: { [key: string]: Suspect };
+    private clueManager: ClueManager;
     private suspectSlot: Phaser.GameObjects.Rectangle[] = [];
     private suspectSlotWidth: number;
     private suspectSlotHeight: number;
     private padding: number = 20;
     private spacing: number = 20;
-  constructor() {
-    super({ key: 'AccusationScene' });
-  }
+    constructor() {
+        super({ key: 'AccusationScene' });
+    }
 
-  init(data: { suspectsData: any; clueManager: ClueManager }): void {
-    this.suspectsData = data.suspectsData;
-    this.clueManager = data.clueManager;
-  }
+    init(data: { suspectsData: any; clueManager: ClueManager }): void {
+        this.suspectsData = data.suspectsData;
+        this.clueManager = data.clueManager;
+    }
 
     create(): void {
-   //Background
-   //this.add.rectangle(screen.width / 2, screen.height / 2, screen.width, screen.height, 0x000080, 0.6)
+        //Background
+        //this.add.rectangle(screen.width / 2, screen.height / 2, screen.width, screen.height, 0x000080, 0.6)
         this.add.rectangle(
             this.scale.width / 2,
             this.scale.height / 2,
@@ -35,7 +35,7 @@ export class AccusationScene extends Phaser.Scene {
 
         // Define starting positions
         const startX = 100;
-        const startY = 100;
+        let startY = 100;
 
         // Keep track of the current X position
         let currentX = startX;
@@ -56,9 +56,16 @@ export class AccusationScene extends Phaser.Scene {
             const buttonWidth = textWidth + this.padding * 2;
             const buttonHeight = textHeight + this.padding;
 
+            if (currentX + buttonWidth > screen.width) {
+                currentX = startX;
+                startY = startY + 100;
+            }
+
             // Calculate button position
             const buttonX = currentX + buttonWidth / 2;
             const buttonY = startY;
+
+
 
             // Create a container for the button
             const buttonContainer = this.add.container(buttonX, buttonY);
@@ -110,42 +117,44 @@ export class AccusationScene extends Phaser.Scene {
 
         new Button(this, backButtonSize, backButtonConfig, backButtonRect, backButtonOutline, () => this.returnToGame(), "A");
 
-  }
-
-  private confirmAccusation(suspect: Suspect): void {
-    // Display confirmation dialogue
-    const confirmText = this.add.text(
-      400,
-      300,
-      `Are you sure you want to accuse ${suspect.name}?`,
-      { fontSize: '18px', fill: '#fff' }
-    );
-
-    const yesButton = this.add.text(400, 350, 'Yes', { fontSize: '18px' })
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.resolveAccusation(suspect);
-      });
-
-    const noButton = this.add.text(500, 350, 'No', { fontSize: '18px' })
-      .setInteractive()
-      .on('pointerdown', () => {
-        confirmText.destroy();
-        yesButton.destroy();
-        noButton.destroy();
-      });
-  }
-
-  private resolveAccusation(suspect: Suspect): void {
-    if (suspect.isCulprit) {
-      // Correct accusation
-      this.scene.stop('Game');
-      this.scene.start('VictoryScene', { suspect });
-    } else {
-      // Incorrect accusation
-      this.scene.stop('Game');
-      this.scene.start('GameOver', { suspect });
     }
+
+    private confirmAccusation(suspect: Suspect): void {
+        // Display confirmation dialogue
+        const tempRect = this.add.rectangle(0, 280, screen.width, 100, 0x000ff, 1).setOrigin(0, 0);
+        const confirmText = this.add.text(
+            400,
+            300,
+            `Are you sure you want to accuse ${suspect.name}?`,
+            { fontSize: '18px', fill: '#fff' }
+        );
+
+        const yesButton = this.add.text(400, 350, 'Yes', { fontSize: '18px' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                this.resolveAccusation(suspect);
+            });
+
+        const noButton = this.add.text(500, 350, 'No', { fontSize: '18px' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                confirmText.destroy();
+                yesButton.destroy();
+                noButton.destroy();
+                tempRect.destroy()
+            });
+    }
+
+    private resolveAccusation(suspect: Suspect): void {
+        if (suspect.isCulprit) {
+            // Correct accusation
+            this.scene.stop('Game');
+            this.scene.start('VictoryScene', { suspect });
+        } else {
+            // Incorrect accusation
+            this.scene.stop('Game');
+            this.scene.start('GameOver', { suspect });
+        }
     }
 
     private returnToGame(): void {
@@ -153,55 +162,4 @@ export class AccusationScene extends Phaser.Scene {
         this.scene.resume("Game");
     }
 
-    private suspectsList() {
-        for (let col = 0; col < 4; col++) {
-            //const x = this.suspectSlotWidth * col + this.suspectSlotWidth / 2;
-            //const y = this.suspectSlotHeight * row + this.suspectSlotHeight / 2;
-
-            const slot = this.add.rectangle(100 * col, 100, this.suspectSlotWidth - 10, this.suspectSlotHeight - 10, 0xaaaaaa);
-            slot.setDepth(10);
-            console.log("slot " + JSON.stringify(slot));
-            slot.setStrokeStyle(2, 0x000000);
-            //slot.setData('slotIndex', this.storySlots.length);
-
-            // Store slot dimensions for future use
-            slot.setData('slotWidth', this.suspectSlotWidth);
-            slot.setData('slotHeight', this.suspectSlotHeight);
-
-            //const dropSlotAction = this.add.rectangle(x, y, 100, 100, 0xaaaffb);
-            //console.log(dropSlotAction);
-            //dropSlotAction.setData("slotIndex", this.storySlotData.length);
-            //dropSlotReaction.setData("slotIndex", this.storySlotData.length);
-
-            //dropSlotAction.setInteractive();
-            //dropSlotReaction.setInteractive();
-
-
-            //dropSlotAction.input.dropZone = true;
-            //dropSlotReaction.input.dropZone = true;
-
-            //this.suspectSlot.push();
-            //this.storySlots.push(dropSlotReaction);
-
-            //const slotKey = `row${row}_col${col}`;
-
-
-            // Initialize the array for this slot key if it doesn't exist
-            //if (!this.storyUnits[slotKey]) {
-            //    this.storyUnits[slotKey] = { action: null, reaction: null };
-            //}
-
-            //this.storySlots.push(dropSlotAction, dropSlotReaction);
-            //this.storySlotData.push(this.storyUnits[slotKey]);
-
-
-            //slot.input.dropZone = true; // Enable drop zone for story slots
-
-            // Store the slot and its data
-            //this.storySlots.push(dropSlotAction);
-            //console.log("story slot data" + JSON.stringify(this.storySlotData));
-
-        }
-    }
 }
-

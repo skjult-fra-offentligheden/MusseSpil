@@ -1,7 +1,7 @@
 {
     "Investigate_body": {
         "id": "Investigate_body",
-        "title": "Strange Symbol",
+        "title": "Do your job",
         "description": "Go look at the body",
         "imageKey": "symbolIcon",
         "foundAt": "Street",

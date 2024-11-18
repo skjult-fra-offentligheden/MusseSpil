@@ -19,5 +19,89 @@
         "description": "A dedicated officer with a sharp eye.",
         "imageKey": "cop1Image",
         "isCulprit": true
+    },
+    "cop2": {
+        "id": "cop2",
+        "name": "Officer Jane",
+        "description": "A resourceful and sharp officer.",
+        "imageKey": "cop2Image",
+        "isCulprit": false
+    },
+    "CopGirlSprite": {
+        "id": "CopGirlSprite",
+        "name": "Officer Lily",
+        "description": "A compassionate and dedicated officer.",
+        "imageKey": "CopGirlSpriteImage",
+        "isCulprit": false
+    },
+    "fancyMouse": {
+        "id": "fancyMouse",
+        "name": "Fancy Mouse",
+        "description": "A stylish mouse with a flair for the dramatic.",
+        "imageKey": "fancyMouseImage",
+        "isCulprit": false
+    },
+    "fatMouse": {
+        "id": "fatMouse",
+        "name": "Fat Mouse",
+        "description": "A jovial mouse who loves to eat.",
+        "imageKey": "fatMouseImage",
+        "isCulprit": false
+    },
+    "mageMouse": {
+        "id": "mageMouse",
+        "name": "Mage Mouse",
+        "description": "A wise mouse with magical abilities.",
+        "imageKey": "mageMouseImage",
+        "isCulprit": false
+    },
+    "orangeShirtMouse": {
+        "id": "orangeShirtMouse",
+        "name": "Orange Shirt Mouse",
+        "description": "A vibrant mouse known for his colorful attire.",
+        "imageKey": "orangeShirtMouseImage",
+        "isCulprit": false
+    },
+    "pinkDressGirlMouse": {
+        "id": "pinkDressGirlMouse",
+        "name": "Pink Dress Girl Mouse",
+        "description": "A stylish mouse who stands out in any crowd.",
+        "imageKey": "pinkDressGirlMouseImage",
+        "isCulprit": false
+    },
+    "redDressCyborgMouse": {
+        "id": "redDressCyborgMouse",
+        "name": "Red Dress Cyborg Mouse",
+        "description": "A technologically enhanced mouse with a mysterious agenda.",
+        "imageKey": "redDressCyborgMouseImage",
+        "isCulprit": false
+    },
+    "redShirtMouse": {
+        "id": "redShirtMouse",
+        "name": "Red Shirt Mouse",
+        "description": "A bold mouse known for his striking red shirt.",
+        "imageKey": "redShirtMouseImage",
+        "isCulprit": false
+    },
+    "sorcerrorMouse": {
+        "id": "sorcerrorMouse",
+        "name": "Sorcerer Mouse",
+        "description": "A master of dark magic and intrigue.",
+        "imageKey": "sorcerrorMouseImage",
+        "isCulprit": false
+    },
+    "yellowShirtMouse": {
+        "id": "yellowShirtMouse",
+        "name": "Yellow Shirt Mouse",
+        "description": "A cheerful mouse always wearing a bright yellow shirt.",
+        "imageKey": "yellowShirtMouseImage",
+        "isCulprit": false
+    },
+    "redDressgirlMouse": {
+        "id": "redDressgirlMouse",
+        "name": "Red Dress Girl Mouse",
+        "description": "A stylish mouse known for her elegant red dress.",
+        "imageKey": "redDressgirlMouseImage",
+        "isCulprit": false
     }
 }
