@@ -41,9 +41,11 @@ export class Game extends Phaser.Scene {
     private dialogueManager!: DialogueManager;
     private objectManager!: DialogueManager;
     private suspectsData: any;
+    public npcIdleFrames: any;
     constructor() {
         super('Game');
         //this.events.on('clueDisplayClosed', this.onClueDisplayClosed, this);
+        
 
     }
 
@@ -92,6 +94,7 @@ export class Game extends Phaser.Scene {
 
 
     create() {
+
         this.dialoguesData = this.cache.json.get("npc_dialogues");
         if (!this.dialoguesData) {
             console.error("Failed to load dialogues data.");
@@ -142,7 +145,7 @@ export class Game extends Phaser.Scene {
         { "textureKey": "sorcerrorMouse", "framePrefix": "sorcerrorMouse", "idleFrame": "sorcerrorMouse0.png" }, { "textureKey": "yellowShirtMouse", "framePrefix": "yellowShirtMouse", "idleFrame": "yellowShirtMouse0.png" },
         { "textureKey": "redDressgirlMouse", "framePrefix": "redDressgirlMouse", "idleFrame": "redDressgirlMouse0.png" },
         ]
-
+        this.npcIdleFrames = standardAtlasSprites
         this.createNPCAnimations(standardAtlasSprites);
 
         // Set up the map
@@ -227,6 +230,7 @@ export class Game extends Phaser.Scene {
         for (const atlas of standard_npcs_atlas) {
             console.log(atlas)
             const { textureKey, framePrefix, idleFrame } = atlas;
+            //this.npcIdleFrames.push(idleFrame);
             npcAnimationData.push({
                 textureKey: `${textureKey}`,
                 animationKeyPrefix: `${textureKey}`,
@@ -241,6 +245,7 @@ export class Game extends Phaser.Scene {
 
         npcAnimationData.forEach((npcData) => {
             this.createAnimationForNPC(npcData);
+            
             //console.log([this.createAnimationForNPC(npcData)])
         });
     }
@@ -538,6 +543,7 @@ export class Game extends Phaser.Scene {
         this.scene.launch('AccusationScene', {
             suspectsData: this.suspectsData,
             clueManager: this.clueManager,
+            suspectsSprites: this.npcIdleFrames
         });
         this.scene.pause();
 

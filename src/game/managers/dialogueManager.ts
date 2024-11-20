@@ -113,7 +113,13 @@ export class DialogueManager {
 
     private displayDialogue(dialogue: DialogueNode) {
         this.currentDialogueNode = dialogue;
-        this.dialogueText.setText(dialogue.text);
+        let set_dialogue_text = ''
+        if (dialogue.speaker) {
+            set_dialogue_text = `${dialogue.speaker}: ${dialogue.text}`
+        }
+        else { set_dialogue_text = `${dialogue.text}` }
+        this.dialogueText.setText(set_dialogue_text);
+        
         //console.log(`Displaying dialogue: ${dialogue.id} - ${dialogue.text}`);
         this.clearOptions();
         this.selectedOptionIndex = 0;
@@ -121,8 +127,11 @@ export class DialogueManager {
         // Create option buttons
         dialogue.options.forEach((option, index) => {
             const isSelected = index === this.selectedOptionIndex;
-            
-            const buttonText = this.scene.add.text(20, 60 + index * 30, option.text, {
+            let set_option_text = ''
+            if (option.speaker) { set_option_text = `${option.speaker} : ${option.text}` }
+            else { set_option_text = `${option.text}` }
+
+            const buttonText = this.scene.add.text(20, 60 + index * 30, set_option_text, {
               fontSize: '24px',
               color: '#00ff00',
               backgroundColor: '#000000',

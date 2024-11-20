@@ -10,13 +10,17 @@ export class AccusationScene extends Phaser.Scene {
     private suspectSlotHeight: number;
     private padding: number = 20;
     private spacing: number = 20;
+    private suspectSprites: any;
+
     constructor() {
         super({ key: 'AccusationScene' });
     }
 
-    init(data: { suspectsData: any; clueManager: ClueManager }): void {
+    init(data: { suspectsData: any; clueManager: ClueManager, suspectsSprites: any }): void {
         this.suspectsData = data.suspectsData;
         this.clueManager = data.clueManager;
+        this.suspectSprites = data.suspectsSprites;
+
     }
 
     create(): void {
@@ -28,11 +32,12 @@ export class AccusationScene extends Phaser.Scene {
             this.scale.width,
             this.scale.height,
             0x000080,
-            0.6
+            0.8
         );
 
-        const suspects = Object.values(this.suspectsData);
+        console.log("suspect sprites: " + this.anims.get("sorcerrorMouse_idle").frames[1].frame + " " + JSON.stringify(this.anims.get("sorcerrorMouse_idle").frames[1], null, 2));
 
+        const suspects = Object.values(this.suspectsData);
         // Define starting positions
         const startX = 100;
         let startY = 100;
@@ -42,45 +47,48 @@ export class AccusationScene extends Phaser.Scene {
 
         // Loop through suspects and create interactive buttons
         suspects.forEach((suspect, index) => {
+            const { textureKey, idleFrame } = this.suspectSprites.find(sprite => sprite.textureKey === suspect.id) || {};
+            console.log("init suspect sprites " + textureKey + " " + idleFrame + " "); // + JSON.stringify(this.suspectSprites, null, 2)
             // Create temporary text to measure its width
             const tempText = this.add.text(0, 0, suspect.name, {
-                fontSize: '24px',
+                fontSize: '22px',
                 fontFamily: 'Arial',
                 color: '#ffffff'
             });
-
             const textWidth = tempText.width;
             const textHeight = tempText.height;
 
             // Calculate button dimensions
             const buttonWidth = textWidth + this.padding * 2;
-            const buttonHeight = textHeight + this.padding;
+            const buttonHeight = textHeight + this.padding+100;
 
             if (currentX + buttonWidth > screen.width) {
                 currentX = startX;
-                startY = startY + 100;
+                startY = startY + 150;
             }
 
             // Calculate button position
             const buttonX = currentX + buttonWidth / 2;
             const buttonY = startY;
-
+            //add images of chars
+            this.add.sprite(buttonX, buttonY+50, textureKey, idleFrame)
 
 
             // Create a container for the button
             const buttonContainer = this.add.container(buttonX, buttonY);
 
             // Create rectangle background
-            const buttonBackground = this.add.rectangle(0, 0, buttonWidth, buttonHeight, 0x000343, 0.8)
+            const buttonBackground = this.add.rectangle(0, 0, buttonWidth, buttonHeight, 0x000343, 0.6)
                 .setStrokeStyle(2, 0xffffff)
                 .setInteractive({ useHandCursor: true });
 
             // Create button text
             const buttonText = this.add.text(0, 0, suspect.name, {
-                fontSize: '24px',
+                fontSize: '22px',
                 fontFamily: 'Arial',
                 color: '#ffffff'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5,1);
+
 
             // Add background and text to the container
             buttonContainer.add([buttonBackground, buttonText]);
@@ -113,7 +121,7 @@ export class AccusationScene extends Phaser.Scene {
         };
         const backButtonRect = { backgroundColor: 0x000343, transparency: 0.8, fill: "white" };
         const backButtonOutline = { linewidth: 5, linecolor: 0xffffff };
-        const backButtonSize = { x: this.scale.width * 0.25, y: this.scale.height * 0.85, width: 200, height: 50 };
+        const backButtonSize = { x: this.scale.width * 0.75, y: this.scale.height * 0.85, width: 200, height: 50 };
 
         new Button(this, backButtonSize, backButtonConfig, backButtonRect, backButtonOutline, () => this.returnToGame(), "A");
 

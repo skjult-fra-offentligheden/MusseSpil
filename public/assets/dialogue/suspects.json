@@ -1,7 +1,7 @@
 {
     "mouseRocker": {
-        "id": "mouseRocker",
-        "name": "Rocky Mouse",
+        "id": "rockerMouse",
+        "name": "Rocker Mouse",
         "description": "A local musician with a mysterious past.",
         "imageKey": "rockerMouseImage",
         "isCulprit": false
@@ -67,13 +67,6 @@
         "name": "Pink Dress Girl Mouse",
         "description": "A stylish mouse who stands out in any crowd.",
         "imageKey": "pinkDressGirlMouseImage",
-        "isCulprit": false
-    },
-    "redDressCyborgMouse": {
-        "id": "redDressCyborgMouse",
-        "name": "Red Dress Cyborg Mouse",
-        "description": "A technologically enhanced mouse with a mysterious agenda.",
-        "imageKey": "redDressCyborgMouseImage",
         "isCulprit": false
     },
     "redShirtMouse": {

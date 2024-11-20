@@ -3,7 +3,6 @@
         "id": "Investigate_body",
         "title": "Do your job",
         "description": "Go look at the body",
-        "imageKey": "symbolIcon",
         "foundAt": "Street",
         "relatedNPCs": [ "DetectiveMouse" ],
         "discovered": false
@@ -12,7 +11,7 @@
         "id": "Examine_note",
         "title": "Torn Note",
         "description": "A piece of paper with illegible writing.",
-        "imageKey": "noteIcon",
+        "imageKey?": "noteIcon",
         "foundAt": "Old Library",
         "relatedNPCs": [ "LibrarianMouse" ],
         "discovered": false
