@@ -55,12 +55,15 @@
                 {
                     "id": "takeNote",
                     "text": "Take note: This knife was used to stab someone",
-                    "nextDialogueId": "inspectionEnd"
+                    "nextDialogueId": "inspectionEnd",
+                    "callbackId": "pick_up_knife"
+
                 },
                 {
                     "id": "doSomething",
                     "text": "It is probably not important, maybe someone just dropped it.",
                     "nextDialogueId": "disregard"
+                    
                 }
             ]
         },

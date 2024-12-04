@@ -1,15 +1,12 @@
-// src/classes/body.ts
-
 import Phaser from 'phaser';
 import { DialogueNode } from './dialogues';
 import { DialogueManager } from '../managers/dialogueManager';
 import { InventoryManager } from '../managers/itemMananger';
-import { Item } from '../managers/itemDatastruct';
+import { Item } from '../classes/itemDatastruct';
 import { Player } from './player';
 import { Interactable } from '../managers/interactables';
-import { NPC } from './npc';
 
-export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
+export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
     itemName: string;
     itemId: string;
     itemDescription: string;
@@ -37,16 +34,16 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
         isCollectible: boolean = false
     ) {
         super(scene, x, y, texture);
-    
+
         // Enable physics body
         scene.physics.world.enable(this);
-        this.body.setImmovable(true)
-    
+        this.body.setImmovable(true);
+
         // Assign parameters to class properties
         this.dialogueData = dialogueData;
         this.dialogueManager = dialogueManager;
         this.uniqueId = uniqueId;
-    
+
         this.itemName = itemName || '';
         this.itemId = itemId || uniqueId;
         this.itemDescription = itemDescription || '';
@@ -56,7 +53,6 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
     }
 
     public collect(inventoryManager: InventoryManager): void {
-        
         if (this.isCollectible) {
             const item: Item = {
                 itemId: this.itemId,
@@ -65,47 +61,47 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable{
                 iconKey: this.iconKey,
                 quantity: 1,
                 isClue: this.isClue,
-                
             };
-            console.log(item)
+            console.log('Collecting item:', item);
             inventoryManager.addItem(item);
             this.scene.events.emit('itemCollected', this);
 
-            this.destroy(); // Remove the item from the world
-        
+            // Remove the item from the world
+            this.destroy();
         }
-    } 
+    }
 
     public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
-        this.inventoryManager = inventoryManager
+        this.inventoryManager = inventoryManager;
+
+        // Only initiate dialogue
         this.initiateDialogue();
     }
 
     public checkProximity(player: Player, range: number, onInRange: () => void): void {
         const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
         if (distance <= range) {
-          onInRange();
+            onInRange();
         }
-      }
+    }
 
-      public initiateDialogue(): void {
-          this.bindCallbacks();
-          this.dialogueManager.startDialogue(this.itemId, "greeting", undefined, this.dialogueData);
+    public initiateDialogue(): void {
+        this.bindCallbacks();
+        // Pass 'this' as the context to the dialogue manager
+        this.dialogueManager.startDialogue(this.itemId, 'greeting', undefined, this.dialogueData, this);
     }
 
     private bindCallbacks(): void {
-        this.dialogueData.forEach(node => {
-            node.options.forEach(option => {
-                if (option.callback) {
+        // Ensure callbacks are bound correctly
+        this.dialogueData.forEach((node) => {
+            node.options.forEach((option) => {
+                if (option.callback && typeof option.callback === 'function') {
                     option.callback = option.callback.bind(this);
                 }
             });
         });
     }
-    
 
-    // Override any NPC methods that are not relevant
-    public update(): void {
-        // Bodies don't need to update movement or AI behaviors
-    }
+    // Bodies don't need to update movement or AI behaviors
+    public update(): void { }
 }

@@ -13,7 +13,7 @@ import { ClueManager } from '../managers/clueManager';
 import { InventoryManager } from '../managers/itemMananger';
 import { Interactable } from '../managers/interactables';
 import { InventoryScene } from './GameScriptScenes/InventoryScene';
-import { Item } from '../managers/itemDatastruct';
+import { Item } from '../classes/itemDatastruct';
 import { GuideScene } from './GameScriptScenes/guide';
 import { ClueDisplayScene } from './clueDisplay';
 import { Clue } from '../classes/clue';
@@ -42,14 +42,12 @@ export class Game extends Phaser.Scene {
     private objectManager!: DialogueManager;
     private suspectsData: any;
     public npcIdleFrames: any;
+    private triggers!: Phaser.Physics.Arcade.Group;
+
     constructor() {
         super('Game');
         //this.events.on('clueDisplayClosed', this.onClueDisplayClosed, this);
-        
-
     }
-
-
 
     preload() {
         // Preload assets...
@@ -125,7 +123,7 @@ export class Game extends Phaser.Scene {
 
         this.clueManager = new ClueManager();
         // Initialize managers
-        this.inventoryManager = new InventoryManager();
+        this.inventoryManager = new InventoryManager(this);
         this.dialoguesData = {
             ...this.dialoguesData,
             ...this.objectData
@@ -133,7 +131,7 @@ export class Game extends Phaser.Scene {
 
         console.log("dialoguedata" + JSON.stringify(this.dialoguesData, null, 2))
         //this.objectManager = new DialogueManager(this, this.objectData, this.clueManager);
-        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.clueData);
+        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.clueData, this.inventoryManager);
 
         // Create animations
         const standardAtlasSprites = [{ "textureKey": "cop1", "framePrefix": "cop1Sprite", "idleFrame": "cop1Sprite.png" }, { "textureKey": "cop2", "framePrefix": "cop2sprite", "idleFrame": "cop2sprite.png" },
@@ -150,28 +148,59 @@ export class Game extends Phaser.Scene {
 
         // Set up the map
         const map = this.make.tilemap({ key: 'scene1' });
-        const tileset = map.addTilesetImage('tilesetnewupdated', 'standardtilemap');
+        const backgroundTileset = map.addTilesetImage('background_floor', 'background_floor');
+        const testHouseTileset = map.addTilesetImage('test_house_more', 'test_house_more');
+        const objectsTileset = map.addTilesetImage('objects', 'objects');
+
+        const triggersLayer = map.getObjectLayer('Triggers');
+        this.triggers = this.physics.add.group();
+
+        triggersLayer.objects.forEach((objData) => {
+            const trigger = this.physics.add.sprite(
+                objData.x + objData.width * 0.5,
+                objData.y - objData.height * 0.5,
+                null
+            );
+            trigger.setOrigin(0.5, 0.5);
+            trigger.displayWidth = objData.width;
+            trigger.displayHeight = objData.height;
+            trigger.visible = false; // Make the trigger invisible
+
+            // Set physics properties
+            trigger.body.setImmovable(true);
+            trigger.body.allowGravity = false;
+
+            // Set custom data
+            trigger.setData('type', objData.name); // Use the object's name as the type
+            const destinationProperty = objData.properties?.find(p => p.name === 'destination');
+            trigger.setData('destination', destinationProperty?.value);
+
+            // Add to triggers group
+            this.triggers.add(trigger);
+        });
 
         // Set up the camera
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor('#000000');
+        console.log(map.widthInPixels + " " + map.heightInPixels)
         this.camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
         // Set up the physics world bounds
         this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-
+        //this.physics.world.setBounds(0, 0, 20000, 20000); 
         // Initialize cursor keys
         this.cursors = this.input.keyboard.createCursorKeys();
 
         // Create tilemap layers
-        const groundLayer = map.createLayer('Below Player', tileset!, 0, 0);
-        const collisionLayer = map.createLayer('World', tileset!, 0, 0);
+        const groundLayer = map.createLayer('Below Player', [backgroundTileset!, testHouseTileset!, objectsTileset!], 0, 0);
+        const collisionLayer = map.createLayer('World', [backgroundTileset!, testHouseTileset!, objectsTileset!], 0, 0);
         collisionLayer?.setCollisionByExclusion([-1]);
 
         // Create the player
         this.player = new Player(this, 300, 300);
         this.player.setDepth(5);
-        this.physics.add.collider(this.player, collisionLayer);
+        this.physics.add.collider(this.player, collisionLayer!);
+        this.physics.add.overlap(this.player, this.triggers, this.onTriggerOverlap, undefined, this);
 
         // Create NPCs
         this.createNPCs(collisionLayer);
@@ -180,8 +209,13 @@ export class Game extends Phaser.Scene {
         this.createObjects(collisionLayer);
 
         // Create the above layer
-        this.aboveLayer = map.createLayer('Above Player', tileset!, 0, 0);
+        this.aboveLayer = map.createLayer('Above Player', [backgroundTileset!, testHouseTileset!, objectsTileset!], 0, 0);
         this.aboveLayer.setDepth(10);
+
+        const debugGraphics = this.add.graphics();
+        this.physics.world.createDebugGraphic();
+        this.physics.world.drawDebug = true;
+        debugGraphics.lineStyle(2, 0xff0000, 1);
 
         // Start following the player with the camera
         this.camera.startFollow(this.player);
@@ -307,41 +341,40 @@ export class Game extends Phaser.Scene {
     private createNPCs(collisionLayer: Phaser.Tilemaps.TilemapLayer): void {
         this.npcs = [
             new NPC({
-                scene: this, x: 500, y: 400, texture: 'cop1', frame: 'cop1Sprite.png', dialogues: this.dialoguesData['cop1'], dialogueManager: this.dialogueManager,
-                npcId: 'cop1', movementType: 'patrol', speed: 50, atlasKey: "cop1", isUnique: true, patrolPoints: [{ x: 400, y: 450 }, { x: 575, y: 500 },],
+                scene: this, x: 400, y: 400, texture: 'cop1', frame: 'cop1Sprite.png', dialogues: this.dialoguesData['cop1'], dialogueManager: this.dialogueManager,
+                npcId: 'cop1', movementType: 'patrol', speed: 50, atlasKey: "cop1", isUnique: true, patrolPoints: [{ x: 400, y: 480 }, { x: 550, y: 500 },],
                 animationKeys: { walkLeft: 'cop1_walk_left', walkRight: 'cop1_walk_right', idle: 'cop1_idle', },
             }),
             new NPC({
-                scene: this, x: 600, y: 700, texture: 'cop2', frame: 'cop2sprite.png', dialogues: this.dialoguesData['cop2'], dialogueManager: this.dialogueManager, npcId: 'cop2',
-                movementType: 'random', speed: 30, atlasKey: "cop2", isUnique: true, moveArea: new Phaser.Geom.Rectangle(700, 650, 100, 100), animationKeys: { walkLeft: 'cop2_walk_left', walkRight: 'cop2_walk_right', idle: 'cop2_idle', },
+                scene: this, x: 600, y: 600, texture: 'cop2', frame: 'cop2sprite.png', dialogues: this.dialoguesData['cop2'], dialogueManager: this.dialogueManager, npcId: 'cop2',
+                movementType: 'random', speed: 30, atlasKey: "cop2", isUnique: true, moveArea: new Phaser.Geom.Rectangle(600, 600, 100, 100), animationKeys: { walkLeft: 'cop2_walk_left', walkRight: 'cop2_walk_right', idle: 'cop2_idle', },
             }),
-            // Add more NPCs here, ensuring you provide the appropriate animationKeys
             new NPC({
-                scene: this, x: 500, y: 450, texture: "CopGirlSprite", frame: "CopGirlSprite0.png", dialogues: this.dialoguesData['copGirl'], dialogueManager: this.dialogueManager, npcId: "CopGirlSprite",
+                scene: this, x: 800, y: 250, texture: "CopGirlSprite", frame: "CopGirlSprite0.png", dialogues: this.dialoguesData['copGirl'], dialogueManager: this.dialogueManager, npcId: "CopGirlSprite",
                 movementType: "idle", speed: 0, atlasKey: "CopGirlSprite", isUnique: true, animationKeys: { walkLeft: "CopGirlSprite_walk_left", walkRight: "CopGirlSprite_walk_right", idle: "CopGirlSprite_idle" }
             }),
             new NPC({
-                scene: this, x: 1385, y: 700, texture: "fancyMouse", frame: "fancyMouse0.png", dialogues: this.dialoguesData['placeholderDialogue'], dialogueManager: this.dialogueManager, npcId: "fancyMouse",
+                scene: this, x: 1425, y: 300, texture: "fancyMouse", frame: "fancyMouse0.png", dialogues: this.dialoguesData['placeholderDialogue'], dialogueManager: this.dialogueManager, npcId: "fancyMouse",
                 movementType: "idle", speed: 0, atlasKey: "fancyMouse", isUnique: true, animationKeys: { walkLeft: "fancyMouse_walk_left", walkRight: "fancyMouse_walk_right", idle: "fancyMouse_idle" }
             }),
             new NPC({
-                scene: this, x: 1500, y: 1450, texture: "fatMouse", frame: "fatMouse0.png", dialogues: this.dialoguesData['fatMouse'], dialogueManager: this.dialogueManager, npcId: "fatMouse",
+                scene: this, x: 150, y: 140, texture: "fatMouse", frame: "fatMouse0.png", dialogues: this.dialoguesData['fatMouse'], dialogueManager: this.dialogueManager, npcId: "fatMouse",
                 movementType: "patrol", speed: 15, atlasKey: "fatMouse", isUnique: true, animationKeys: { walkLeft: "fatMouse_walk_left", walkRight: "fatMouse_walk_right", idle: "fatMouse_idle" }, patrolPoints: [{ x: 1300, y: 1450 }, { x: 1600, y: 1450 },]
             }),
             new NPC({
-                scene: this, x: 800, y: 1250, texture: "grannyMouse", frame: "grannyMouse0.png", dialogues: this.dialoguesData['grannyMouse'], dialogueManager: this.dialogueManager, npcId: "grannyMouse",
+                scene: this, x: 80, y: 125, texture: "grannyMouse", frame: "grannyMouse0.png", dialogues: this.dialoguesData['grannyMouse'], dialogueManager: this.dialogueManager, npcId: "grannyMouse",
                 movementType: "random", speed: 35, moveArea: new Phaser.Geom.Rectangle(750, 1220, 300, 300), atlasKey: "grannyMouse", isUnique: true, animationKeys: { walkLeft: "grannyMouse_walk_left", walkRight: "grannyMouse_walk_right", idle: "grannyMouse_idle" }
             }),
             new NPC({
-                scene: this, x: 50, y: 2000, texture: "mageMouse", frame: "mageMouse0.png", dialogues: this.dialoguesData['mageMouse'], dialogueManager: this.dialogueManager, npcId: "mageMouse",
+                scene: this, x: 50, y: 200, texture: "mageMouse", frame: "mageMouse0.png", dialogues: this.dialoguesData['mageMouse'], dialogueManager: this.dialogueManager, npcId: "mageMouse",
                 movementType: "random", moveArea: new Phaser.Geom.Rectangle(25, 1900, 50, 500), speed: 25, atlasKey: "mageMouse", isUnique: true, animationKeys: { walkLeft: "mageMouse_walk_left", walkRight: "mageMouse_walk_right", idle: "mageMouse_idle" }
             }),
             new NPC({
-                scene: this, x: 1600, y: 900, texture: "orangeShirtMouse", frame: "orangeShirtMouse0.png", dialogues: this.dialoguesData['albino'], dialogueManager: this.dialogueManager, npcId: "orangeShirtMouse",
+                scene: this, x: 160, y: 90, texture: "orangeShirtMouse", frame: "orangeShirtMouse0.png", dialogues: this.dialoguesData['albino'], dialogueManager: this.dialogueManager, npcId: "orangeShirtMouse",
                 movementType: "random", moveArea: new Phaser.Geom.Rectangle(1550, 875, 300, 50), speed: 40, atlasKey: "orangeShirtMouse", isUnique: true, animationKeys: { walkLeft: "orangeShirtMouse_walk_left", walkRight: "orangeShirtMouse_walk_right", idle: "orangeShirtMouse_idle" }
             }),
             new NPC({
-                scene: this, x: 2000, y: 1300, texture: "pinkDressGirlMouse", frame: "pinkDressGirlMouse0.png", dialogues: this.dialoguesData['pinkDressGirlMouse'], dialogueManager: this.dialogueManager, npcId: "pinkDressGirlMouse",
+                scene: this, x: 200, y: 130, texture: "pinkDressGirlMouse", frame: "pinkDressGirlMouse0.png", dialogues: this.dialoguesData['pinkDressGirlMouse'], dialogueManager: this.dialogueManager, npcId: "pinkDressGirlMouse",
                 movementType: "random", moveArea: new Phaser.Geom.Rectangle(2000, 1300, 400, 400), speed: 30, atlasKey: "pinkDressGirlMouse", isUnique: true, animationKeys: { walkLeft: "pinkDressGirlMouse_walk_left", walkRight: "pinkDressGirlMouse_walk_right", idle: "pinkDressGirlMouse_idle" }
             }),
             new NPC({
@@ -365,7 +398,7 @@ export class Game extends Phaser.Scene {
                 movementType: "idle", speed: 0, atlasKey: "yellowShirtMouse", isUnique: true, animationKeys: { walkLeft: "yellowShirtMouse_walk_left", walkRight: "yellowShirtMouse_walk_right", idle: "yellowShirtMouse_idle" }
             }),
             new NPC({
-                scene: this, x: 1000, y: 200, texture: "redDressgirlMouse", frame: "redDressgirlMouse0.png", dialogues: this.dialoguesData['redDressgirlMouse'], dialogueManager: this.dialogueManager, npcId: "redDressgirlMouse",
+                scene: this, x: 1100, y: 200, texture: "redDressgirlMouse", frame: "redDressgirlMouse0.png", dialogues: this.dialoguesData['redDressgirlMouse'], dialogueManager: this.dialogueManager, npcId: "redDressgirlMouse",
                 movementType: "idle", speed: 0, atlasKey: "redDressgirlMouse", isUnique: true, animationKeys: { walkLeft: "redDressgirlMouse_walk_left", walkRight: "redDressgirlMouse_walk_right", idle: "redDressgirlMouse_idle" }
             }),
         ];
@@ -383,7 +416,7 @@ export class Game extends Phaser.Scene {
     private createObjects(collisionLayer: Phaser.Tilemaps.TilemapLayer): void {
         this.Objects = [
             new Body(this, 600, 500, 'DeadBody', this.dialoguesData['DeadBody'], this.dialogueManager, 'DeadBody', undefined, undefined, undefined, undefined, false),
-            new Body(this, 600, 400, 'knifeBlood', this.dialoguesData['knifeBlood'], this.dialogueManager, 'knifeBlood', 'knifeBlood', 'Bloody Knife', 'A knife with blood stains. Could this be the murder weapon?', 'knifeBloodIcon', true),
+            new Body(this, 600, 400, 'knifeBlood', this.dialoguesData['knifeBlood'], this.dialogueManager, 'knifeBlood', 'knifeBlood', 'knifeBlood', 'A knife with blood stains. Could this be the murder weapon?', 'knifeBlood', true),
             // Add more objects here
         ];
 
@@ -402,6 +435,7 @@ export class Game extends Phaser.Scene {
         this.interactables = [...this.npcs, ...this.Objects];
 
         // Handle item collection events
+        //This should be something else
         this.events.on('itemCollected', this.onItemCollected, this);
 
         // Input handlers for inventory and guide
@@ -419,7 +453,7 @@ export class Game extends Phaser.Scene {
     update(time: number, delta: number) {
         // Update player movement
         this.player.update();
-
+        //console.log(`Player position: x=${this.player.x}, y=${this.player.y}`);
         // Update NPCs
         this.npcs.forEach((npc) => {
             npc.update(time, delta);
@@ -500,11 +534,13 @@ export class Game extends Phaser.Scene {
                     activeInteractable instanceof Body &&
                     activeInteractable.isCollectible
                 ) {
+                    //console.log("test interacting here with object")
                     activeInteractable.initiateInteraction(
                         this.player,
                         this.inventoryManager
                     );
                 } else {
+                    //console.log("test interacting here with NPC")
                     activeInteractable.initiateDialogue();
                 }
             }
@@ -580,5 +616,25 @@ export class Game extends Phaser.Scene {
         if (index > -1) {
             this.interactables.splice(index, 1);
         }
+    }
+
+    onTriggerOverlap(player, trigger) {
+        const type = trigger.getData('type');
+        const destination = trigger.getData('destination');
+
+        if (type === 'door') {
+            // Show interaction prompt
+            this.showInteractionPrompt('Press E to enter');
+
+            // Check for interaction key press
+            if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('E'))) {
+                this.enterHouse(destination);
+            }
+        }
+    }
+
+    enterHouse(destinationScene: string) {
+        // Pass data to the new scene if needed
+        this.scene.start(destinationScene, { fromScene: 'Game' });
     }
 }

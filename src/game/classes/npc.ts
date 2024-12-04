@@ -36,7 +36,8 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private dialogueManager: DialogueManager;
     private npcId: string;
     declare body: Phaser.Physics.Arcade.Body;
-  
+    private dialogueState: string;
+
     // Animations
     private animsLeft?: string;
     private animsRight?: string;
@@ -57,28 +58,15 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private readonly MIN_MOVE_DISTANCE: number = 2;
 
     constructor(options: NPCOptions) {
-        const {
-          scene,
-          x,
-          y,
-          texture,
-          frame,
-          dialogues,
-          dialogueManager,
-          npcId = 'npc1',
-          movementType = 'idle',
-          speed = 50,
-          patrolPoints = [],
-          moveArea,
-          isUnique = false,
-          atlasKey,
-          animationKeys,
-        } = options;
+        const {scene, x, y, texture, frame, dialogues, dialogueManager,
+          npcId = 'npc1',movementType = 'idle', speed = 50,
+          patrolPoints = [], moveArea, isUnique = false,
+          atlasKey, animationKeys,} = options;
         const textureKey = options.isUnique && options.atlasKey ? options.atlasKey : options.texture;
         super(scene, x, y, textureKey, frame);
 
 
-
+        this.dialogueState = 'greeting';
         this.dialogues = dialogues;
         this.dialogueManager = dialogueManager;
         this.npcId = npcId;
@@ -89,7 +77,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
             this.animsRight = animationKeys.walkRight;
             this.animsIdle = animationKeys.idle;
             this.textureKey = atlasKey; 
-            console.log("NPC TEXTURE show textures: left: " + this.animsLeft + " right: " + this.animsRight + " idle: "+ this.animsIdle + " texturekey: "+ this.textureKey)
+            //console.log("NPC TEXTURE show textures: left: " + this.animsLeft + " right: " + this.animsRight + " idle: "+ this.animsIdle + " texturekey: "+ this.textureKey)
         } else {
                 // Use standard animations
                 this.animsLeft = 'walk_left';
@@ -98,9 +86,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
                 this.textureKey = 'standard_npcs_atlas';
               }
             
-        console.log("NPC TEXTURE " + textureKey)
-        console.log("NPC looking for correct " + atlasKey + " and is unique " + isUnique)
-        console.log("NPC animationkeys " + JSON.stringify(animationKeys) + " frames " + frames) 
+        //console.log("NPC TEXTURE " + textureKey)
+        //console.log("NPC looking for correct " + atlasKey + " and is unique " + isUnique)
+        //console.log("NPC animationkeys " + JSON.stringify(animationKeys) + " frames " + frames) 
         // Movement properties
         this.speed = speed;
         this.movementType = movementType;
@@ -266,6 +254,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     public destroy(fromScene?: boolean): void {
         //this.scene.events.off('dialogueEnded', this.onDialogueEnded, this);
         super.destroy(fromScene);
+    }
+
+    public getDialogueState(): string {
+        return this.dialogueState;
+    }
+
+    public setDialogueState(state: string): void {
+        this.dialogueState = state;
     }
 
     // Movement methods (patrol, random, etc.)

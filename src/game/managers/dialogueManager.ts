@@ -4,7 +4,11 @@ import Phaser from 'phaser';
 import { DialogueNode, DialogueOption } from '../classes/dialogues';
 import { NPC } from '../classes/npc';
 import { ClueManager } from "../managers/clueManager";
-import { Clue } from  '../classes/clue'
+import { Clue } from '../classes/clue'
+import { InventoryManager } from "../managers/itemMananger"
+import { Item } from "../classes/itemDatastruct"
+import { CallbackHandler } from '../managers/CallBackManager';
+
 export class DialogueManager {
     private scene: Phaser.Scene;
     private dialogueBox: Phaser.GameObjects.Container;
@@ -26,17 +30,28 @@ export class DialogueManager {
     private Enter: Phaser.Input.Keyboard.Key;
     private exitButton: Phaser.GameObjects.Text;
     private dialoguesData: { [npcId: string]: DialogueNode };
-
-
-    constructor(scene: Phaser.Scene, dialoguesData: any, clueManager: ClueManager, cluesData: any) {
+    private inventoryManager: InventoryManager;
+    private item = Item;
+    private callbackHandler: CallbackHandler;
+    constructor(scene: Phaser.Scene, dialoguesData: any, clueManager: ClueManager, cluesData: any, inventoryManager: InventoryManager) {
         this.scene = scene;
         this.dialoguesData = dialoguesData;
         this.clueManager = clueManager;
         this.cluesData = cluesData;
+        this.inventoryManager = inventoryManager;
+        //test inventory
         console.log("cluesdata " + this.cluesData);
         // Create dialogue box container
         this.dialogueBox = this.scene.add.container(0, 0).setDepth(1000); // High depth to overlay other elements
         this.dialogueBox.setVisible(false);
+
+        this.callbackHandler = new CallbackHandler(
+            this.scene,
+            clueManager,
+            this.inventoryManager,
+            cluesData
+        );
+
         // Create dialogue box background and rect
         const width = this.scene.cameras.main.width;
         const height = 200 // Adjust height as needed
@@ -63,7 +78,7 @@ export class DialogueManager {
         this.Enter = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
         // Handle window scaling
         this.scene.scale.on('resize', this.onResize, this);
-    }
+      }
 
     private onResize(gameSize: Phaser.Structs.Size) {
         const { width, height } = gameSize;
@@ -73,7 +88,7 @@ export class DialogueManager {
         this.dialogueText.setWordWrapWidth(width - 40);
     }
 
-    public startDialogue(npcId: string, startDialogueId: string = 'greeting', npcInstance?: NPC, dialogues?: DialogueNode[]) {
+    public startDialogue(npcId: string, startDialogueId: string = 'greeting', npcInstance?: NPC, dialogueData?: DialogueNode[], context?: any) {
         try {
             if (this.isActive) return;
             this.isActive = true;
@@ -88,6 +103,7 @@ export class DialogueManager {
             }
 
             const startDialogue = this.getDialogueById(startDialogueId);
+            this.callbackHandler.setContext(context);
             if (startDialogue) {
                 // Display the dialogue
                 this.dialogueBox.setVisible(true);
@@ -188,10 +204,8 @@ export class DialogueManager {
         // Execute callback if present
         
         if (option.callbackId) {
-            console.log("doing callback")
-            this.handleCallback(option.callbackId);
-
-            console.log("success callback")
+            console.log("doing callback " + option.callbackId);
+            this.callbackHandler.handleCallback(option.callbackId);
         }
 
         if (option.nextDialogueId) {
@@ -261,23 +275,6 @@ export class DialogueManager {
         }
     }
 
-    private handleCallback(callbackId: string) {
-        switch (callbackId) 
-        {
-            case "Investigate_body": {
-                console.log(`Adding clue ${this.cluesData}`);
-                const data = this.cluesData[callbackId];
-                console.log("added data")
-                this.clueManager.addClue({ ...data, discovered: true });
-                const message = `New Clue Collected: ${data}`;
-                // Implement your UI logic to show the message
-                console.log(message); // Replace with actual UI code
-                break
-            }
-        }
-    }
-
-
     public endDialogue() {
         this.isActive = false;
         this.dialogueBox.setVisible(false);
@@ -306,5 +303,6 @@ export class DialogueManager {
             this.handleKeyboardInput();
         }
     }
+
 }
 

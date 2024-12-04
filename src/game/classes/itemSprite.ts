@@ -1,7 +1,7 @@
 // src/classes/ItemSprite.ts
 
 import Phaser from 'phaser';
-import { Item } from '../managers/itemDatastruct';
+import { Item } from '../classes/itemDatastruct';
 import { InventoryManager } from '../managers/itemMananger';
 
 export class ItemSprite extends Phaser.Physics.Arcade.Sprite {

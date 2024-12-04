@@ -3,7 +3,7 @@
 import Phaser from 'phaser';
 import { Clue } from '../classes/clue';
 import { ClueManager } from '../managers/clueManager';
-
+import { Button } from "../scripts/buttonScript"
 interface ClueDisplaySceneData {
     clueManager: ClueManager;
 }
@@ -21,6 +21,8 @@ export class ClueDisplayScene extends Phaser.Scene {
     }
 
     create() {
+
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -49,7 +51,7 @@ export class ClueDisplayScene extends Phaser.Scene {
         this.cluesContainer.add(title);
 
         // Display clues
-        const clues = this.clueManager.getClues().filter(clue => clue.discovered);
+        const clues = this.clueManager.getAllClues().filter(clue => clue.discovered);
         if (clues.length === 0) {
             const noCluesText = this.add.text(0, 50, 'No clues collected yet.', {
                 fontSize: '24px',
@@ -111,6 +113,22 @@ export class ClueDisplayScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ESC', () => {
             this.closeClueDisplay();
         });
+
+        // Create "Back to Game" button using the Button class
+        const backButtonConfig = {
+            text: "Back to Game",
+            textColor: '#ffffff',
+            strokeColor: '#000000',
+            fontSize: 24,
+            fontFamily: "Arial Black",
+            align: "center" // Changed to center for better alignment
+        };
+        const backButtonRect = { backgroundColor: 0x000343, transparency: 0.8, fill: "white" };
+        const backButtonOutline = { linewidth: 5, linecolor: 0xffffff };
+        const backButtonSize = { x: this.scale.width * 0.75, y: this.scale.height * 0.85, width: 200, height: 50 };
+
+        new Button(this, backButtonSize, backButtonConfig, backButtonRect, backButtonOutline, () => this.closeClueDisplay(), "J");
+
     }
 
     private closeClueDisplay() {
@@ -120,4 +138,10 @@ export class ClueDisplayScene extends Phaser.Scene {
         // Stop this scene
         this.scene.stop();
     }
+
+    private returnToGame(): void {
+        this.scene.stop();
+        this.scene.resume("Game");
+    }
+
 }

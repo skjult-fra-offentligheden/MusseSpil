@@ -10,6 +10,7 @@ import { ClueJournal } from "./scenes/GameScriptScenes/clueScene"
 import { AccusationScene } from "./scenes/GameScriptScenes/AccusationScene"
 import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene"
 import { GameOver } from "./scenes/GameScriptScenes/GameOver"
+import { HouseScene } from "./scenes/HouseScene"
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config: Phaser.Types.Core.GameConfig = {
@@ -43,7 +44,8 @@ const config: Phaser.Types.Core.GameConfig = {
         ClueJournal,
         AccusationScene,
         VictoryScene,
-        GameOver
+        GameOver,
+        HouseScene
     ]
 };
 

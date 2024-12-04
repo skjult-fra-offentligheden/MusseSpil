@@ -15,5 +15,14 @@
         "foundAt": "Old Library",
         "relatedNPCs": [ "LibrarianMouse" ],
         "discovered": false
+    },
+    "Knife_with_blood": {
+        "id": "Knife_with_blood",
+        "title": "Knife with blood",
+        "description": "This knife might be the murder weapon",
+        "imageKey?": "knifeBlood",
+        "foundAt": "Dead body",
+        "relatedNPCs": [ "" ],
+        "discovered": true
     }
 }

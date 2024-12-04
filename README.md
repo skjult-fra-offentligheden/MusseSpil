@@ -1,247 +1,259 @@
-# Phaser React TypeScript Template
+# Samler tankerne om logic og sådan
 
-This is a Phaser 3 project template that uses the React framework and Vite for bundling. It includes a bridge for React to Phaser game communication, hot-reloading for quick development workflow and scripts to generate production-ready builds.
+Overordnet set vil jeg lave et lille verden med en masse at interagere med og derefter samle spor og sammensætte dem til en sammenhængende historie
 
-**[This Template is also available as a JavaScript version.](https://github.com/phaserjs/template-react)**
+### Personer
+* Detektiv mus
+* Betjente
+* Politichef (ikke inkl)
+* Advokat?
+* Kriminelle
+* Beboere
+  * Gammel dame mus
+  * tyk mus
+  * Gammel mand mus
+  * Lille pige mus (ikke lavet)
+  * NPC mus x 2
+  * Fancy Mouse
+  * 2 x pigemus
+  * Mor mus (ikke lavet)
+  * Reskinnet tilfældige mus
 
-### Versions
+* Specielle mus
+  * Wizard Mouse
+  * soccerer Mouse
+  * Cyborg Mouse
+  * Spøgelsemus
+  * Trash Can Mouse (ikke inkl)
+  * Doctor Mouse (ikke inkl)
 
-This template has been updated for:
+  total i spillet er der 16 mus inkl player
+---
 
-- [Phaser 3.85.2](https://github.com/phaserjs/phaser)
-- [React 18.2.0](https://github.com/facebook/react)
-- [Vite 5.3.1](https://github.com/vitejs/vite)
-- [TypeScript 5.2.2](https://github.com/microsoft/TypeScript)
+## Teknologi inklussion
 
-![screenshot](screenshot.png)
+Først er at jeg har brugt TypeScript ... fordi det er mere som C# end ren JavaScript.  
+Har valgt at inkludere en udvidelse til React (som jeg bruger som framework fordi jeg læste, det var godt at lære til jobs). Udvidelsen er Phaser, som er brugt til web-game udvidelse. Den har indbyggede formler som tweens og sprite animation og indbygget tilemap (nok det sidste).
 
-## Requirements
+Alle figurer er lavet i Piskel, fordi det er nemt og online, og jeg kan finde ud af det.
+(20/11) - har piskel offline også nu
 
-[Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
+Tilemaps er lavet i Tilemaps.
 
-## Available Commands
+- Til et standard overlay på map er pixel størrelse 48x48.
+- I story mode er overlay 256x256. -- Update går væk fra storymode til ren accusation
 
-| Command | Description |
-|---------|-------------|
-| `npm install` | Install project dependencies |
-| `npm run dev` | Launch a development web server |
-| `npm run build` | Create a production build in the `dist` folder |
-| `npm run dev-nolog` | Launch a development web server without sending anonymous data (see "About log.js" below) |
-| `npm run build-nolog` | Create a production build in the `dist` folder without sending anonymous data (see "About log.js" below) |
+---
 
-## Writing Code
+## Gameflow
 
-After cloning the repo, run `npm install` from your project directory. Then, you can start the local development server by running `npm run dev`.
+Ideén er at du spawner ind i verdenen. Du bliver konfronteret med et mysterie eller mord som skal løses.
 
-The local development server runs on `http://localhost:8080` by default. Please see the Vite documentation if you wish to change this, or add SSL support.
+Til at starte med skal der komme en op forklare dig hvad der sker og hvorfor du er der.
+Derefter bliver du sat fri i verdenen med 5-20 NPC's som alle var i området da tingene sker, og en masse skøre ting skal ske.
+Man skal snakke, samle ting, give ting til NPC's så man langsomt samler spor.
 
-Once the server is running you can edit any of the files in the `src` folder. Vite will automatically recompile your code and then reload the browser.
+Mussene skal også gerne reagere på hvad Spilleren gør. Sådan hvis spilleren er ond bliver de mere onde og hvis spilleren er god bliver de mere gode.
+De bør også gerne huske hvad spilleren har sagt til dem.
 
-## Template Project Structure
+Så der skal være et lille inventory system som holder styr på hvilke ting som er samlet op. 
+Et cluesystem hvor man kan se hvilke spor som er samlet op, og hvilke NPC's den er forbundet til.
 
-We have provided a default project structure to get you started. This is as follows:
+og et Accusation system, hvor du vælger hvem som er morderen. Hvis du vælger forkert taber du, hvis du vælger rigtigt vinder du.
 
-- `index.html` - A basic HTML page to contain the game.
-- `src` - Contains the React client source code.
-- `src/main.tsx` - The main **React** entry point. This bootstraps the React application.
-- `src/vite-env.d.ts` - Global TypeScript declarations, provide types information.
-- `src/App.tsx` - The main React component.
-- `src/game/PhaserGame.tsx` - The React component that initializes the Phaser Game and serve like a bridge between React and Phaser.
-- `src/game/EventBus.ts` - A simple event bus to communicate between React and Phaser.
-- `src/game` - Contains the game source code.
-- `src/game/main.tsx` - The main **game** entry point. This contains the game configuration and start the game.
-- `src/game/scenes/` - The Phaser Scenes are in this folder.
-- `public/style.css` - Some simple CSS rules to help with page layout. - not really used
-- `public/assets` - Contains the static assets used by the game.
-- `public/assets/tilemaps` - Contains the static map used by the game.
-- `public/assets/npcs` - Contains the frames for the npc's, and a json to denote their position
-- `public/assets/characterSprite` - Contains the player character.
+Jeg skal have implementeret et "aktionManager" , hvor jeg med callbacks fra dialogen eller andre steder kan trigger bestemte handlinger fra mussene
 
-## React Bridge
 
-The `PhaserGame.tsx` component is the bridge between React and Phaser. It initializes the Phaser game and passes events between the two.
+---
 
-To communicate between React and Phaser, you can use the **EventBus.js** file. This is a simple event bus that allows you to emit and listen for events from both React and Phaser.
+## App.tsx and main.tsx
 
-```js
-// In React
-import { EventBus } from './EventBus';
+For at starte spillet. Det første er, at vi integrerer med Phaser, derefter at gøre noget. Det første jeg gør er at indlæse `index.html` og derefter fra det script at indlæse `main.tsx`.
 
-// Emit an event
-EventBus.emit('event-name', data);
+Fra `main.tsx` indlæser jeg `App.tsx`.  
+- **29/10** Der er en del boilerplate-kode, som nok kan fjernes.  
+- **29/10** Kan ikke fjernes så meget. Den står for at loade den nuværende scene og at bekræfte om sprites kan bevæge sig.
 
-// In Phaser
-// Listen for an event
-EventBus.on('event-name', (data) => {
-    // Do something with the data
-});
+---
+
+## EventBus.ts
+
+Bruges til at forbinde events mellem Phaser og React.
+
+Det er egentlig bare:
+
+```typescript
+export const EventBus (React) = new Events.EventEmitter() (Phaser);
 ```
 
-In addition to this, the `PhaserGame` component exposes the Phaser game instance along with the most recently active Phaser Scene using React forwardRef.
+---
+## PhaserGame.tsx
 
-Once exposed, you can access them like any regular react reference.
-
-## Phaser Scene Handling
-
-In Phaser, the Scene is the lifeblood of your game. It is where you sprites, game logic and all of the Phaser systems live. You can also have multiple scenes running at the same time. This template provides a way to obtain the current active scene from React.
-
-You can get the current Phaser Scene from the component event `"current-active-scene"`. In order to do this, you need to emit the event `"current-scene-ready"` from the Phaser Scene class. This event should be emitted when the scene is ready to be used. You can see this done in all of the Scenes in our template.
-
-**Important**: When you add a new Scene to your game, make sure you expose to React by emitting the `"current-scene-ready"` event via the `EventBus`, like this:
+1. den gør: Importer react componenter, Importer EventBus (forbind React og Phaser), Importer StartGame (main)
 
 
-```ts
-class MyScene extends Phaser.Scene
-{
-    constructor ()
-    {
-        super('MyScene');
-    }
-
-    create ()
-    {
-        // Your Game Objects and logic here
-
-        // At the end of create method:
-        EventBus.emit('current-scene-ready', this);
-    }
-}
-```
-
-You don't have to emit this event if you don't need to access the specific scene from React. Also, you don't have to emit it at the end of `create`, you can emit it at any point. For example, should your Scene be waiting for a network request or API call to complete, it could emit the event once that data is ready.
-
-### React Component Example
-
-Here's an example of how to access Phaser data for use in a React Component:
-
-```ts
-import { useRef } from 'react';
-import { IRefPhaserGame } from "./game/PhaserGame";
-
-// In a parent component
-const ReactComponent = () => {
-
-    const phaserRef = useRef<IRefPhaserGame>(); // you can access to this ref from phaserRef.current
-
-    const onCurrentActiveScene = (scene: Phaser.Scene) => {
+    2 interfaces (structs)
+     @Export interface IRefPhaserGame { game, scene}
+    og en skjult interface for den nuværende aktive scene sættes.
+    funktion:@Export const Phasergame = <Begge interfaces> (function PhaserGame (current scene), ref) 
     
-        // This is invoked
+    1. const game = useRef<Phaser.game> 
+    2. Brug layoutEffect.   - Hvis der intet spil er, start et spil
+    3. Brug Effecter -Eventbus, tjek om scenen er klar.
+    4. Returner html <div ID='Game-Container' >
 
+    Så her laves HTML - elementet, som vises til brugeren.
+
+--- 
+### Main Menu
+    
+    Triggeres fra app.tsx
+    
+    Import GameObjects, Scene fra phaser (framework)
+    Import Button (lavet selv :I )
+    
+    @Export class MainMenu extends Scene.
+    -Tag Scene, og tilføj disse objecter.
+    {
+        Background: GameObjects.Image
+        Logo: GameObjects.Image
+        Title: GameObjects.text
+        PlayButton: GameObjects image //kan fjernes 29/10
+        LogoTween: Phaser.tween.tween //kan fjernes 29/10
+        text: GameObject.text
     }
+    @constructor (\"MainMenu\") (Giver scriptet et kaldenavn som kan kaldes fra andre scripts)
+    
+    create(): void {,
+       Få Size af skærm
+       Sæt logo (billede)
+       Tiljøj tekst
+       Tiljøj knapper som kan skifte scene
+    }
+    hjælpe funktioner
+    
+    1. ChangeScene() //fjernet 29/10
+    
+    2. Resize() - Omskaller til nuværende scene. (omskallere ikke teksten i Button eller andre importerede alt.)
+    
+    Knap change->scene
 
-    return (
-        ...
-        <PhaserGame ref={phaserRef} currentActiveScene={onCurrentActiveScene} />
-        ...
-    );
+ ---
 
-}
-```
+ ### Game
+    
+    Tankegangen bag den her er at det skal være en af flere scenarioer og scener hvor man kan gå rundt, snakke med personer og samle hints. Der bør inkodes unikke interactioner (nogle danser. Effekter, Etc. )
+    
+    Måske burde der også være en mode hvor kan kan bruge de ting man samler op?
+    
+    Tankegangen her er at gøre det så simpelt som muligt at bevæge sig og interagere med verdenen det er meget vigtigt at det kan tilgås at alle og alle kontrols fungerer. 
+    
+    Der skal også laves tablet / phone funktionalteter. 
+    
+    Det første man gør at at importere en masse masse ting. 
+    
+    og husk: const MAX_DIALOGUE_DISTANCE = 125; Super vigtig da man ikke bare skal interagere med alt på samme tid uanset hvor på kortet man er.
+    
+    @Export class Game extends Phaser.scene {
+        public (ting som skal kunne tilgås fra andre scripts):
+        1. Inventory manager
+        2. GuideScene //den er importeret ind men behøver måske ikke være public.
+        3. Cursors
+    
+        private (ting som skal beholdes i dette script):
+        1. GameControlTexts //kan nok fjernes
+        2. camera //Styrer zoom og den størrelse man ser verdenen fra
+        3. Abovelayer. //styrer hvad man kan støde ind i af objecter (ikke npcs)
+        4. DialogManager //styrer hvor i dialogtræet du er normal (ved det faktisk ikke):
+         1. npcs // liste af alle npc's som skal tegnes
+        2. Player //spilleren
+        3. Interaction prompt //skal opdateres
+        4. body.
+        5. Objects // liste over \"døde\" objecter som kan interageres med.
+        6. interactables //det samme som object
+        7. clue manager //kan nok fjernes (kan ikke fjernes, 20/11)
+        
+    }
+    
+    constructor( \"Game\" ) // giv scriptet navnet game, skal senere ændres til noget som \"scene1\" 
+    
+    preload() {
+        hent unikke ting til scenen her.
+        grunden til det hentes her er for at minimere hvor meget der hentes når hjemmesiden åbnes.
+    }
+    
+    create(){
+        1. initier inventory og dialog
+        2. tilføj test items til inventory // kan fjernes når inventory fungerer 100% (inventory funktionen bliver ændret igen 20/11)
+        3. load tilemap og tileset ind.
+            -Sæt lag 1, under spilleren.
+            -Sæt lag 2, på samme niveau som spilleren.
+            sæt lag 3, over spilleren.
+        4. Sæt kamera op. 
+            -Opsæt hvad kammeraet ser når den ikke ser kortet
+            -Opsæt begrænsninger for kamera.
+        5. Initier keyboard keys
+            -Her skal den udvides så den kan tage touch-screen inputs.
+        6. skab spiller og sæt collider op mellem spiller og lag 1 på tilemap.
+        7. skab NPCs og tilføj dem til en liste
+            -NPC'er skal have start position, dialog, bevægelses pattern og begrænsning på bevælgelse. Der skal også tilføjes en sprite til NPC.
+        8. Tilføj npc collision mellem player og mellem lag 1
+        9. Lav døde objekter, skal også tilføjes med alt det samme som NPC fordi teknisk er det næsten den samme klasse.
+        10. sæt lag 2 over spiller, så den tegnes over spilleren.
+        11. Sæt knapper op. 
+        12. Sæt html element op med funktioner, dette tegnes ovenpå alt andet så det er statisk på skærmen. 
+    
+    }
+    
+    update(time, delta){
+        1. Opdater spiller (bevægelse/frame).
+        2. Opdater Npc (bevægelse/frame).
+        3. Opdater dialog (hvis aktiv)
+        4. Hvis spiller er under lag 2, gør det lag semi transparent. 
+        5. Hvis dialog manager er aktiv, tjek distancer mellem objecter, npc og spiller. Hvis aktiv hvis dialog. Hvis ikke så luk dialogen (gem den)
+        6. Udregn distancer mellem sprites. Hvis tæt nok på hvis lille boks hvor der står hvordan man kan interagere med det.
+    }
+    
+    hjælpefuntioner () {
+        1. showInventory, showGuide. Sæt knapper op.
+        2. Change scene (ikke i brug, skal bruges når man løser mysteriet) (I brug nu 20/11)
+        3. showInteractionPrompt (bliver kaldt i update)
+        4. hideInteractionPrompt (bliver kaldt i update)
+        5. onItemCollected (fjern objecter som bliver samlet op)
+        6. addTestItems (smid ting direkte i inventory for test.) 
+    
+    }
+---
+    ## Inventory Scene
+    
+    Det her en den sværeste del af koden indtil videre.
+    
+    Den er delt i potentielt 4 dele. 
+    
+    Idéen med denne del er at kunne sammensætte en historie fra de ting man har fundet og de NPC man har snakket med. F.eks. Rocker NPC Mus kombineret med Pistol gør at han skyder pistolen. Hvis man trækker en anden mus ind på den anden side, vil den mus blive ramt. 
+    
+    Det hele burde sammensættes så det bliver en historie. F.eks. Mus et er jaloux over X, og derfor finder en Kniv og stikker mux Y ned. Derefter flygter musen, og prøver at gemme sig.
+    
+    Eller mus X skylder mus Y penge, og derfor bliver han stukekt ned. 
+    
+    Eller mus X stjæler mus Y's taske. osv osv osv osv osv osv.
+    
+    Kompleksiteten er at for hver mus X, og antal objekter skal der være n^x aktioner. så 4 objecter og 1 mus er det 4 handlinger. og for 4 objecter og 2 mus er det 16 mulige handlinger, osv. 
+    
+    -------------------------------------------------------
+    Under story boardet burde der være 2-3 kategorier. 1 NPC. 2. Objekt. 3 sted. 
+    
+    Dette er et 2-delt problem. Første problem er at det er mange ting og derfor svært at få det hele til at passe. Andet problem er det er svært at animere det hele.
+    
+    Min Ide er at for hver scene / kort skal baggrundende sættes på forhånd, derefter kan man trække mus og ting ind. 
+    
+    ---------------------------------------------------------
 
-In the code above, you can get a reference to the current Phaser Game instance and the current Scene by creating a reference with `useRef()` and assign to PhaserGame component.
+    Update 20/11- 24.
+    Storyboard ideén var god og fed, men det ekstra arbejde som skulle til for at lave alle sprites osv var simpelthen for meget.
+    Er gået videre til et standard inventory system hvor du kan samle ting op og se dem senere for måske at få mere insigt.
+    Der burde også laves et system hvor spilleren kan give ting til andre NPC- i forbindelse med quests
 
-From this state reference, the game instance is available via `phaserRef.current.game` and the most recently active Scene via `phaserRef.current.scene`.
-
-The `onCurrentActiveScene` callback will also be invoked whenever the the Phaser Scene changes, as long as you emit the event via the EventBus, as outlined above.
-
-## Handling Assets
-
-Vite supports loading assets via JavaScript module `import` statements.
-
-This template provides support for both embedding assets and also loading them from a static folder. To embed an asset, you can import it at the top of the JavaScript file you are using it in:
-
-```js
-import logoImg from './assets/logo.png'
-```
-
-To load static files such as audio files, videos, etc place them into the `public/assets` folder. Then you can use this path in the Loader calls within Phaser:
-
-```js
-preload ()
-{
-    //  This is an example of an imported bundled image.
-    //  Remember to import it at the top of this file
-    this.load.image('logo', logoImg);
-
-    //  This is an example of loading a static image
-    //  from the public/assets folder:
-    this.load.image('background', 'assets/bg.png');
-}
-```
-
-When you issue the `npm run build` command, all static assets are automatically copied to the `dist/assets` folder.
-
-## Deploying to Production
-
-After you run the `npm run build` command, your code will be built into a single bundle and saved to the `dist` folder, along with any other assets your project imported, or stored in the public assets folder.
-
-In order to deploy your game, you will need to upload *all* of the contents of the `dist` folder to a public facing web server.
-
-## Customizing the Template
-
-### Vite
-
-If you want to customize your build, such as adding plugin (i.e. for loading CSS or fonts), you can modify the `vite/config.*.mjs` file for cross-project changes, or you can modify and/or create new configuration files and target them in specific npm tasks inside of `package.json`. Please see the [Vite documentation](https://vitejs.dev/) for more information.
-
-## About log.js
-
-If you inspect our node scripts you will see there is a file called `log.js`. This file makes a single silent API call to a domain called `gryzor.co`. This domain is owned by Phaser Studio Inc. The domain name is a homage to one of our favorite retro games.
-
-We send the following 3 pieces of data to this API: The name of the template being used (vue, react, etc). If the build was 'dev' or 'prod' and finally the version of Phaser being used.
-
-At no point is any personal data collected or sent. We don't know about your project files, device, browser or anything else. Feel free to inspect the `log.js` file to confirm this.
-
-Why do we do this? Because being open source means we have no visible metrics about which of our templates are being used. We work hard to maintain a large and diverse set of templates for Phaser developers and this is our small anonymous way to determine if that work is actually paying off, or not. In short, it helps us ensure we're building the tools for you.
-
-However, if you don't want to send any data, you can use these commands instead:
-
-Dev:
-
-```bash
-npm run dev-nolog
-```
-
-Build:
-
-```bash
-npm run build-nolog
-```
-
-Or, to disable the log entirely, simply delete the file `log.js` and remove the call to it in the `scripts` section of `package.json`:
-
-Before:
-
-```json
-"scripts": {
-    "dev": "node log.js dev & dev-template-script",
-    "build": "node log.js build & build-template-script"
-},
-```
-
-After:
-
-```json
-"scripts": {
-    "dev": "dev-template-script",
-    "build": "build-template-script"
-},
-```
-
-Either of these will stop `log.js` from running. If you do decide to do this, please could you at least join our Discord and tell us which template you're using! Or send us a quick email. Either will be super-helpful, thank you.
-
-## Join the Phaser Community!
-
-We love to see what developers like you create with Phaser! It really motivates us to keep improving. So please join our community and show-off your work 😄
-
-**Visit:** The [Phaser website](https://phaser.io) and follow on [Phaser Twitter](https://twitter.com/phaser_)<br />
-**Play:** Some of the amazing games [#madewithphaser](https://twitter.com/search?q=%23madewithphaser&src=typed_query&f=live)<br />
-**Learn:** [API Docs](https://newdocs.phaser.io), [Support Forum](https://phaser.discourse.group/) and [StackOverflow](https://stackoverflow.com/questions/tagged/phaser-framework)<br />
-**Discord:** Join us on [Discord](https://discord.gg/phaser)<br />
-**Code:** 2000+ [Examples](https://labs.phaser.io)<br />
-**Read:** The [Phaser World](https://phaser.io/community/newsletter) Newsletter<br />
-
-Created by [Phaser Studio](mailto:support@phaser.io). Powered by coffee, anime, pixels and love.
-
-The Phaser logo and characters are &copy; 2011 - 2024 Phaser Studio Inc.
-
-All rights reserved.
+    Så input -> stuff [{id, clue, description, img, amount}]
+    og output er nok bare en pop eller destroy fra listen.
+---

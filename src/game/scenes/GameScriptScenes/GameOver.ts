@@ -17,7 +17,7 @@ export class GameOver extends Scene
         this.camera = this.cameras.main
         this.camera.setBackgroundColor(0xff0000);
 
-        this.gameOverText = this.add.text(screen.width/2, screen.height/2, 'To be developped', {
+        this.gameOverText = this.add.text(screen.width/2, screen.height/2, 'Game Lost: To be developped', {
             fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
             stroke: '#000000', strokeThickness: 8,
             align: 'center'
