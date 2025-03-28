@@ -1,15 +1,16 @@
-import { ClueManager } from '../../managers/clueManager';
+import { ClueManager } from './clueManager';
 
 export class ClueJournal extends Phaser.Scene {
     private clueManager: ClueManager;
-
+    private originScene: string;
     constructor() {
         super({ key: 'ClueJournal' });
     }
 
-    init(data: { clueManager: ClueManager }): void {
+    init(data: { clueManager: ClueManager, originScene:  string}): void {
         // Receive the ClueManager instance passed from the main scene
         this.clueManager = data.clueManager;
+        this.originScene = data.originScene;
     }
 
     create(): void {
@@ -46,11 +47,10 @@ export class ClueJournal extends Phaser.Scene {
     private closeClueJournal(): void {
         // Stop this scene
         this.scene.stop();
-
-        // Get the main game scene and resume it
-        const gameScene = this.scene.get('Game') as Phaser.Scene;
-        if (gameScene) {
-            gameScene.scene.resume();
+        if (this.originScene) {
+            this.scene.resume(this.originScene);
+        } else {
+            console.warn("No fromScene specified, cannot resume the correct scene.");
         }
     }
 }

@@ -2,15 +2,16 @@ import { Boot } from './scenes/Boot';
 import { Game as MainGame } from './scenes/Game';
 import { MainMenu } from './scenes/MainMenu';
 import { UIGameOverlay } from './scenes/UiGameOverlay';
-import { GuideScene } from './scenes/GameScriptScenes/guide';
+import { GuideScene } from '../game/guideScripts/guide';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
-import { ClueJournal } from "./scenes/GameScriptScenes/clueScene"
-import { AccusationScene } from "./scenes/GameScriptScenes/AccusationScene"
+import { ClueJournal } from "../game/clueScripts/clueScene"
+import { AccusationScene } from "../game/Accusation_scripts/AccusationScene"
 import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene"
 import { GameOver } from "./scenes/GameScriptScenes/GameOver"
 import { HouseScene } from "./scenes/HouseScene"
+import { ToturialScene } from "./scenes/ToturialScene"
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config: Phaser.Types.Core.GameConfig = {
@@ -45,7 +46,8 @@ const config: Phaser.Types.Core.GameConfig = {
         AccusationScene,
         VictoryScene,
         GameOver,
-        HouseScene
+        HouseScene,
+        ToturialScene
     ]
 };
 

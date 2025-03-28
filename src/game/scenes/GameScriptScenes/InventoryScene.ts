@@ -5,18 +5,25 @@ import { Button } from "../../scripts/buttonScript"
 export class InventoryScene extends Phaser.Scene {
     private inventoryManager!: InventoryManager;
     private items: Item[] = [];
+    private originScene: string;
 
     constructor() {
         super({ key: 'InventoryScene' });
     }
 
-    init(data: { inventoryManager: InventoryManager }) {
+    init(data: { inventoryManager: InventoryManager, originScene: string }) {
         this.inventoryManager = data.inventoryManager;
+        this.originScene = data.originScene;
     }
 
     create() {
         // Retrieve items from the inventory manager
-        this.items = this.inventoryManager.getItems();
+        try {
+            this.items = this.inventoryManager.getItems();
+        } catch (error) {
+            console.error("Kunne ikke få items fra inventory manager")
+            this.items = [];
+        }
 
         // Display the inventory background or UI elements
         this.add.rectangle(
@@ -33,8 +40,7 @@ export class InventoryScene extends Phaser.Scene {
 
         // Close the inventory on key press (e.g., 'I' key)
         this.input.keyboard.on('keydown-I', () => {
-            this.scene.stop();
-            this.scene.resume('Game');
+            this.returnToGame()
         });
     }
 
@@ -43,9 +49,28 @@ export class InventoryScene extends Phaser.Scene {
         const padding = 10;  // Padding between items
         const columns = 5;   // Number of items per row
 
+        const topClearingForUiElements = this.scale.height / 5;
         // Starting position for the grid
-        const startX = 100;
-        const startY = 100;
+        const startX = this.scale.width/5;
+        const startY = topClearingForUiElements + this.scale.height / 5;
+
+        /* 
+        64*5 cols + 10*50 = 370, så hvis skærm er mindre end 370, så reducer antallet af items og padding.
+        64*4 rows + 10*4 = 276, så hvis skærm er mindre end 276 gør de nederste del af skærmen scrollbar. top items 1,2,3 skal altid være synlige.
+
+
+        Overview over hvordan det skal se ud.
+          1|2|3      main clues 
+        ---------
+        a|b|c|d|e    all items.
+        ---------
+        f|g|h|i|j
+        ---------
+        k|l|m|n|o
+
+            |
+         scroll ned hvis mere end 15 items
+        */
 
         this.items.forEach((item, index) => {
             const row = Math.floor(index / columns);
@@ -55,18 +80,26 @@ export class InventoryScene extends Phaser.Scene {
             const y = startY + row * (itemSize + padding);
 
             // Display the item's icon
-            console.log("inventory scene " + item.iconKey);
-            const icon = this.add.image(x, y, item.iconKey).setOrigin(0, 0);
-            icon.setSize(48, 48);
+            console.log("inventory scene 1" + item.iconKey + " making it appear  " + x+ " " + y);
+            const icon = this.add.image(x, y, item.iconKey!).setOrigin(0, 0).setDepth(100)
+            console.log("inventory scene added icon " + icon);
 
-            // Optionally, display the item's quantity
-            if (item.quantity > 1) {
-                this.add.text(x + itemSize - 16, y + itemSize - 16, item.quantity.toString(), {
+            icon.setSize(itemSize-padding, itemSize-padding);
+            console.log("inventory scene all items " + 
+                " item size : " + item.quantity! + 
+                " item size : "  + itemSize
+            );
+
+            // ikke her
+            if (item.quantity! > 1) {
+                this.add.text(x + itemSize - 16, y + itemSize - 16, item.quantity!.toString(), {
                     fontSize: '16px',
                     color: '#ffffff',
                     backgroundColor: '#000000',
-                }).setOrigin(1, 1);
+                }).setOrigin(1, 1).setDepth(100);
             }
+            console.log("inventory scene 4" + item.iconKey);
+
 
             // Optionally, make the icon interactive to show item details
             icon.setInteractive();
@@ -115,9 +148,12 @@ export class InventoryScene extends Phaser.Scene {
         });
     }
 
+    //Skal resume den scene den kom fra.
     private returnToGame(): void {
         this.scene.stop();
-        this.scene.resume("Game");
+        console.log("in inventory scene, returning to the scene " + this.originScene);
+        //hvis den fejler i at få den oprindelige scene, skal der stadig være en måde man skal kunne få den til at emitte at scenen er lukket.
+        this.scene.resume(this.originScene);
     }
 
 }

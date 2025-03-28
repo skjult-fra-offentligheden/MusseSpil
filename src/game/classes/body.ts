@@ -31,10 +31,21 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
         itemId?: string,
         itemDescription?: string,
         iconKey?: string,
-        isCollectible: boolean = false
+        isCollectible: boolean = false,
+        public desiredWidth?: number,     
+        public desiredHeight?: number,     
+        public desiredScale?: number       
     ) {
         super(scene, x, y, texture);
 
+        if (desiredScale !== undefined) {
+            this.setScale(desiredScale);
+        }
+
+        if (desiredWidth && desiredHeight) {
+            this.displayWidth = desiredWidth;
+            this.displayHeight = desiredHeight;
+        }
         // Enable physics body
         scene.physics.world.enable(this);
         this.body.setImmovable(true);
@@ -50,6 +61,9 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
         this.iconKey = iconKey || texture;
         this.isCollectible = isCollectible;
         this.setInteractive();
+        console.log("set it interactive. object")
+
+
     }
 
     public collect(inventoryManager: InventoryManager): void {
@@ -73,7 +87,6 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
         this.inventoryManager = inventoryManager;
-
         // Only initiate dialogue
         this.initiateDialogue();
     }
@@ -93,13 +106,17 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     private bindCallbacks(): void {
         // Ensure callbacks are bound correctly
-        this.dialogueData.forEach((node) => {
-            node.options.forEach((option) => {
-                if (option.callback && typeof option.callback === 'function') {
-                    option.callback = option.callback.bind(this);
-                }
+        console.log("pre load " + this.dialogueData);
+        if (this.dialogueData) {
+            console.log("this dialogue data " + this.dialogueData);
+            this.dialogueData.forEach((node) => {
+                node.options.forEach((option) => {
+                    if (option.callback && typeof option.callback === 'function') {
+                        option.callback = option.callback.bind(this);
+                    }
+                });
             });
-        });
+        } else { console.warn("Dialogue data not initilized ") }
     }
 
     // Bodies don't need to update movement or AI behaviors

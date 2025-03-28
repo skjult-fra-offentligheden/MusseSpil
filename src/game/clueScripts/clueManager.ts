@@ -1,6 +1,8 @@
 import { Clue } from "../classes/clue";
 
 export class ClueManager {
+    private static instance: ClueManager;
+
     private clues: Map<string, Clue>;
 
     constructor() {
@@ -23,6 +25,13 @@ export class ClueManager {
 
     getClue(clueId: string): Clue | undefined {
         return this.clues.get(clueId);
+    }
+
+    public static getInstance(): ClueManager {
+        if (!ClueManager.instance) {
+            ClueManager.instance = new ClueManager();
+        }
+        return ClueManager.instance;
     }
 }
 

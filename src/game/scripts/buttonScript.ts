@@ -69,7 +69,7 @@ export class Button {
             .on("pointerup", () => {
                 buttonBackground.setFillStyle(rect_info.backgroundColor || 0x000343, rect_info.transparency);
                 console.log("Button clicked");
-                if (onClick) onClick(); // Execute the callback if provided
+                if (onClick) onClick();
             });
 
         // Set up hotkey to trigger the button

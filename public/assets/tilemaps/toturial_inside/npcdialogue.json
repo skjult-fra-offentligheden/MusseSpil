@@ -1,0 +1,262 @@
+{
+    "cop2": [
+        {
+            "id": "greeting",
+            "speaker": "Copper Holmes",
+            "text": "Hi Detective, I'm here to show you how things work",
+            "once": false,
+            "options": [
+                {
+                    "id": "ask_help",
+                    "speaker": "Detective",
+                    "text": "Thanks partner",
+                    "nextDialogueId": "ask_help"
+                },
+                {
+                    "id": "no_thanks",
+                    "speaker": "Detective",
+                    "text": "pffff i know what i'm doing.",
+                    "nextDialogueId": "no_thanks"
+                }
+            ]
+        },
+        {
+            "id": "ask_help",
+            "speaker": "Copper Holmes",
+            "text": "On the table, there's 3 clues, inspect them and see if they tell you anything",
+            "options": [
+                {
+                    "id": "accept_help",
+                    "speaker": "Detective",
+                    "text": "You got it",
+                    "nextDialogueId": "accept_help_response",
+                    "effectKey": "increaseCopReputation",
+                    "once": true
+                },
+                {
+                    "id": "decline_help",
+                    "speaker": "Detective",
+                    "text": "I think... this sounds lame, I'm going to find a better mystery'",
+                    "nextDialogueId": "decline_help"
+                }
+            ]
+        },
+        {
+            "id": "no_thanks",
+            "speaker": "Copper Holmes",
+            "text": "Please please learn what to do. ",
+            "options": [
+                {
+                    "id": "accept_help_toturial",
+                    "speaker": "Detective",
+                    "text": "oooookaaay, what to do",
+                    "nextDialogueId": "ask_help",
+                    "effectKey": "increaseCopReputation",
+                    "once": true
+                },
+                {
+                    "id": "deny_help_toturial",
+                    "speaker": "Detective",
+                    "text": "Seriously, leave me alone.",
+                    "nextDialogueId": "ask_help",
+                    "effectKey": "decreaseCopReputation",
+                    "once": true
+                }
+            ]
+        },
+        {
+            "id": "accept_help_response",
+            "speaker": "Copper Holmes",
+            "text": "Okay, once you examined them, question the suspects about it.",
+            "options": []
+        },
+        {
+            "id": "decline_help",
+            "speaker": "Copper Holmes",
+            "text": "... You're a disappointment to everyone who ever believed in you.",
+            "options": [],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        }
+    ],
+    "orangeShirtMouse": [
+        {
+            "id": "greeting",
+            "speaker": "Albino Mouse",
+            "text": "I'm only here because I'm albino. ",
+            "options": [
+                {
+                    "id": "play_stupid",
+                    "speaker": "Detective",
+                    "text": "Oh, why?",
+                    "nextDialogueId": "play_stupid"
+                },
+                {
+                    "id": "no_thanks",
+                    "speaker": "Detective",
+                    "text": "You are kind of a freak",
+                    "nextDialogueId": "no_thanks",
+                    "effectKey": "decreaseNPCReputation",
+                    "once": true
+                }
+            ]
+        },
+        {
+            "id": "play_stupid",
+            "speaker": "Albino Mouse",
+            "text": "Everyone looks down on albinos",
+            "options": [
+                {
+                    "id": "play_stupid2",
+                    "speaker": "Detective",
+                    "text": "Yeah, me too",
+                    "nextDialogueId": "no_thanks"
+                },
+                {
+                    "id": "Weird",
+                    "speaker": "Detective",
+                    "text": "I think you are worth just as much as a normal mouse",
+                    "nextDialogueId": "Weird"
+                }
+            ]
+        },
+        {
+            "id": "no_thanks",
+            "speaker": "Albino Mouse",
+            "text": "Thanks, now I have something to cry about tonight",
+            "options": [
+                {
+                    "id": "be_mean",
+                    "speaker": "Detective",
+                    "text": "You can cry in jail. You're the guilty one",
+                    "nextDialogueId": "i_want_a_lawyer"
+                },
+                {
+                    "id": "be_supportive",
+                    "speaker": "Detective",
+                    "text": "Look, I'll find out what happened.'",
+                    "nextDialogueId": "i_want_a_lawyer"
+                }
+            ]
+
+        },
+        {
+            "id": "Weird",
+            "speaker": "Albino Mouse",
+            "text": "That is a weird thing to say",
+            "options": [
+                {
+                    "id": "super_weird",
+                    "speaker": "Detective",
+                    "text": "Whatever you say, FREAK!",
+                    "nextDialogueId": "no_thanks"
+                },
+                {
+                    "id": "be_supportive",
+                    "speaker": "Detective",
+                    "text": "Look, I'll find out what happened.'",
+                    "nextDialogueId": "i_want_a_lawyer"
+                }
+            ]
+        },
+        {
+            "id": "i_want_a_lawyer",
+            "speaker": "Albino Mouse",
+            "text": "I want a lawyer",
+            "options": [
+            ]
+        }
+    ],
+    "pinkDressGirlMouse": [
+        {
+            "id": "greeting",
+            "speaker": "Pink Mouse",
+            "text": "Granny says I look pretty in pink!",
+            "options": [
+                {
+                    "id": "compliment",
+                    "speaker": "Detective",
+                    "text": "You do look lovely!",
+                    "nextDialogueId": "compliment_response"
+                },
+                {
+                    "id": "dismiss",
+                    "speaker": "Detective",
+                    "text": "Granny says a lot of things.",
+                    "nextDialogueId": "dismiss_response"
+                }
+            ]
+        },
+        {
+            "id": "compliment_response",
+            "speaker": "Pink Mouse",
+            "text": "Aww, thank you!",
+            "options": []
+        },
+        {
+            "id": "dismiss_response",
+            "speaker": "Pink Mouse",
+            "text": "Hmph, you’re just mean.",
+            "options": []
+        }
+    ],
+    "rockerMouse": [
+        {
+            "id": "greeting",
+            "speaker": "Rocker",
+            "text": "I did not do it",
+            "options": [
+                {
+                    "id": "play_stupid",
+                    "speaker": "Detective",
+                    "text": "Did what?",
+                    "nextDialogueId": "play_stupid"
+                },
+                {
+                    "id": "no_thanks",
+                    "speaker": "Detective",
+                    "text": "Yeah, you did it",
+                    "nextDialogueId": "no_thanks"
+                }
+            ]
+        },
+        {
+            "id": "play_stupid",
+            "speaker": "Rocker",
+            "text": "Kill the guy",
+            "options": [
+                {
+                    "id": "play_stupid2",
+                    "speaker": "Detective",
+                    "text": "It was a guy?",
+                    "nextDialogueId": "play_stupid2"
+                },
+                {
+                    "id": "Weird",
+                    "speaker": "Detective",
+                    "text": "Was he your customer?",
+                    "nextDialogueId": "Weird"
+                }
+            ]
+        },
+        {
+            "id": "no_thanks",
+            "speaker": "Rocker",
+            "text": "Detective, disrespectfully, leave",
+            "options": []
+        },
+        {
+            "id": "play_stupid2",
+            "speaker": "Rocker",
+            "text": "You must be blind",
+            "options": []
+        },
+        {
+            "id": "Weird",
+            "speaker": "Rocker",
+            "text": "... I am not talking to you anymore",
+            "options": []
+        }
+    ]
+}
+

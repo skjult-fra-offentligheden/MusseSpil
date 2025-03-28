@@ -44,34 +44,6 @@
          "y":0
         }, 
         {
-         "draworder":"topdown",
-         "id":7,
-         "name":"Triggers",
-         "objects":[
-                {
-                 "height":70.5,
-                 "id":4,
-                 "name":"door",
-                 "properties":[
-                        {
-                         "name":"destination",
-                         "type":"string",
-                         "value":"HouseScene"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":50,
-                 "x":464,
-                 "y":186.5
-                }],
-         "opacity":1,
-         "type":"objectgroup",
-         "visible":true,
-         "x":0,
-         "y":0
-        }, 
-        {
          "data":[0, 30, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 29, 0, 0, 0, 0, 0, 0, 0,
             0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0,
             0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0,
@@ -152,9 +124,146 @@
          "width":40,
          "x":0,
          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":7,
+         "name":"Triggers",
+         "objects":[
+                {
+                 "height":70.5,
+                 "id":4,
+                 "name":"door",
+                 "properties":[
+                        {
+                         "name":"destination",
+                         "type":"string",
+                         "value":"HouseScene"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":53.333333333333,
+                 "x":463,
+                 "y":186.5
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":8,
+         "name":"NPCspawnpoints",
+         "objects":[
+                {
+                 "height":0,
+                 "id":9,
+                 "name":"cop1",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":524,
+                 "y":365.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"cop2",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":742.666666666667,
+                 "y":367.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":11,
+                 "name":"fancyMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1493.33333333333,
+                 "y":286.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":12,
+                 "name":"fatMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1063.33333333333,
+                 "y":529.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":13,
+                 "name":"grannyMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1318,
+                 "y":499.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":14,
+                 "name":"rockerMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1478.66666666667,
+                 "y":130.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":15,
+                 "name":"orangeShirtMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1124.66666666667,
+                 "y":167.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":16,
+                 "name":"pinkDressGirlMouse",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":219.333333333333,
+                 "y":131.333333333333
+                }],
+         "offsetx":-59.3333333333334,
+         "offsety":7.33333333333331,
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
         }],
- "nextlayerid":8,
- "nextobjectid":8,
+ "nextlayerid":9,
+ "nextobjectid":17,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.0",
@@ -180,7 +289,7 @@
         {
          "columns":5,
          "firstgid":10,
-         "image":"tilemap objects.png",
+         "image":"tilemap_objects.png",
          "imageheight":240,
          "imagewidth":240,
          "margin":0,

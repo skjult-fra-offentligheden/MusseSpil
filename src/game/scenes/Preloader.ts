@@ -29,6 +29,10 @@ export class Preloader extends Scene
         //  Load the assets for the game
         this.load.setPath('assets');
 
+        //Dialog, toturial:
+        this.load.json("npc_dialogues_toturial", "tilemaps/toturial_inside/npcdialogue.json");
+        this.load.json("objects_dialogues_toturial", "tilemaps/toturial_inside/objectsDialogue.json");
+        this.load.json("toturial_clues", "tilemaps/toturial_inside/clues.json");
 
         this.load.image('logo', 'widerNewlogoMouse.png');
         this.load.image('star', 'star.png');
@@ -44,7 +48,8 @@ export class Preloader extends Scene
         this.load.json("npc_dialogues", "dialogue/npcdialogue.json");
         this.load.json("objects_dialogues", "dialogue/objectsDialogue.json");
         this.load.json("scene_1_clues", "dialogue/clues.json");
-        this.load.json('suspectsData', 'dialogue/suspects.json');
+        //this.load.json('suspectsData', 'dialogue/suspects.json');
+        this.load.json('suspectsData', 'tilemaps/toturial_inside/suspects.json');
 
         
     }

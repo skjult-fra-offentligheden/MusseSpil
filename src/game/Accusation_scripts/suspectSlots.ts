@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { Suspect } from "../GameScriptScenes/suspect"
+import { Suspect } from "./suspect"
 
 export class SuspectSlot {
     public rectangle: Phaser.GameObjects.Rectangle;

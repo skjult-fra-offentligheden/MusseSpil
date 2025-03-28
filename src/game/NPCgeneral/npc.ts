@@ -1,12 +1,15 @@
 // src/classes/npc.ts
 
-import Phaser from 'phaser';
+import Phaser, { Scene } from 'phaser';
 import { DialogueNode } from './dialogues';
 import { DialogueManager } from '../managers/dialogueManager';
 import { Interactable } from '../managers/interactables';
 import { Player } from './player';
 import { InventoryManager } from '../managers/itemMananger';
-
+import { NPCReactions } from '../scenes/ToturialScene/npcReactions';
+import { Item } from "../classes/itemDatastruct";
+import { GlobalEvents } from '../../factories/globalEventEmitter';
+import { npcMemory } from "../../data/npcMemory";
 interface NPCOptions {
     scene: Phaser.Scene;
     x: number;
@@ -57,6 +60,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private readonly STUCK_THRESHOLD: number = 1000; // Time in ms to consider stuck
     private readonly MIN_MOVE_DISTANCE: number = 2;
 
+    // reactions
+    private reactions: any;
+
     constructor(options: NPCOptions) {
         const {scene, x, y, texture, frame, dialogues, dialogueManager,
           npcId = 'npc1',movementType = 'idle', speed = 50,
@@ -70,6 +76,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         this.dialogues = dialogues;
         this.dialogueManager = dialogueManager;
         this.npcId = npcId;
+        
         //animation frames
         if (isUnique && atlasKey && animationKeys) {
             // Use unique atlas and animations
@@ -115,6 +122,11 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         });
 
         this.scene.events.on('dialogueEnded', this.onDialogueEnded, this);
+
+        this.reactions = NPCReactions[this.npcId] || {};
+        this.setupListeners(); // ✅ Listen for item use events
+        //console.log(`🔎 Loaded reactions for NPC ${this.npcId}:`, this.reactions);
+
     }
 
     //play animation
@@ -137,10 +149,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         //console.log(" check if it can play " + animKey + " " + this.anims.currentAnim?.key + " " + animKey)
         if (animKey && this.anims.currentAnim?.key !== animKey){
             try {
-                            //console.log(`NPC "${this.npcId}" switching to animation: ${animKey}`);
-                this.play(animKey, true)
+                if (typeof animKey === "string" && animKey.includes("idle") && this.anims.currentAnim?.key) {
+                    //hi
+                }
+                else {
+                    this.play(animKey, true)
+                 }         
             } catch (error) {
-                console.error("An error happened in the anim play " + error)
+                //console.error("An error happened in the anim play " + error)
             }
 
         }
@@ -151,6 +167,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         if (distance < range) {
             onInRange();
         }
+    }
+
+    public npcMemory: npcMemory = {
+        events_happened: { },
+        reputation_criminals: -2,
+        reputation_cops: 2,
+        reputation_civilians: 0,
+        visitedDialogues: new Set<string>()
     }
 
     public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
@@ -294,5 +318,43 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         } else {
             this.setVelocity(0);
         }
+
+        this.setupListeners(); // maybe here?
+
     }
+
+    private setupListeners() {
+
+        //problem, bliver ikke automatisk kaldt når der bliver brugt et item. Kun i intialiseringen. 
+        GlobalEvents.on('itemUsed', this.reactToItem, this); // Fejl her, den trigger ikke eventet som forventet, selvom det bliver kaldt
+        //console.log("ItemUsed in, listener reached " + this);
+    }
+
+    private reactToItem(item: Item) {
+        //console.log("ItemUsed in, listener reached " + JSON.stringify(item, null, 2));
+        if (!item || !item.itemId) {
+            //console.warn("⚠️ No valid item provided to reactToItem:", item);
+            return;
+        }
+        if (this.reactions[item.itemId]) { 
+            //console.log("ItemUsed in, listener reached, react to item 2") //doesn't trigger
+            //console.log(`💬 ${this.npcId} reacts: "${this.reactions[item.itemId]}"`);
+            this.showSpeechBubble(this.reactions[item.itemId]);
+        }
+    }
+
+    private showSpeechBubble(text: string) {
+        const bubble = this.scene.add.text(this.x, this.y - 30, text, {
+            fontSize: "16px",
+            color: "#ffffff",
+            backgroundColor: "#000000",
+            padding: { x: 5, y: 3 },
+        }).setOrigin(0.5).setDepth(1005);
+
+        // Remove bubble after 2 seconds
+        this.scene.time.delayedCall(3000, () => {
+            bubble.destroy();
+        });
+    }
+
 }

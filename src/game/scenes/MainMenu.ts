@@ -60,7 +60,8 @@ export class MainMenu extends Scene {
 
     goToGame(): void {
         console.log("Started game");
-        this.scene.start("Game");
+        this.scene.start("ToturialScene");
+       // this.scene.start("Game");
         //this.scene.launch('UIGameScene');
 
     }
