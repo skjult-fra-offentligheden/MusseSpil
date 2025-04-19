@@ -2,7 +2,7 @@
 
 import Phaser from 'phaser';
 import { Clue } from '../classes/clue';
-import { ClueManager } from '../managers/clueManager';
+import { ClueManager } from '../clueScripts/clueManager';
 import { Button } from "../scripts/buttonScript"
 interface ClueDisplaySceneData {
     clueManager: ClueManager;

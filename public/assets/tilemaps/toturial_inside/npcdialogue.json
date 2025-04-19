@@ -1,64 +1,100 @@
 {
     "cop2": [
         {
+            "id": "cop2_tutorial_briefing",
+            "speaker": "Copper Holmes",
+            "text": "Alright Rookie, listen up. We raided a suspected drug operation.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_2",
+            "once": true
+        },
+        {
+            "id": "cop2_tutorial_briefing_2",
+            "speaker": "Copper Holmes",
+            "text": "Nabbed these three mice...",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_3"
+        },
+        {
+            "id": "cop2_tutorial_briefing_3",
+            "speaker": "Copper Holmes",
+            "text": "...but we only found *one* bag of the bad stuff.",
+            "options": []
+        },
+        {
+            "id": "accept_help_response",
+            "speaker": "Copper Holmes",
+            "text": "Okay, once you examined them, question the suspects about it.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_4"
+        },
+        {
+            "id": "cop2_tutorial_briefing_4",
+            "speaker": "Copper Holmes",
+            "text": "Your job? Figure out which one of these squeakers was the *seller*. Look around, talk to everyone. Got it?",
+            "options": [],
+            "nextDialogueId": null
+        },
+        {
             "id": "greeting",
             "speaker": "Copper Holmes",
-            "text": "Hi Detective, I'm here to show you how things work",
+            "text": "Need some pointers on how things work around here, Detective?", 
             "once": false,
             "options": [
                 {
-                    "id": "ask_help",
+                    "id": "ask_help", 
                     "speaker": "Detective",
-                    "text": "Thanks partner",
-                    "nextDialogueId": "ask_help"
+                    "text": "Yeah, what should I be looking for?", 
+                    "nextDialogueId": "ask_help" 
                 },
                 {
                     "id": "no_thanks",
                     "speaker": "Detective",
-                    "text": "pffff i know what i'm doing.",
-                    "nextDialogueId": "no_thanks"
+                    "text": "Nah, I think I got this.", 
+                    "nextDialogueId": "no_thanks" 
                 }
             ]
         },
         {
             "id": "ask_help",
             "speaker": "Copper Holmes",
-            "text": "On the table, there's 3 clues, inspect them and see if they tell you anything",
+            "text": "Check the evidence on the table first. Inspect items closely, sometimes details hide in plain sight. Then talk to the suspects.",
             "options": [
                 {
                     "id": "accept_help",
                     "speaker": "Detective",
-                    "text": "You got it",
+                    "text": "You got it, Chief.", 
                     "nextDialogueId": "accept_help_response",
-                    "effectKey": "increaseCopReputation",
+                    "effectKey": "increaseCopReputation", 
                     "once": true
                 },
                 {
-                    "id": "decline_help",
+                    "id": "decline_help", 
                     "speaker": "Detective",
-                    "text": "I think... this sounds lame, I'm going to find a better mystery'",
+                    "text": "Sounds boring. I'm gonna solve a *real* crime.",
                     "nextDialogueId": "decline_help"
                 }
             ]
         },
         {
-            "id": "no_thanks",
+            "id": "no_thanks", 
             "speaker": "Copper Holmes",
-            "text": "Please please learn what to do. ",
+            "text": "Confidence is good, Rookie, but don't let it blind you. Follow procedure.",
             "options": [
+                
                 {
-                    "id": "accept_help_toturial",
+                    "id": "accept_help_reluctantly", 
                     "speaker": "Detective",
-                    "text": "oooookaaay, what to do",
-                    "nextDialogueId": "ask_help",
+                    "text": "Alright, alright. What's the procedure again?",
+                    "nextDialogueId": "ask_help", 
                     "effectKey": "increaseCopReputation",
                     "once": true
                 },
                 {
-                    "id": "deny_help_toturial",
+                    "id": "deny_help_persist", 
                     "speaker": "Detective",
-                    "text": "Seriously, leave me alone.",
-                    "nextDialogueId": "ask_help",
+                    "text": "Seriously, I know what I'm doing.",
+                    "nextDialogueId": null, 
                     "effectKey": "decreaseCopReputation",
                     "once": true
                 }
@@ -67,13 +103,13 @@
         {
             "id": "accept_help_response",
             "speaker": "Copper Holmes",
-            "text": "Okay, once you examined them, question the suspects about it.",
-            "options": []
+            "text": "Good. Once you've examined the evidence, see how the suspects react when you ask them about it.", 
+            "options": [] 
         },
         {
-            "id": "decline_help",
+            "id": "decline_help", 
             "speaker": "Copper Holmes",
-            "text": "... You're a disappointment to everyone who ever believed in you.",
+            "text": "... Just... try not to mess this up too badly, okay?", 
             "options": [],
             "effectKey": "decreaseCopReputation",
             "once": true
@@ -83,7 +119,7 @@
         {
             "id": "greeting",
             "speaker": "Albino Mouse",
-            "text": "I'm only here because I'm albino. ",
+            "text": "Drugs? No way! I was just... admiring the cheese. It's so much better than usual...",
             "options": [
                 {
                     "id": "play_stupid",
@@ -171,7 +207,7 @@
         {
             "id": "greeting",
             "speaker": "Pink Mouse",
-            "text": "Granny says I look pretty in pink!",
+            "text": "This is beneath me. That phone? Never seen it",
             "options": [
                 {
                     "id": "compliment",
@@ -204,7 +240,7 @@
         {
             "id": "greeting",
             "speaker": "Rocker",
-            "text": "I did not do it",
+            "text": "This is bogus! I was just fixin' my guitar stand, got glue everywhere",
             "options": [
                 {
                     "id": "play_stupid",

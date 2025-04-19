@@ -6,7 +6,8 @@ import { ItemActionHandler } from "../scenes/ToturialScene/ItemActionHandler";
 import { Item } from "../classes/itemDatastruct";
 export class UIGameOverlay extends Phaser.Scene {
     private itemSlots: Phaser.GameObjects.Rectangle[] = [];
-    private itemIcons: Phaser.GameObjects.Sprite[] = [];
+    private itemIcons: (Phaser.GameObjects.Sprite | null)[] = []
+    private itemsInSlots: (Item | null)[] = []; // Keep track of which item is in which slot visually
     private slotConfig = {
         width: 50,
         height: 50,
@@ -48,21 +49,27 @@ export class UIGameOverlay extends Phaser.Scene {
                 { backgroundColor: 0x000343, transparency: 0.8 },
                 { linewidth: 2, linecolor: 0xffffff }, btnConfig.callback, btnConfig.key);
         });
-
         this.inventoryManager = InventoryManager.getInstance();
-        const mainScene = this.scene.get('ToturialScene');
+        this.itemActionHandler = new ItemActionHandler(this);
+        this.updateSlotContents(); // Initial update
+        const mainScene = this.scene.get('ToturialScene') as import('../scenes/ToturialScene').ToturialScene;;
         if (mainScene) {
             mainScene.events.on('inventoryUpdated', this.updateSlotContents, this);
         } else {
             console.warn("UIGameOverlay: ToturialScene not found, inventory updates may not work.");
         }
 
-        this.itemActionHandler = new ItemActionHandler(this);
-        this.updateSlotContents(); // ✅ Ensure UI updates at start
+
 
         //Må ikke være space da den også bruges af cursor
-        this.input.keyboard.on('keydown-N', () => {
+        this.input.keyboard.on('keydown-SPACE', () => {
+            if (mainScene?.dialogueManager?.isDialogueActive()) {
+                console.log("[UIGameOverlay] Dialogue active, ignoring spacebar for item use."); // Optional log
+                return; // Stop processing this key press in the overlay
+            }
+
             if (this.activeItem) {
+                //defer the UI update
                 this.useActiveItem();
             } else {
                 console.warn("⚠️ No item selected to use!");
@@ -85,46 +92,119 @@ export class UIGameOverlay extends Phaser.Scene {
                 .setScrollFactor(0);
 
             this.itemSlots.push(slot);
+            this.itemIcons.push(null); // Initialize icon array with nulls
+            this.itemsInSlots.push(null); // Initialize item tracking array
         }
     }
 
     private updateSlotContents = () => {
         console.log("Updating slot contents...");
         // Remove previous icons.
-        this.itemIcons.forEach(icon => icon.destroy());
-        this.itemIcons = [];
+        console.log("Updating slot contents (Optimized)...");
+        const currentItems = this.inventoryManager.getItems().slice(0, 5);
+        console.log("Current inventory items:", currentItems);
 
-        const items = this.inventoryManager.getItems().slice(0, 5);
-        console.log("Current inventory items:", items);
 
-        this.itemSlots.forEach((slot, index) => {
-            if (items[index]) {
-                console.log(`Placing item ${items[index].iconKey} in slot ${index}`);
-                const icon = this.add.sprite(
-                    slot.x - this.slotConfig.width / 2,
-                    slot.y + this.slotConfig.height / 2,
-                    items[index].iconKey!
-                )
-                    .setOrigin(0.5)
-                    .setScale(1)
-                    .setInteractive()
-                    .setScrollFactor(0);
+        if (this.activeItemIcon) {
+            const prevIndex = this.itemsInSlots.findIndex(item => item?.itemId === this.activeItem?.itemId);
+            if (prevIndex !== -1) {
+                this.itemSlots[prevIndex]?.setStrokeStyle(2, 0xffffff).setScale(1);
+                this.activeItemIcon?.clearTint();
+            }
+            // Don't nullify activeItem itself here, just the visual representation state
+            // We will re-apply it below if the item is still present.
+        }
+        // Reset activeItemIcon reference, it will be reassigned if needed
+        this.activeItemIcon = null;
+        // ----------------------------------------------------
 
-                icon.on('pointerdown', () => {
-                    this.handleItemClick(items[index], icon);
-                });
 
-                // If this item is the active one, reapply the selection style.
-                if (this.activeItem && this.activeItem.itemId === items[index].itemId) {
-                    icon.setTint(0xffff00);
-                    slot.setStrokeStyle(4, 0x0000ff).setScale(1.1);
-                    // Update the activeItemIcon reference in case it changed.
-                    this.activeItemIcon = icon;
+        for (let i = 0; i < this.itemSlots.length; i++) {
+            const slot = this.itemSlots[i];
+            const newItem = currentItems[i] || null; // Get the item for this slot, or null if none
+            let currentIcon = this.itemIcons[i];
+
+            if (newItem) {
+                // --- Item should be in this slot ---
+                if (currentIcon) {
+                    // Icon exists: Update texture if needed, ensure visible and interactive
+                    if (currentIcon.texture.key !== newItem.iconKey) {
+                        currentIcon.setTexture(newItem.iconKey!);
+                    }
+                    currentIcon.setVisible(true).setInteractive();
+                    // Ensure the listener points to the *new* item data for this slot
+                    currentIcon.off('pointerdown'); // Remove previous listener
+                    currentIcon.on('pointerdown', () => {
+                        this.handleItemClick(newItem, currentIcon!); // Use newItem here
+                    });
+
+                } else {
+                    // Icon doesn't exist: Create it
+                    console.log(`Creating icon for ${newItem.iconKey} in slot ${i}`);
+                    currentIcon = this.add.sprite(
+                        slot.x - this.slotConfig.width / 2,
+                        slot.y + this.slotConfig.height / 2,
+                        newItem.iconKey!
+                    )
+                        .setOrigin(0.5)
+                        .setScale(1) // Adjust scale if needed
+                        .setInteractive()
+                        .setScrollFactor(0);
+
+                    currentIcon.on('pointerdown', () => {
+                        this.handleItemClick(newItem, currentIcon!); // Use newItem here
+                    });
+                    this.itemIcons[i] = currentIcon; // Store the new icon
                 }
 
-                this.itemIcons.push(icon);
+                // --- Apply active item styling if this is the active item ---
+                if (this.activeItem && this.activeItem.itemId === newItem.itemId) {
+                    console.log(`Re-applying active style to ${newItem.itemId} in slot ${i}`);
+                    currentIcon.setTint(0xffff00);
+                    slot.setStrokeStyle(4, 0x0000ff).setScale(1.1);
+                    this.activeItemIcon = currentIcon; // Update active icon reference
+                } else {
+                    // Ensure non-active items in this slot don't have active styling
+                    // (This check might be redundant if we reset all styles at the start,
+                    // but safer to be explicit).
+                    if (currentIcon !== this.activeItemIcon) { // Avoid clearing tint on the just-set active icon
+                        currentIcon.clearTint();
+                        // Slot style is handled below for empty slots or non-active items
+                    }
+                }
+
+            } else {
+                // --- No item should be in this slot ---
+                if (currentIcon) {
+                    // Icon exists: Hide it and disable interaction
+                    console.log(`Hiding icon in slot ${i}`);
+                    currentIcon.setVisible(false).disableInteractive();
+                    currentIcon.off('pointerdown'); // Remove listener
+                    // Optional: could destroy here if items rarely reappear, but hiding is faster
+                    // currentIcon.destroy();
+                    // this.itemIcons[i] = null;
+                }
+                // Ensure slot style is reset if it's not holding the active item
+                slot.setStrokeStyle(2, 0xffffff).setScale(1);
             }
-        });
+
+            // Ensure slot style is default if it's not the active item's slot
+            if (!this.activeItem || !newItem || this.activeItem.itemId !== newItem.itemId) {
+                slot.setStrokeStyle(2, 0xffffff).setScale(1);
+            }
+
+            // Update the tracking array
+            this.itemsInSlots[i] = newItem;
+        }
+        // Final check: If activeItem exists but isn't in the first 5 slots anymore, clear its visual selection state
+        if (this.activeItem && !this.itemsInSlots.some(item => item?.itemId === this.activeItem?.itemId)) {
+            console.log(`Active item ${this.activeItem.itemId} is no longer in displayed slots. Clearing selection.`);
+            // The activeItemIcon should be null already from the reset at the start
+            // We just need to ensure no slot has the active style
+            this.itemSlots.forEach(s => s.setStrokeStyle(2, 0xffffff).setScale(1));
+            // Optionally, you might want to nullify this.activeItem itself here if it's truly gone
+            // this.activeItem = null;
+        }
     };
 
     public updateInventoryDisplay() {
@@ -133,36 +213,48 @@ export class UIGameOverlay extends Phaser.Scene {
 
     private handleItemClick(item: Item, icon: Phaser.GameObjects.Sprite) {
         console.log(`🖱️ Selected item: ${item.itemId}`);
-        const index = this.itemIcons.findIndex(i => i === icon);
+        const currentItemIndex = this.itemsInSlots.findIndex(i => i?.itemId === item.itemId);
 
-        if (this.activeItemIcon && this.activeItem && this.activeItem.itemId === item.itemId) {
-            console.log(`Item ${item.itemId} is already active. Deselecting.`);
+        if (this.activeItem && this.activeItem.itemId === item.itemId) {
+            // Item is already active, deselect it
+            console.log(`Deselecting active item: ${item.itemId}`);
             icon.clearTint();
-            this.itemSlots[index].setStrokeStyle(2, 0xffffff).setScale(1);
+            if (currentItemIndex !== -1) {
+                this.itemSlots[currentItemIndex].setStrokeStyle(2, 0xffffff).setScale(1);
+            }
             this.activeItemIcon = null;
             this.activeItem = null;
             return;
         }
 
-
-        if (this.activeItem && this.activeItem.itemId !== item.itemId) {
-            const prevIndex = this.itemIcons.findIndex(i => i === this.activeItemIcon);
-            if (prevIndex !== -1) {
-                this.itemSlots[prevIndex]
-                    .setStrokeStyle(2, 0xffffff)
-                    .setScale(1);
-                this.activeItemIcon?.clearTint();
+        // Deselect previous item visually if there was one
+        if (this.activeItem && this.activeItemIcon) {
+            const previousItemIndex = this.itemsInSlots.findIndex(i => i?.itemId === this.activeItem?.itemId);
+            console.log(`Deselecting previous item: ${this.activeItem.itemId} at index ${previousItemIndex}`);
+            if (previousItemIndex !== -1) {
+                this.itemSlots[previousItemIndex]?.setStrokeStyle(2, 0xffffff).setScale(1);
             }
+            this.activeItemIcon.clearTint();
         }
 
+        // Select the new item
+        console.log(`Selecting new active item: ${item.itemId}`);
         this.activeItem = item;
         this.activeItemIcon = icon;
         this.activeItemIcon.setTint(0xffff00);
-        this.itemSlots[index].setStrokeStyle(4, 0x0000ff).setScale(1.1);
+        if (currentItemIndex !== -1) {
+            this.itemSlots[currentItemIndex].setStrokeStyle(4, 0x0000ff).setScale(1.1);
+        } else {
+            console.warn("Clicked item not found in tracked slots - visual selection might fail.");
+        }
     }
 
     private useActiveItem() {
-        this.itemActionHandler.useItem(this.activeItem);
-        this.updateSlotContents(); 
+        if (!this.activeItem) return; // Guard clause
+
+        const itemToUse = this.activeItem; // Store ref in case it changes mid-logic
+
+        this.itemActionHandler.useItem(itemToUse);
+
     }
 }

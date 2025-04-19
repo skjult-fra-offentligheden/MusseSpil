@@ -14,25 +14,33 @@ import { HouseScene } from "./scenes/HouseScene"
 import { ToturialScene } from "./scenes/ToturialScene"
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
+
+const LOGICAL_WIDTH = 1024; // Example: choose your desired base width
+const LOGICAL_HEIGHT = 768; // Example: choose your desired base height
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    
-    width: screen.width,
-    height: screen.height,
+
+    width: LOGICAL_WIDTH,
+    height: LOGICAL_HEIGHT,
     scale: {
         mode: Phaser.Scale.FIT, // Scale the game to fit the window
         autoCenter: Phaser.Scale.CENTER_BOTH, // Center the game in the window
         width: '100%',
         height: '100%',
       },
-    parent: 'game-container',
-    backgroundColor: '#028af8',
+    //parent: 'game-container',
+    backgroundColor: '#000000',
     physics: {
         default: 'arcade',
         arcade: {
           gravity: { x: 0, y: 0 }, // Adjust gravity as needed
-          debug: true,
+          debug: false,
         },
+    },
+    render: {
+        pixelArt: true, 
+        antialias: false,
     },
     scene: [
         Boot,

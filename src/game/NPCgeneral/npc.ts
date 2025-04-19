@@ -37,7 +37,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private dialogues: DialogueNode[];
     private isDialogueActive: boolean = false;
     private dialogueManager: DialogueManager;
-    private npcId: string;
+    public npcId: string;
     declare body: Phaser.Physics.Arcade.Body;
     private dialogueState: string;
 
@@ -46,14 +46,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private animsRight?: string;
     private animsIdle?: string;
     private textureKey: string;
-  
+
     // Movement
     private speed: number;
     private movementType: string;
     private patrolPoints: { x: number; y: number }[];
     private targetPointIndex: number = 0;
     private moveArea: Phaser.Geom.Rectangle;
-  
+
     // Unstick logic
     private previousPosition: Phaser.Math.Vector2;
     private stuckTimer: number = 0;
@@ -64,10 +64,10 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private reactions: any;
 
     constructor(options: NPCOptions) {
-        const {scene, x, y, texture, frame, dialogues, dialogueManager,
-          npcId = 'npc1',movementType = 'idle', speed = 50,
-          patrolPoints = [], moveArea, isUnique = false,
-          atlasKey, animationKeys,} = options;
+        const { scene, x, y, texture, frame, dialogues, dialogueManager,
+            npcId = 'npc1', movementType = 'idle', speed = 50,
+            patrolPoints = [], moveArea, isUnique = false,
+            atlasKey, animationKeys, } = options;
         const textureKey = options.isUnique && options.atlasKey ? options.atlasKey : options.texture;
         super(scene, x, y, textureKey, frame);
 
@@ -76,23 +76,23 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         this.dialogues = dialogues;
         this.dialogueManager = dialogueManager;
         this.npcId = npcId;
-        
+
         //animation frames
         if (isUnique && atlasKey && animationKeys) {
             // Use unique atlas and animations
             this.animsLeft = animationKeys.walkLeft;
             this.animsRight = animationKeys.walkRight;
             this.animsIdle = animationKeys.idle;
-            this.textureKey = atlasKey; 
+            this.textureKey = atlasKey;
             //console.log("NPC TEXTURE show textures: left: " + this.animsLeft + " right: " + this.animsRight + " idle: "+ this.animsIdle + " texturekey: "+ this.textureKey)
         } else {
-                // Use standard animations
-                this.animsLeft = 'walk_left';
-                this.animsRight = 'walk_right';
-                this.animsIdle = 'idle';
-                this.textureKey = 'standard_npcs_atlas';
-              }
-            
+            // Use standard animations
+            this.animsLeft = 'walk_left';
+            this.animsRight = 'walk_right';
+            this.animsIdle = 'idle';
+            this.textureKey = 'standard_npcs_atlas';
+        }
+
         //console.log("NPC TEXTURE " + textureKey)
         //console.log("NPC looking for correct " + atlasKey + " and is unique " + isUnique)
         //console.log("NPC animationkeys " + JSON.stringify(animationKeys) + " frames " + frames) 
@@ -125,14 +125,14 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
         this.reactions = NPCReactions[this.npcId] || {};
         this.setupListeners(); // ✅ Listen for item use events
-        //console.log(`🔎 Loaded reactions for NPC ${this.npcId}:`, this.reactions);
+        //console.log(`🔎 Loaded reactions for NPC ${this.npcId}:`, this.reactions);e
 
     }
 
     //play animation
-    private playAnimation(state: string): void{
+    private playAnimation(state: string): void {
         let animKey: string | undefined;
-        switch (state){
+        switch (state) {
             case "left":
                 //console.log("playing left " + this.animsLeft)
                 animKey = this.animsLeft;
@@ -141,20 +141,20 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
                 animKey = this.animsRight;
                 break;
             case "idle":
-                default:
-                    animKey = this.animsIdle;
-                    break;
+            default:
+                animKey = this.animsIdle;
+                break;
         }
 
         //console.log(" check if it can play " + animKey + " " + this.anims.currentAnim?.key + " " + animKey)
-        if (animKey && this.anims.currentAnim?.key !== animKey){
+        if (animKey && this.anims.currentAnim?.key !== animKey) {
             try {
                 if (typeof animKey === "string" && animKey.includes("idle") && this.anims.currentAnim?.key) {
                     //hi
                 }
                 else {
                     this.play(animKey, true)
-                 }         
+                }
             } catch (error) {
                 //console.error("An error happened in the anim play " + error)
             }
@@ -170,7 +170,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     }
 
     public npcMemory: npcMemory = {
-        events_happened: { },
+        events_happened: {},
         reputation_criminals: -2,
         reputation_cops: 2,
         reputation_civilians: 0,
@@ -179,7 +179,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
         this.initiateDialogue();
-      }
+    }
 
     // Method to initiate dialogue
     public initiateDialogue(): void {
@@ -277,6 +277,12 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     // Clean up event listeners when NPC is destroyed
     public destroy(fromScene?: boolean): void {
         //this.scene.events.off('dialogueEnded', this.onDialogueEnded, this);
+        // Remove the specific listener added in the constructor
+        GlobalEvents.off('itemUsed', this.reactToItem, this);
+
+        // You might also want to remove other scene-specific listeners if added
+        // this.scene.events.off('dialogueEnded', this.onDialogueEnded, this); // Make sure this isn't needed elsewhere first
+
         super.destroy(fromScene);
     }
 
@@ -295,7 +301,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         if (this.body.velocity.x < 0) {
             //console.log(" playing animation left " + this.body.velocity.x)
             this.playAnimation("left");
-        } else if (this.body.velocity.x > 0){
+        } else if (this.body.velocity.x > 0) {
             this.playAnimation("right");
         } else {
             this.playAnimation("idle")
@@ -319,7 +325,6 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
             this.setVelocity(0);
         }
 
-        this.setupListeners(); // maybe here?
 
     }
 
@@ -332,11 +337,13 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     private reactToItem(item: Item) {
         //console.log("ItemUsed in, listener reached " + JSON.stringify(item, null, 2));
+        console.log(`[${this.npcId}] reactToItem called with item:`, item?.itemId);
+
         if (!item || !item.itemId) {
             //console.warn("⚠️ No valid item provided to reactToItem:", item);
             return;
         }
-        if (this.reactions[item.itemId]) { 
+        if (this.reactions[item.itemId]) {
             //console.log("ItemUsed in, listener reached, react to item 2") //doesn't trigger
             //console.log(`💬 ${this.npcId} reacts: "${this.reactions[item.itemId]}"`);
             this.showSpeechBubble(this.reactions[item.itemId]);
@@ -356,5 +363,4 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
             bubble.destroy();
         });
     }
-
 }

@@ -23,7 +23,8 @@ export class DialogueManager {
     private inventoryManager: InventoryManager;
     private callbackHandler: CallbackHandler;
     private dialogueUI: DialogueUI;
-
+    private spaceKey: Phaser.Input.Keyboard.Key;
+    private enterKey: Phaser.Input.Keyboard.Key;
     constructor(
         scene: Phaser.Scene,
         dialoguesData: { [npcId: string]: DialogueNode },
@@ -43,6 +44,9 @@ export class DialogueManager {
         // Keyboard input setup delegated to DialogueUI where applicable
         this.scene.events.on('start', () => this.reset());
         this.scene.events.on('resume', () => this.reset());
+
+        this.spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.enterKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     }
 
     public setScene(scene: Phaser.Scene): void {
@@ -63,9 +67,7 @@ export class DialogueManager {
         this.currentNpc = npcInstance;
 
         // Load dialogues
-        this.currentDialogues = (npcInstance && npcInstance.dialogues)
-            ? npcInstance.dialogues
-            : this.dialoguesData[npcId] || [];
+        this.currentDialogues = (npcInstance && npcInstance.dialogues) ? npcInstance.dialogues : this.dialoguesData[npcId] || [];
 
         // Filter dialogues based on conditions
         if (npcInstance && npcInstance.npcMemory) {
@@ -75,6 +77,7 @@ export class DialogueManager {
         }
 
         const startDialogue = this.getDialogueById(startDialogueId);
+        console.log(`[DialogueManager] Node found for ${startDialogueId}:`, startDialogue);
         if (startDialogue) {
             this.callbackHandler.setContext(context);
             this.currentDialogueNode = startDialogue;
@@ -121,8 +124,8 @@ export class DialogueManager {
         this.scene.physics.world.resume();
         this.scene.events.emit('dialogueEnded', this.currentNpcId);
         console.timeEnd("test");
-        console.log("Listener count for 'dialogueEnded':", this.scene.events.listenerCount('dialogueEnded') );
-    
+        console.log("Listener count for 'dialogueEnded':", this.scene.events.listenerCount('dialogueEnded'));
+
     }
 
     public getCurrentNpc(): NPC | null {
@@ -140,9 +143,66 @@ export class DialogueManager {
         this.dialogueUI.reset();
     }
 
+    public getSelectedOptionIndex(): number {
+        return this.selectedOptionIndex;
+    }
+
     public update() {
-        if (this.isActive) {
-            this.dialogueUI.handleInput(this.currentDialogueNode, this.handleOptionSelection.bind(this));
+        if (this.isActive && this.currentDialogueNode) {
+
+            // --- Handle Input for Advancement/Selection/Exit ---
+
+            // Check for SPACE key press
+            if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+                console.log("[DialogueManager Update] Spacebar JustDown detected!"); // Debug log
+
+                if (this.currentDialogueNode.options.length > 0) {
+                    // Case 1: Node HAS options -> Select the highlighted option
+                    console.log("[DialogueManager Update] Handling option selection."); // Debug log
+                    // Ensure dialogueUI has getSelectedOptionIndex() method
+                    const selectedOption = this.currentDialogueNode.options[this.dialogueUI.getSelectedOptionIndex()];
+                    if (selectedOption) {
+                        this.handleOptionSelection(selectedOption);
+                    } else {
+                        console.warn("[DialogueManager Update] Tried to select but no option found at index", this.dialogueUI.getSelectedOptionIndex());
+                    }
+
+                } else if (this.currentDialogueNode.nextDialogueId) {
+                    // Case 2: Node has NO options BUT has a nextDialogueId -> Advance
+                    console.log("[DialogueManager Update] Advancing dialogue (no options, next ID). Current Node:", this.currentDialogueNode.id, "Next ID:", this.currentDialogueNode.nextDialogueId); // Debug log
+                    const nextNodeId = this.currentDialogueNode.nextDialogueId;
+                    const nextDialogue = this.getDialogueById(nextNodeId);
+                    if (nextDialogue) {
+                        console.log("[DialogueManager Update] Found next node object:", nextDialogue.id); // Debug log
+                        this.currentDialogueNode = nextDialogue; // Update the current node *before* showing UI
+                        console.log("[DialogueManager Update] Calling UI.showDialogue for:", nextDialogue.id); // Debug log
+                        this.dialogueUI.showDialogue(nextDialogue, this.handleOptionSelection.bind(this), this.handleExitTalk.bind(this));
+                        console.log("[DialogueManager Update] Finished calling UI.showDialogue"); // Debug log
+                    } else {
+                        console.warn(`[DialogueManager Update] Next dialogue ID "${nextNodeId}" not found.`);
+                        this.endDialogue(); // End if next node is invalid
+                    }
+
+                } else {
+                    // Case 3: Node has NO options and NO nextDialogueId -> End dialogue
+                    console.log("[DialogueManager Update] Ending dialogue (no options, no next ID)."); // Debug log
+                    this.endDialogue();
+                }
+                return; // Stop processing other input for this frame
+            }
+
+            // Check for ENTER key press (Manual Exit)
+            if (Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+                console.log("[DialogueManager Update] Enter pressed, handling exit."); // Debug log
+                this.handleExitTalk(); // Use existing exit handler
+                return; // Stop processing other input for this frame
+            }
+
+            // --- Handle Input for Option Navigation (Visual only, if options exist) ---
+            if (this.currentDialogueNode.options.length > 0) {
+                // Ensure dialogueUI has handleOptionNavigationInput() method
+                this.dialogueUI.handleOptionNavigationInput();
+            }
         }
     }
 }

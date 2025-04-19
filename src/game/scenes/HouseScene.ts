@@ -220,7 +220,7 @@ export class HouseScene extends Phaser.Scene {
         if (!this.interactionPrompt) {
             const camera = this.cameras.main;
             const x = camera.scrollX + camera.width / 2;
-            const y = camera.scrollY + camera.height - 170;
+            const y = camera.scrollY + camera.height - 50;
 
             this.interactionPrompt = this.add
                 .text(x, y, 'Press n to interact', {

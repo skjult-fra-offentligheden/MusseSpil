@@ -1,0 +1,24 @@
+/* App.css or index.css */
+html, body {
+    height: 100%; /* Make sure body can fill the viewport height */
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrollbars if canvas slightly overflows */
+    background-color: #222; /* Optional: Dark background for contrast */
+}
+
+#app {
+    width: 100vw; /* Use full viewport width */
+    height: 100vh; /* Use full viewport height */
+    /* --- Use Flexbox for centering --- */
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+}
+
+    /* Optional: Ensure canvas itself behaves well within flex container */
+    #app canvas {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain; /* Similar effect to Phaser.Scale.FIT */
+    }

@@ -22,8 +22,11 @@ export class ItemActionHandler {
         //    this.showTemporaryMessage(`🚫 You can't use ${activeItem.itemName} here.`);
         //    return;
         //}
-
-        console.log(` Using active item: ${activeItem.itemId} in ${currentScene}`);
+        //console.log(`ItemActionHandler: Checking GlobalEvents instance before emit:`, GlobalEvents);
+        //// Check the property set by the last NPC constructor
+        //console.log(`ItemActionHandler: Reading _npcTest from GlobalEvents:`, (GlobalEvents as any)._npcTest);
+        //console.log(`ItemActionHandler: Listener count for 'itemUsed' before emit: ${GlobalEvents.listenerCount('itemUsed')}`);
+        //console.log(` Using active item: ${activeItem.itemId} in ${currentScene}`);
         GlobalEvents.emit('itemUsed', activeItem);
 
         switch (activeItem.itemId) {

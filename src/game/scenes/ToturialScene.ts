@@ -23,7 +23,7 @@ export class ToturialScene extends Phaser.Scene {
     interactionPrompt!: Phaser.GameObjects.Text | null;
     Objects!: Body[];
     private dialoguesData!: { [npcId: string]: DialogueNode[] };
-    private dialogueManager!: DialogueManager;
+    public dialogueManager!: DialogueManager;
     private player: Player;
     private triggers!: Phaser.Physics.Arcade.StaticGroup;
     private exitX!: number;
@@ -37,6 +37,7 @@ export class ToturialScene extends Phaser.Scene {
     private objectManager!: DialogueManager;
     private suspectsData: any;
     private inventoryManager!: InventoryManager; 
+    private isIntroDialogueActive: boolean = false;
 
     constructor() {
         super({ key: 'ToturialScene' });
@@ -109,6 +110,8 @@ export class ToturialScene extends Phaser.Scene {
         const objectsDecorationTileset = map.addTilesetImage('objects_decoration', 'objects_decoration');
 
         //CollisionLayer
+        const mapOffsetX = 200;
+        const mapOffsetY = 200;
 
         const groundLayer = map.createLayer('Below Player', [
             backgroundTileset!,
@@ -162,9 +165,6 @@ export class ToturialScene extends Phaser.Scene {
             console.error("Door trigger not found in the 'Triggers' layer");
         }
 
-        const startX = 400;
-        const startY = 400;
-
         this.player = new Player(this, this.exitX, this.exitY - 50);
         this.player.setAlpha(1);
         this.player.setDepth(5);
@@ -176,13 +176,20 @@ export class ToturialScene extends Phaser.Scene {
 
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor('#000000');
-        this.camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+        //move camera to set it center
+        this.camera.centerOn(map.widthInPixels / 2, map.heightInPixels / 2);
+
+        //this.camera.setBounds(-1 * (map.widthInPixels / 2), -1 * (map.heightInPixels / 2, map).widthInPixels, map.heightInPixels);
 
         const debugGraphics = this.add.graphics();
         this.physics.world.createDebugGraphic();
         this.physics.world.drawDebug = true;
-        debugGraphics.lineStyle(2, 0xff0000, 1);
+        if (this.physics.world.drawDebug) {
+            debugGraphics.lineStyle(2, 0xff0000, 1);
+        }
 
+
+        
         //add collisions:
         this.physics.add.collider(this.player, collisionLayer!);
         this.physics.add.collider(this.player, collisionLayer2!);
@@ -194,6 +201,18 @@ export class ToturialScene extends Phaser.Scene {
         console.log("Collision Layer:", collisionLayer);
         console.log("Triggers:", this.triggers);
 
+        const gameWidth = this.scale.width;  // Game logical width (from config)
+        const gameHeight = this.scale.height; // Game logical height (from config)
+        if (map.widthInPixels < gameWidth || map.heightInPixels < gameHeight) {
+            // Center the camera view on the center of the tilemap
+            // This makes the smaller map appear centered within the larger game viewport
+            this.camera.centerOn(map.widthInPixels / 2, map.heightInPixels / 2);
+
+            // If you were following the player, you might need to stop it initially
+            // if you want the whole map centered at the start, regardless of player position.
+            // You could re-enable follow later based on game events.
+            this.camera.stopFollow(); // Optional: Uncomment if needed
+        }
         // Launch UI Scene
 
         if (!this.scene.get('ClueDisplayScene')) {
@@ -202,7 +221,7 @@ export class ToturialScene extends Phaser.Scene {
 
         const npcConfigs = [
             {
-                scene: this, x: npcPositions['cop2']?.x || 0, y: npcPositions['cop2']?.y || 0,
+                scene: this, x: npcPositions['cop2']?.x || 0 , y: npcPositions['cop2']?.y || 0,
                 texture: "cop2", frame: "cop2.png", dialogues: this.dialoguesData['cop2'],
                 dialogueManager: this.dialogueManager, npcId: "cop2",
                 movementType: "idle", moveArea: new Phaser.Geom.Rectangle(25, 190, 50, 500),
@@ -244,7 +263,7 @@ export class ToturialScene extends Phaser.Scene {
         });
         //generate Objects
         const Objectsclue = map.getObjectLayer('ObjectCluesSpawnpoints');
-        this.createObjects(collisionLayer!, collisionLayer!, Objectsclue)
+        this.createObjects(collisionLayer!, collisionLayer!, Objectsclue, mapOffsetX, mapOffsetY)
 
         this.interactables = [...this.npcs, ...this.Objects];
 
@@ -254,6 +273,27 @@ export class ToturialScene extends Phaser.Scene {
         this.scene.bringToTop('UIGameScene');
 
         // play scenes.
+        console.log("--- Attempting to start tutorial briefing ---"); // Log Start
+
+        const chiefWhiskers = this.npcs.find(npc => npc.npcId === 'cop2');
+        console.log("Found chiefWhiskers NPC:", chiefWhiskers);
+        if (this.dialogueManager) {
+            console.log("DialogueManager exists."); // Log DM existence
+        } else {
+            console.error("DialogueManager does NOT exist here!");
+        }
+        if (chiefWhiskers && this.dialogueManager) {
+            // ... (optional: disable player input temporarily)
+            this.isIntroDialogueActive = true;
+            // Call startDialogue with the SPECIFIC briefing ID
+            console.log("Conditions met. Calling startDialogue with 'cop2', 'cop2_tutorial_briefing'.");
+            this.dialogueManager.startDialogue('cop2', 'cop2_tutorial_briefing', chiefWhiskers); // <-- Use the new ID here!
+
+            // ... (optional: setup listener for dialogueEnded to re-enable input)
+        } else {
+            console.warn("Did not start dialogue. chiefWhiskers found:", !!chiefWhiskers, "DialogueManager found:", !!this.dialogueManager); // Log failure reason
+        }
+        console.log("--- Finished attempt to start tutorial briefing ---");
 
         // first scene will the the cop going up to the player, introducing himself, the case, the controls.
         // 1 stop player movements. or take control of player movements.
@@ -286,8 +326,11 @@ export class ToturialScene extends Phaser.Scene {
     update(time: number, delta: number) {
         this.player.update();
         this.npcs.forEach((npc) => npc.update(time, delta));
+        if (this.dialogueManager) { // Check if it exists
+            this.dialogueManager.update();
+        }
 
-        if (this.dialogueManager && this.dialogueManager.isDialogueActive()) {
+        if (this.dialogueManager && this.dialogueManager.isDialogueActive() && !this.isIntroDialogueActive) {
             const currentNpc = this.dialogueManager.getCurrentNpc();
             if (currentNpc) {
                 const playerPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
@@ -295,6 +338,7 @@ export class ToturialScene extends Phaser.Scene {
                 const distance = Phaser.Math.Distance.BetweenPoints(playerPosition, npcPosition);
 
                 if (distance > MAX_DIALOGUE_DISTANCE) {
+                    console.warn(`[ToturialScene] Ending dialogue due to distance! Player: (${playerPosition.x}, ${playerPosition.y}), NPC: (${npcPosition.x}, ${npcPosition.y}), Distance: ${distance}, Max: ${MAX_DIALOGUE_DISTANCE}`);
                     this.dialogueManager.endDialogue();
                     this.hideInteractionPrompt();
                 }
@@ -310,7 +354,7 @@ export class ToturialScene extends Phaser.Scene {
             interactable.checkProximity(this.player, MAX_DIALOGUE_DISTANCE, () => {
                 interactableInRange = true;
                 activeInteractable = interactable;
-                this.showInteractionPrompt();
+                this.showInteractionPrompt(activeInteractable);
             });
         });
 
@@ -333,18 +377,28 @@ export class ToturialScene extends Phaser.Scene {
         }
     }
 
-    showInteractionPrompt() {
+    showInteractionPrompt(target: Interactable | null = null) {
         if (!this.interactionPrompt) {
+            let promptText = 'Press [SPACE] to interact';
+            if (target) {
+                if (target instanceof NPC) {
+                    promptText = `Press [SPACE] to talk to ${target.npcId}`; // Or use a display name if NPCs have one
+                } else if (target instanceof Body) {
+                    promptText = `Press [SPACE] to examine ${target.itemId}`; // Or use an item display name
+                }
+                // Add more checks if you have other interactable types
+            }
+
             const camera = this.cameras.main;
             const x = camera.scrollX + camera.width / 2;
-            const y = camera.scrollY + camera.height - 170;
+            const y = camera.scrollY + camera.height - 50;
 
             this.interactionPrompt = this.add
-                .text(x, y, 'Press n to interact', {
-                    fontSize: '14px',
+                .text(x, y, promptText, {
+                    fontSize: '16px',
                     color: '#ffffff',
-                    backgroundColor: '#000000',
-                    padding: { x: 10, y: 5 },
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: { x: 8, y: 4 },
                 })
                 .setOrigin(0.5, 0);
         }
@@ -363,9 +417,9 @@ export class ToturialScene extends Phaser.Scene {
         //første del skal være objects layer
         const orig_objects = [
             { x: objectsCluePos["cluePhone"].x || 600, y: objectsCluePos["cluePhone"].y || 500, texture: 'cluePhone', dialogueKey: 'cluePhone', itemId: 'cluePhone', description: "A phone used in the drug traficking business", scale: .5, collectible: true },
-            { x: objectsCluePos["clueCoke"].x || 600, y: objectsCluePos["clueCoke"].y || 400, texture: 'clueCoke', dialogueKey: 'clueCoke', itemId: 'clueCoke', description: 'A bag of coke.', scale: 0.6, collectible: true },
-            { x: objectsCluePos["glue"].x || 600, y: objectsCluePos["glue"].y || 400, texture: 'glue', dialogueKey: 'glue', itemId: 'glue', description: 'some glue ? ', scale: 0.7, collectible: true },
-            { x: objectsCluePos["clueCheese"].x || 600, y: objectsCluePos["clueCheese"].y || 400, texture: 'clueCheese', itemId: "clueCheese", dialogueKey: 'clueCheese', description: 'Hmm, some delicious cheese.', scale: 0.6, collectible: true },
+            { x: objectsCluePos["clueCoke"].x || 600, y: objectsCluePos["clueCoke"].y  || 400 , texture: 'clueCoke', dialogueKey: 'clueCoke', itemId: 'clueCoke', description: 'A bag of coke.', scale: 0.6, collectible: true },
+            { x: objectsCluePos["glue"].x || 600, y: objectsCluePos["glue"].y  || 400 , texture: 'glue', dialogueKey: 'glue', itemId: 'glue', description: 'some glue ? ', scale: 0.7, collectible: true },
+            { x: objectsCluePos["clueCheese"].x || 600 , y: objectsCluePos["clueCheese"].y || 400 , texture: 'clueCheese', itemId: "clueCheese", dialogueKey: 'clueCheese', description: 'Hmm, some delicious cheese.', scale: 0.6, collectible: true },
         ];
 
 
