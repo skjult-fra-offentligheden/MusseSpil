@@ -2,13 +2,13 @@
 import Phaser from 'phaser';
 import { DialogueNode, DialogueOption } from '../dialogues/dialogues';
 import { NPC } from '../NPCgeneral/npc';
-import { ClueManager } from '../managers/clueManager';
+import { ClueManager } from '../clueScripts/clueManager';
 import { Clue } from '../classes/clue';
 import { InventoryManager } from '../managers/itemMananger';
 import { CallbackHandler } from '../managers/CallBackManager';
 import { GameState } from '../managers/GameState';
 import { DialogueUI } from '../dialogues/dialogueUI';
-
+import { AllItemConfigs } from '../../data/items/AllItemConfig';
 export class DialogueManager {
     private scene: Phaser.Scene;
     private isActive: boolean = false;
@@ -21,25 +21,24 @@ export class DialogueManager {
     private selectedOptionIndex: number = 0;
     private dialoguesData: { [npcId: string]: DialogueNode };
     private inventoryManager: InventoryManager;
-    private callbackHandler: CallbackHandler;
     private dialogueUI: DialogueUI;
     private spaceKey: Phaser.Input.Keyboard.Key;
     private enterKey: Phaser.Input.Keyboard.Key;
+    private callbackHandler: CallbackHandler;
     constructor(
         scene: Phaser.Scene,
         dialoguesData: { [npcId: string]: DialogueNode },
         clueManager: ClueManager,
-        cluesData: { [key: string]: Clue },
-        inventoryManager: InventoryManager
+        inventoryManager: InventoryManager,
+        callbackHandler: CallbackHandler
     ) {
         this.scene = scene;
         this.dialoguesData = dialoguesData;
         this.clueManager = clueManager;
-        this.cluesData = cluesData;
         this.inventoryManager = inventoryManager;
-
+        this.callbackHandler = callbackHandler;
         this.dialogueUI = new DialogueUI(scene);
-        this.callbackHandler = new CallbackHandler(scene, clueManager, inventoryManager, cluesData);
+        //this.callbackHandler = new CallbackHandler(scene, clueManager, inventoryManager, cluesData);
 
         // Keyboard input setup delegated to DialogueUI where applicable
         this.scene.events.on('start', () => this.reset());
@@ -54,36 +53,88 @@ export class DialogueManager {
         this.dialogueUI.setScene(scene); // Update UI scene if changed
     }
 
+
+
     public startDialogue(
-        npcId: string,
-        startDialogueId: string = 'greeting',
-        npcInstance?: NPC,
-        dialogueData?: DialogueNode[],
-        context?: any
+        sourceId: string, // Renamed to be more generic (NPC id or Item id)
+        startDialogueNodeId: string = 'greeting', // Entry point dialogue node ID within the source's dialogue array
+        speakerContext?: NPC | any, // The NPC instance or the Body instance (for items)
+        // dialogueData?: DialogueNode[], // REMOVE this if we fetch from AllItemConfigs for items
+        //context?: any // REMOVE this if speakerContext is the main context
     ) {
+        console.log("[DialogueManager] passed vars", sourceId, startDialogueNodeId, speakerContext, this.isActive)
+
+
         if (this.isActive) return;
+
+
         this.isActive = true;
-        this.currentNpcId = npcId;
-        this.currentNpc = npcInstance;
+        this.currentNpcId = sourceId; 
+        this.currentNpc = (speakerContext instanceof NPC) ? speakerContext : null;
 
-        // Load dialogues
-        this.currentDialogues = (npcInstance && npcInstance.dialogues) ? npcInstance.dialogues : this.dialoguesData[npcId] || [];
+        console.log("[DialogueManager] current NPC", this.currentNpc, this.currentNpcId)
 
-        // Filter dialogues based on conditions
-        if (npcInstance && npcInstance.npcMemory) {
-            this.currentDialogues = this.currentDialogues.filter(node =>
-                !node.condition || node.condition(GameState.getInstance(), npcInstance.npcMemory)
-            );
+        // --- Determine the source of dialogue data ---
+        const itemConfig = AllItemConfigs[sourceId]; // Check if it's an item
+        if (itemConfig && itemConfig.dialogue) {
+            this.currentDialogues = itemConfig.dialogue;
+            console.log(`[DialogueManager] Using ITEM dialogue for: ${sourceId}`);
+        } else if (this.dialoguesData[sourceId]) { // Fallback to NPC dialogues from preloaded JSON
+            // Ensure this.dialoguesData[sourceId] is an array of DialogueNode
+            // If it's a single DialogueNode (as your constructor param type suggests), you might need to wrap it.
+            // Assuming this.dialoguesData[npcId] is DialogueNode[] for NPCs:
+
+            //IT ENTER HEREE
+            console.log("[DialogueManager] else if", this.dialoguesData[sourceId])
+            this.currentDialogues = Array.isArray(this.dialoguesData[sourceId])
+                ? this.dialoguesData[sourceId] as DialogueNode[]
+                : [this.dialoguesData[sourceId] as DialogueNode]; // Wrap if it's a single node
+            console.log(`[DialogueManager] Using NPC dialogue for: ${sourceId}`);
+        } else {
+            console.warn(`[DialogueManager] No dialogue data found for source: ${sourceId}`);
+            this.currentDialogues = [];
+            this.isActive = false;
+            return;
         }
 
-        const startDialogue = this.getDialogueById(startDialogueId);
-        console.log(`[DialogueManager] Node found for ${startDialogueId}:`, startDialogue);
+
+        // Filter dialogues based on conditions (if applicable, mostly for NPCs)
+        if (this.currentNpc && this.currentNpc.npcMemory) {
+            this.currentDialogues = this.currentDialogues.filter(node => {
+                // 'node.condition' is the text like "playerDidCocaine"
+                // We pass this text to our "Question Answerer" (evaluateCondition)
+                console.log("[DialogueManager] if this.currentNPC and this.currentNPC.memory", node.condition, this.evaluateCondition(node.condition))
+                //results:
+                //undefined true
+                //playerDidGlue_1 false
+                //all conditions, and false
+                return this.evaluateCondition(node.condition);
+            }); // <<< ADDED ')' HERE
+        } // <<< ADDED '}' HERE
+
+        console.log("[DialogueManager] currentDialogues.length", this.currentDialogues.length)
+        // console log result 13 (with npc  cop2)
+        // It's possible that after filtering, no dialogues remain, or the startDialogueNodeId is filtered out.
+        if (this.currentDialogues.length === 0) {
+            console.warn(`[DialogueManager] After filtering conditions, no dialogues remain for source: ${sourceId}`);
+            this.isActive = false;
+            return;
+        }
+
+        let startDialogue = this.getDialogueById(startDialogueNodeId);
+        console.log(`[DialogueManager] Node found for ${startDialogueNodeId}:`, startDialogue); // Moved for clarity
+        if (!startDialogue) {
+            // pick the first remaining node as a fallback
+            startDialogue = this.currentDialogues[0];
+            console.warn(`[DialogueManager] "${startId}" filtered out; ` +
+                `falling back to "${startDialogue?.id}".`);
+        }
         if (startDialogue) {
-            this.callbackHandler.setContext(context);
+            console.log(`[DialogueManager] Starting with node for ${startDialogueNodeId}:`, startDialogue);
             this.currentDialogueNode = startDialogue;
             this.dialogueUI.showDialogue(startDialogue, this.handleOptionSelection.bind(this), this.handleExitTalk.bind(this));
         } else {
-            console.warn(`Dialogue ID "${startDialogueId}" not found for NPC "${npcId}".`);
+            console.warn(`Dialogue ID "${startDialogueNodeId}" not found for source "${sourceId}" (possibly filtered out by condition).`);
             this.isActive = false;
         }
     }
@@ -116,16 +167,32 @@ export class DialogueManager {
     }
 
     public endDialogue() {
-        console.log("Before emitting 'dialogueEnded'", this.currentNpcId);
-        console.time("test");
+        if (!this.isActive) return; // Prevent multiple calls if already ended
+
+        const npcIdThatWasTalking = this.currentNpcId; // Store the ID of the NPC whose dialogue is ending
+
+        //console.log("Before resetting state in endDialogue for", npcIdThatWasTalking);
+        //console.time("test");
+
         this.isActive = false;
         this.currentNpc = null;
+        this.currentNpcId = ''; // Reset DM's state
         this.dialogueUI.hideDialogue();
-        this.scene.physics.world.resume();
-        this.scene.events.emit('dialogueEnded', this.currentNpcId);
-        console.timeEnd("test");
-        console.log("Listener count for 'dialogueEnded':", this.scene.events.listenerCount('dialogueEnded'));
+        if (this.scene.physics.world) { // Check if world exists (e.g. scene not shutting down)
+            this.scene.physics.world.resume();
+        }
 
+        //console.timeEnd("test");
+
+        if (npcIdThatWasTalking) { // Only emit if there was an active NPC
+            const specificEventName = `dialogueEnded_${npcIdThatWasTalking}`;
+            console.log(`[DialogueManager] Emitting specific event: ${specificEventName}`);
+            this.scene.events.emit(specificEventName, npcIdThatWasTalking); // Emit specific event
+
+            // Log listener count for the specific event if you want to debug that
+            // console.log(`Listener count for '${specificEventName}':`, this.scene.events.listenerCount(specificEventName));
+        }
+        // console.log("Listener count for generic 'dialogueEnded':", this.scene.events.listenerCount('dialogueEnded'));
     }
 
     public getCurrentNpc(): NPC | null {
@@ -145,6 +212,65 @@ export class DialogueManager {
 
     public getSelectedOptionIndex(): number {
         return this.selectedOptionIndex;
+    }
+
+    private evaluateCondition(conditionKey: string): boolean {
+        if (!conditionKey) return true;
+
+        const gameState = GameState.getInstance(this.scene); // Still useful for eventsAddressed or other global flags
+
+        // Helper to get item state (assuming unique evidence items for now, so we check AllItemConfigs)
+        // In a more complex system, you'd get the item instance from InventoryManager
+        const getItemState = (itemId: string) => {
+            const itemConfig = AllItemConfigs[itemId];
+            if (!itemConfig) {
+                console.warn(`[DialogueManager] Item config not found for ID: ${itemId} in getItemState`);
+                return null; // Or some default state
+            }
+            return {
+                timesUsed: itemConfig.timesUsed || 0, // Default to 0 if not present
+                currentStatus: itemConfig.currentStatus || itemConfig.initialStatus || 'full' // Default status
+            };
+        };
+
+        let itemState; // To hold the state of the relevant item
+
+        switch (conditionKey) {
+            case "playerDidCocaine": // This implies the coke is now 'empty' or used at least once
+                itemState = getItemState('coke');
+                // Condition is true if coke has been used at least once OR is empty
+                return itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false;
+
+            case "playerDidGlue_1":
+                itemState = getItemState('clueGlue'); // Assuming 'clueGlue' is the ID
+                return itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerDidGlue_1_event") : false;
+
+            case "playerDidGlue_2":
+                itemState = getItemState('clueGlue');
+                return itemState ? itemState.timesUsed === 2 && !gameState.hasEventBeenAddressed("playerDidGlue_2_event") : false;
+
+            case "playerDidGlue_3":
+                itemState = getItemState('clueGlue');
+                return itemState ? itemState.timesUsed >= 3 && !gameState.hasEventBeenAddressed("playerDidGlue_3_event") : false;
+
+            case "player_ate_cheese_1":
+                itemState = getItemState('blueCheese'); // Assuming 'blueCheese' is the ID
+                return itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerAteCheese_1_event") : false;
+
+            case "player_ate_cheese_2":
+                itemState = getItemState('blueCheese');
+                return itemState ? itemState.timesUsed >= 2 && !gameState.hasEventBeenAddressed("playerAteCheese_2_event") : false;
+
+            // ... other non-item-consumption conditions ...
+            case "hasBlueCheeseClue":
+                return this.clueManager.hasClue("blueCheese_clue_id_from_config"); // Use actual clue ID
+            case "cokeSellerIdentified":
+                return gameState.getFlag("cokeSellerFound"); // Example if using globalFlags
+
+            default:
+                console.warn(`[DialogueManager] Unknown condition key in evaluateCondition: ${conditionKey}`);
+                return true; // Or false
+        }
     }
 
     public update() {

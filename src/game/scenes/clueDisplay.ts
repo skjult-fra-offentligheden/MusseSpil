@@ -4,6 +4,7 @@ import Phaser from 'phaser';
 import { Clue } from '../classes/clue';
 import { ClueManager } from '../clueScripts/clueManager';
 import { Button } from "../scripts/buttonScript"
+import { artKey } from '../scenes/ToturialScene/evidenceArtHelper';
 interface ClueDisplaySceneData {
     clueManager: ClueManager;
 }

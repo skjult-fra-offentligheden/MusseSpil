@@ -1,0 +1,91 @@
+
+    {
+        "orangeShirtMouse": [
+            {
+                "id": "greeting",
+                "speaker": "Albino Mouse",
+                "text": "Drugs? No way! I was just... admiring the cheese. It's so much better than usual...",
+                "options": [
+                    {
+                        "id": "play_stupid",
+                        "speaker": "Detective",
+                        "text": "Oh, why?",
+                        "nextDialogueId": "play_stupid"
+                    },
+                    {
+                        "id": "no_thanks",
+                        "speaker": "Detective",
+                        "text": "You are kind of a freak",
+                        "nextDialogueId": "no_thanks",
+                        "effectKey": "decreaseNPCReputation",
+                        "once": true
+                    }
+                ]
+            },
+            {
+                "id": "play_stupid",
+                "speaker": "Albino Mouse",
+                "text": "Everyone looks down on albinos",
+                "options": [
+                    {
+                        "id": "play_stupid2",
+                        "speaker": "Detective",
+                        "text": "Yeah, me too",
+                        "nextDialogueId": "no_thanks"
+                    },
+                    {
+                        "id": "Weird",
+                        "speaker": "Detective",
+                        "text": "I think you are worth just as much as a normal mouse",
+                        "nextDialogueId": "Weird"
+                    }
+                ]
+            },
+            {
+                "id": "no_thanks",
+                "speaker": "Albino Mouse",
+                "text": "Thanks, now I have something to cry about tonight",
+                "options": [
+                    {
+                        "id": "be_mean",
+                        "speaker": "Detective",
+                        "text": "You can cry in jail. You're the guilty one",
+                        "nextDialogueId": "i_want_a_lawyer"
+                    },
+                    {
+                        "id": "be_supportive",
+                        "speaker": "Detective",
+                        "text": "Look, I'll find out what happened.'",
+                        "nextDialogueId": "i_want_a_lawyer"
+                    }
+                ]
+
+            },
+            {
+                "id": "Weird",
+                "speaker": "Albino Mouse",
+                "text": "That is a weird thing to say",
+                "options": [
+                    {
+                        "id": "super_weird",
+                        "speaker": "Detective",
+                        "text": "Whatever you say, FREAK!",
+                        "nextDialogueId": "no_thanks"
+                    },
+                    {
+                        "id": "be_supportive",
+                        "speaker": "Detective",
+                        "text": "Look, I'll find out what happened.'",
+                        "nextDialogueId": "i_want_a_lawyer"
+                    }
+                ]
+            },
+            {
+                "id": "i_want_a_lawyer",
+                "speaker": "Albino Mouse",
+                "text": "I want a lawyer",
+                "options": [
+                ]
+            }
+        ]
+}

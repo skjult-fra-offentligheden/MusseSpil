@@ -1,0 +1,61 @@
+
+    {
+        "rockerMouse": [
+            {
+                "id": "greeting",
+                "speaker": "Rocker",
+                "text": "This is bogus! I was just fixin' my guitar stand, got glue everywhere",
+                "options": [
+                    {
+                        "id": "play_stupid",
+                        "speaker": "Detective",
+                        "text": "Did what?",
+                        "nextDialogueId": "play_stupid"
+                    },
+                    {
+                        "id": "no_thanks",
+                        "speaker": "Detective",
+                        "text": "Yeah, you did it",
+                        "nextDialogueId": "no_thanks"
+                    }
+                ]
+            },
+            {
+                "id": "play_stupid",
+                "speaker": "Rocker",
+                "text": "Kill the guy",
+                "options": [
+                    {
+                        "id": "play_stupid2",
+                        "speaker": "Detective",
+                        "text": "It was a guy?",
+                        "nextDialogueId": "play_stupid2"
+                    },
+                    {
+                        "id": "Weird",
+                        "speaker": "Detective",
+                        "text": "Was he your customer?",
+                        "nextDialogueId": "Weird"
+                    }
+                ]
+            },
+            {
+                "id": "no_thanks",
+                "speaker": "Rocker",
+                "text": "Detective, disrespectfully, leave",
+                "options": []
+            },
+            {
+                "id": "play_stupid2",
+                "speaker": "Rocker",
+                "text": "You must be blind",
+                "options": []
+            },
+            {
+                "id": "Weird",
+                "speaker": "Rocker",
+                "text": "... I am not talking to you anymore",
+                "options": []
+            }
+        ]
+    }

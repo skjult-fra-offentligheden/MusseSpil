@@ -1,6 +1,5 @@
 import { GameState } from '../managers/GameState';
 import { InventoryManager } from '../managers/itemMananger';
-
 export class UIManager {
     private static instance: UIManager;
     private currentScene: Phaser.Scene | null = null;
@@ -68,7 +67,7 @@ export class UIManager {
 
     public showJournal() {
         const gameState = GameState.getInstance();
-        const clueManager = gameState.clueManager;
+        const clueManager = gameState.getClueManager();
 
         if (!this.currentScene) {
             console.error('No current scene set in UIManager.');
@@ -88,27 +87,67 @@ export class UIManager {
         this.currentScene.scene.bringToTop('ClueJournal');
     }
 
-    public showAccusation() {
+    public showNotification(message: string): void {
         if (!this.currentScene) {
-            console.error('No current scene set in UIManager.');
+            console.warn("[UIManager] Scene not set in UIManager. Cannot show notification.");
+            // Fallback to console if no scene to draw on
+            console.log(`[UI NOTIFICATION - NO SCENE]: ${message}`);
             return;
         }
-        if (this.currentScene.scene.isActive('AccusationScene')) {
-            console.log('Guide scene is already active, not launching again.');
-            return;
-        }
+        console.log(`[UIManager] Showing notification: "${message}" on scene ${this.currentScene.scene.key}`);
 
-        const gameState = GameState.getInstance();
-        const suspectsData = gameState.suspectsData;
-        const clueManager = gameState.clueManager;
-        const suspectsSprites = gameState.npcIdleFrames;
+        // Simple notification display logic
+        const notificationText = this.currentScene.add.text(
+            this.currentScene.cameras.main.centerX,    // Center X of the camera
+            this.currentScene.cameras.main.scrollY + this.currentScene.cameras.main.height - 60, // Bottom of camera view, minus offset
+            message,
+            {
+                fontSize: '16px',
+                fontFamily: '"Verdana", "Arial", sans-serif', // Specify a common font
+                color: '#ffffff',
+                backgroundColor: 'rgba(0,0,0,0.75)',
+                padding: { x: 15, y: 8 },
+                align: 'center',
+                wordWrap: { width: this.currentScene.cameras.main.width - 60, useAdvancedWrap: true } // Word wrap
+            }
+        )
+            .setOrigin(0.5)
+            .setDepth(Phaser.Math.MAX_SAFE_INTEGER) // Ensure it's on top of everything
+            .setScrollFactor(0); // Make it fixed to the camera, so it doesn't scroll with the world
 
-        console.log("About to showAccusation", suspectsData, clueManager, suspectsData);
-        //flyt logiken her ?
-        this.currentScene.scene.pause();
-        this.currentScene.scene.launch('AccusationScene', { suspectsData, clueManager, suspectsSprites, originScene: this.originScene });
-        this.currentScene.scene.bringToTop('AccusationScene');
+        // Automatically destroy the text after a few seconds
+        this.currentScene.tweens.add({
+            targets: notificationText,
+            alpha: { from: 1, to: 0 }, // Fade out
+            delay: 2500,               // Start fading after 2.5 seconds
+            duration: 500,             // Fade out over 0.5 seconds
+            onComplete: () => {
+                notificationText.destroy();
+            }
+        });
     }
+
+    //public showAccusation() {
+    //    if (!this.currentScene) {
+    //        console.error('No current scene set in UIManager.');
+    //        return;
+    //    }
+    //    if (this.currentScene.scene.isActive('AccusationScene')) {
+    //        console.log('Guide scene is already active, not launching again.');
+    //        return;
+    //    }
+
+    //    const gameState = GameState.getInstance();
+    //    const suspectsData = gameState.suspectsData;
+    //    const clueManager = gameState.clueManager;
+    //    const suspectsSprites = gameState.npcIdleFrames;
+
+    //    console.log("About to showAccusation", suspectsData, clueManager, suspectsData);
+    //    //flyt logiken her ?
+    //    this.currentScene.scene.pause();
+    //    this.currentScene.scene.launch('AccusationScene', { suspectsData, clueManager, suspectsSprites, originScene: this.originScene });
+    //    this.currentScene.scene.bringToTop('AccusationScene');
+    //}
 
 
 

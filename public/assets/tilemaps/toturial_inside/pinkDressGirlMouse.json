@@ -1,0 +1,36 @@
+
+    {
+        "pinkDressGirlMouse": [
+            {
+                "id": "greeting",
+                "speaker": "Pink Mouse",
+                "text": "This is beneath me. That phone? Never seen it",
+                "options": [
+                    {
+                        "id": "compliment",
+                        "speaker": "Detective",
+                        "text": "You do look lovely!",
+                        "nextDialogueId": "compliment_response"
+                    },
+                    {
+                        "id": "dismiss",
+                        "speaker": "Detective",
+                        "text": "Granny says a lot of things.",
+                        "nextDialogueId": "dismiss_response"
+                    }
+                ]
+            },
+            {
+                "id": "compliment_response",
+                "speaker": "Pink Mouse",
+                "text": "Aww, thank you!",
+                "options": []
+            },
+            {
+                "id": "dismiss_response",
+                "speaker": "Pink Mouse",
+                "text": "Hmph, you’re just mean.",
+                "options": []
+            }
+        
+]}

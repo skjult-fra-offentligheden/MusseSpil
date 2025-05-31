@@ -2,38 +2,22 @@
 
 import Phaser, { Scene } from 'phaser';
 import { DialogueNode } from './dialogues';
-import { DialogueManager } from '../managers/dialogueManager';
+import { DialogueManager } from '../dialogues/dialogueManager';
 import { Interactable } from '../managers/interactables';
-import { Player } from './player';
+import { Player } from '../classes/player';
 import { InventoryManager } from '../managers/itemMananger';
 import { NPCReactions } from '../scenes/ToturialScene/npcReactions';
 import { Item } from "../classes/itemDatastruct";
 import { GlobalEvents } from '../../factories/globalEventEmitter';
 import { npcMemory } from "../../data/npcMemory";
-interface NPCOptions {
-    scene: Phaser.Scene;
-    x: number;
-    y: number;
-    texture?: string;
-    frame?: string | number;
-    dialogues: DialogueNode[];
-    dialogueManager: DialogueManager;
-    npcId: string;
-    movementType?: string; // 'idle', 'patrol', 'random'
-    speed?: number;
-    patrolPoints?: { x: number; y: number }[];
-    moveArea?: Phaser.Geom.Rectangle;
-    isUnique?: boolean;
-    atlasKey?: string;
-    animationKeys?: {
-      walkLeft?: string;
-      walkRight?: string;
-      idle?: string;
-      // Add other animations as needed
-    };
-  }
+import { ItemUsedEventPayload } from '../../data/events/eventTypes';
+import { NPCConfig as RichNPCConfig, NPCMovementType } from '../../data/NPCs/npcTemplate';
+import { GameState } from '../managers/GameState';
 
 export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
+    public displayName: string; 
+    public config: RichNPCConfig;
+
     private dialogues: DialogueNode[];
     private isDialogueActive: boolean = false;
     private dialogueManager: DialogueManager;
@@ -42,10 +26,9 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private dialogueState: string;
 
     // Animations
-    private animsLeft?: string;
-    private animsRight?: string;
-    private animsIdle?: string;
-    private textureKey: string;
+    private animsIdleKey: string;
+    private animsWalkLeftKey?: string;
+    private animsWalkRightKey?: string;
 
     // Movement
     private speed: number;
@@ -61,105 +44,126 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private readonly MIN_MOVE_DISTANCE: number = 2;
 
     // reactions
-    private reactions: any;
+    private reactionsData: Record<string, string>;
+    private isReactingToItem: boolean = false;
+    private reactionTimer: number = 0;
+    private reactionAnimationKey: string | null = null;
+    private myDialogueNodes: DialogueNode[];
+    //sensory range
+    private sensoryRange: number;
+    constructor(scene: Phaser.Scene, x: number, y: number, config: RichNPCConfig, dialogueNodesForThisNPC: DialogueNode[], dialogueManager: DialogueManager) {
+        if (!scene.textures.exists(config.textureKey)) {
+            console.error(`[NPC Constructor - ${config.npcId}] Texture key "${config.textureKey}" NOT FOUND in cache. Preload it! Using fallback.`);
+            // It's better to throw an error or have a proper fallback texture defined in your game config
+            // For now, super will likely error or use a missing texture.
+        }
 
-    constructor(options: NPCOptions) {
-        const { scene, x, y, texture, frame, dialogues, dialogueManager,
-            npcId = 'npc1', movementType = 'idle', speed = 50,
-            patrolPoints = [], moveArea, isUnique = false,
-            atlasKey, animationKeys, } = options;
-        const textureKey = options.isUnique && options.atlasKey ? options.atlasKey : options.texture;
-        super(scene, x, y, textureKey, frame);
+        super(scene, x, y, config.textureKey, config.initialFrame || 0);
 
-
-        this.dialogueState = 'greeting';
-        this.dialogues = dialogues;
+        this.config = config;
+        this.dialogues = config.dialogues;
         this.dialogueManager = dialogueManager;
-        this.npcId = npcId;
+        this.myDialogueNodes = dialogueNodesForThisNPC;
 
-        //animation frames
-        if (isUnique && atlasKey && animationKeys) {
-            // Use unique atlas and animations
-            this.animsLeft = animationKeys.walkLeft;
-            this.animsRight = animationKeys.walkRight;
-            this.animsIdle = animationKeys.idle;
-            this.textureKey = atlasKey;
-            //console.log("NPC TEXTURE show textures: left: " + this.animsLeft + " right: " + this.animsRight + " idle: "+ this.animsIdle + " texturekey: "+ this.textureKey)
-        } else {
-            // Use standard animations
-            this.animsLeft = 'walk_left';
-            this.animsRight = 'walk_right';
-            this.animsIdle = 'idle';
-            this.textureKey = 'standard_npcs_atlas';
+        this.npcId = config.npcId;
+        this.dialogueState = 'greeting';
+        this.sensoryRange = config.sensoryRange || 500;
+
+        this.animsIdleKey = config.animations.idleKey;
+        this.animsWalkLeftKey = config.animations.walkLeftKey;
+        this.animsWalkRightKey = config.animations.walkRightKey;
+        if (!this.animsIdleKey) {
+            console.warn(`[NPC ${this.npcId}] Constructor: animsIdleKey is not defined in config.animations!`);
         }
 
         //console.log("NPC TEXTURE " + textureKey)
         //console.log("NPC looking for correct " + atlasKey + " and is unique " + isUnique)
         //console.log("NPC animationkeys " + JSON.stringify(animationKeys) + " frames " + frames) 
         // Movement properties
-        this.speed = speed;
-        this.movementType = movementType;
-        this.patrolPoints = patrolPoints || [];
+        this.speed = config.speed;
+        this.movementType = config.movementType;
+        this.patrolPoints = config.patrolPoints || [];
         this.targetPointIndex = 0;
-        this.moveArea = moveArea || new Phaser.Geom.Rectangle(x - 100, y - 100, 200, 200);
+        this.moveArea = config.moveArea ? new Phaser.Geom.Rectangle(config.moveArea.x, config.moveArea.y, config.moveArea.width, config.moveArea.height) : new Phaser.Geom.Rectangle(x - 100, y - 100, 200, 200);
+        this.sensoryRange = config.sensoryRange || 150;
+
+
         this.previousPosition = new Phaser.Math.Vector2(this.x, this.y);
+        this.isReactingToItem = false;
+        this.reactionTimer = 0;
+        this.displayName = config.displayName;
 
         // Add the NPC sprite to the scene and enable physics
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
 
-        this.body.setCollideWorldBounds(true);
-        this.body.setBounce(0); // Prevent bouncing off walls
-        this.body.setFriction(1, 1); // Increase friction to reduce sliding
-
-        // Set NPC as immovable
-        this.setImmovable(true);
+        if (this.body) { // Check if body exists (it should as it extends Physics.Arcade.Sprite)
+            this.body.setCollideWorldBounds(true);
+            this.body.setBounce(0);
+            this.body.setFriction(1, 1);
+            this.setImmovable(true);
+        } else {
+            console.error(`[NPC ${this.npcId}] FAILED TO GET PHYSICS BODY!`);
+        }
+        this.setScale(config.defaultScale || 1.0); // Set scale from config or default
+        this.setDepth(config.depth || 5);  
 
         // Set up interaction
-        this.setInteractive();
+        this.setInteractive({ useHandCursor: true });
         this.on('pointerdown', () => {
+            console.log(`[NPC ${this.npcId}] Clicked! Initiating dialogue.`);
+
             this.initiateDialogue();
         });
 
-        this.scene.events.on('dialogueEnded', this.onDialogueEnded, this);
+        if (this.scene.events) { // Make sure scene.events is available
+            this.scene.events.on(`dialogueEnded_${this.npcId}`, this.onDialogueEnded, this);
+        }
 
-        this.reactions = NPCReactions[this.npcId] || {};
-        this.setupListeners(); // ✅ Listen for item use events
-        //console.log(`🔎 Loaded reactions for NPC ${this.npcId}:`, this.reactions);e
+        this.reactionsData = config.simpleReactions || NPCReactions[this.npcId] || {};
+        this.setupListeners();
+
+        // Call onSpawn from config if it exists
+        this.config.onSpawn?.call(this, this.scene);
+
+        // Play initial idle animation
+        if (this.animsIdleKey) {
+            this.playAnimationByKey(this.animsIdleKey); // Use a consistent play method
+        } else {
+            console.warn(`[NPC ${this.npcId}] No idle animation key defined in config.animations.idleKey. NPC might not animate initially.`);
+        }
+        console.log(`[NPC ${this.npcId}] Created. DisplayName: ${this.displayName}, Movement: ${this.movementType}`);
+
 
     }
 
     //play animation
-    private playAnimation(state: string): void {
-        let animKey: string | undefined;
-        switch (state) {
-            case "left":
-                //console.log("playing left " + this.animsLeft)
-                animKey = this.animsLeft;
-                break;
-            case "right":
-                animKey = this.animsRight;
-                break;
-            case "idle":
-            default:
-                animKey = this.animsIdle;
-                break;
+    private playAnimationByKey(animationNameKey: string, ignoreIfPlaying: boolean = true): void {
+        if (!animationNameKey) {
+            // console.warn(`[NPC ${this.npcId}] playAnimationByKey called with no key.`);
+            return;
+        }
+        if (!this.anims) {
+            console.error(`[NPC ${this.npcId}] Anims controller not available for playing ${animationNameKey}`);
+            return;
         }
 
-        //console.log(" check if it can play " + animKey + " " + this.anims.currentAnim?.key + " " + animKey)
-        if (animKey && this.anims.currentAnim?.key !== animKey) {
-            try {
-                if (typeof animKey === "string" && animKey.includes("idle") && this.anims.currentAnim?.key) {
-                    //hi
-                }
-                else {
-                    this.play(animKey, true)
-                }
-            } catch (error) {
-                //console.error("An error happened in the anim play " + error)
-            }
-
+        if (ignoreIfPlaying && this.anims.currentAnim && this.anims.currentAnim.key === animationNameKey) {
+            return; // Already playing this, don't restart
         }
+
+        try {
+            this.play(animationNameKey, ignoreIfPlaying);
+        } catch (error) {
+            console.error(`[NPC ${this.npcId}] Error playing animation "${animationNameKey}":`, error);
+        }
+    }
+
+    private onDialogueEnded(): void { // No parameter needed if event is specific like 'dialogueEnded_npcId'
+        console.log(`[NPC ${this.npcId}] Dialogue ended event received.`);
+        this.isDialogueActive = false;
+        const player = this.scene.registry.get('player') as Player | undefined; // Get from registry
+        this.config.onDialogueEnd?.call(this, player!);
     }
 
     public checkProximity(player: Player, range: number, onInRange: () => void): void {
@@ -177,25 +181,42 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         visitedDialogues: new Set<string>()
     }
 
-    public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
-        this.initiateDialogue();
+    public initiateInteraction(playerParam?: Player): void {
+        if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return;
+        this.setVelocity(0);
+        this.isDialogueActive = true;
+
+        const initialNodeId = this.config.dialogues?.[0]?.id || 'greeting';
+        // Call onDialogueStart from config if it exists
+        const playerForDialogue = playerParam || this.scene.registry.get('player') as Player | undefined;
+        if (playerForDialogue) {
+            this.config.onDialogueStart?.call(this, playerForDialogue);
+        } else {
+            console.warn(`[NPC ${this.npcId}] Player not available for onDialogueStart callback.`);
+        }
+
+        this.dialogueManager.startDialogue(this.npcId, initialNodeId, this);
     }
 
     // Method to initiate dialogue
-    public initiateDialogue(): void {
-        if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return; // Prevent multiple dialogues
+    public initiateDialogue(playerParam?: Player): void {
+        console.log('this.dialogueManager', this.dialogueManager);
+        console.log('scene.dialogueManager', (this.scene as any).dialogueManager);
+        if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return;
         this.setVelocity(0);
         this.isDialogueActive = true;
-        this.dialogueManager.startDialogue(this.npcId, 'greeting', this); // Pass NPC ID
-    }
 
-    // Handler for when dialogue ends
-    private onDialogueEnded(endedNpcId: string): void {
-        if (endedNpcId === this.npcId) {
-            this.isDialogueActive = false;
+        const initialNodeId = this.config.dialogues?.[0]?.id || 'greeting';
+        // Call onDialogueStart from config if it exists
+        const playerToUse = playerParam || this.scene.registry.get('player') as Player | undefined;
+        if (!playerToUse) {
+            console.error(`[NPC ${this.npcId}] Player instance not available for onDialogueStart.`);
+            // Potentially skip onDialogueStart or handle error
+        } else {
+            this.config.onDialogueStart?.call(this, playerToUse); // Use playerToUse
         }
+        this.dialogueManager.startDialogue(this.npcId, initialNodeId, this);
     }
-
 
     private patrolMovement(): void {
         if (this.patrolPoints.length < 2) {
@@ -216,6 +237,28 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
             const angle = Math.atan2(dy, dx);
             this.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
         }
+    }
+
+    private turnTowards(targetX: number, targetY: number): void {
+        // This method now primarily DECIDES the animation key for the reaction
+        // and sets this.reactionAnimationKey. It also plays it.
+        let newReactionAnimKey: string | null = null;
+
+        if (targetX < this.x && Math.abs(targetX - this.x) > 5 && this.animsLeft) {
+            newReactionAnimKey = this.animsLeft;
+        } else if (targetX > this.x && Math.abs(targetX - this.x) > 5 && this.animsRight) {
+            newReactionAnimKey = this.animsRight;
+        } else {
+            newReactionAnimKey = this.animsIdle || null; // Default to idle if not turning or anims not available
+        }
+
+        this.reactionAnimationKey = newReactionAnimKey; // Store it
+
+        // Play it immediately if valid
+        // if (this.reactionAnimationKey) {
+        //     this.playAnimation(this.reactionAnimationKey, true); // Force play this animation
+        // }
+        // The playAnimation call is now in handleItemUsedByPlayer after turnTowards
     }
 
     private randomMovement(): void {
@@ -276,14 +319,13 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     // Clean up event listeners when NPC is destroyed
     public destroy(fromScene?: boolean): void {
-        //this.scene.events.off('dialogueEnded', this.onDialogueEnded, this);
-        // Remove the specific listener added in the constructor
-        GlobalEvents.off('itemUsed', this.reactToItem, this);
-
-        // You might also want to remove other scene-specific listeners if added
-        // this.scene.events.off('dialogueEnded', this.onDialogueEnded, this); // Make sure this isn't needed elsewhere first
-
+        // Important: Remove scene-specific event listeners
+        if (this.scene && this.scene.events) {
+            this.scene.events.off(`dialogueEnded_${this.npcId}`, this.onDialogueEnded, this);
+        }
+        GlobalEvents.off('itemUsedFromInventory', this.handleItemUsedByPlayer, this);
         super.destroy(fromScene);
+    
     }
 
     public getDialogueState(): string {
@@ -298,69 +340,164 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     //animation frames
 
     public update(time: number, delta: number): void {
-        if (this.body.velocity.x < 0) {
-            //console.log(" playing animation left " + this.body.velocity.x)
-            this.playAnimation("left");
-        } else if (this.body.velocity.x > 0) {
-            this.playAnimation("right");
-        } else {
-            this.playAnimation("idle")
+        if (this.config.onUpdate) {
+            const preventDefaultUpdate = this.config.onUpdate.call(this, time, delta);
+            if (preventDefaultUpdate === false) return; // Config's onUpdate handled everything
         }
 
-        if (!this.isDialogueActive) {
+        if (this.isReactingToItem) {
+            this.reactionTimer -= delta;
+            if (this.reactionTimer <= 0) {
+                this.isReactingToItem = false;
+                if (this.animsIdleKey) this.playAnimationByKey(this.animsIdleKey, true);
+                else this.anims.stop();
+            }
+            return;
+        }
+
+        if (this.isDialogueActive) {
+            if (this.body && (this.body.velocity.x !== 0 || this.body.velocity.y !== 0)) {
+                this.setVelocity(0);
+            }
+            if (this.animsIdleKey) this.playAnimationByKey(this.animsIdleKey);
+            return;
+        }
+
+        if (this.body) {
             switch (this.movementType) {
-                case 'patrol':
-                    this.patrolMovement();
-                    break;
-                case 'random':
-                    this.randomMovement();
-                    break;
-                case 'idle':
-                default:
-                    this.setVelocity(0);
+                case 'patrol': this.patrolMovement(); break;
+                case 'random': this.randomMovement(); break;
+                case 'idle': default:
+                    if (this.body.velocity.x !== 0 || this.body.velocity.y !== 0) this.setVelocity(0);
                     break;
             }
-            this.checkIfStuck(delta);
-        } else {
-            this.setVelocity(0);
         }
 
-
+        if (this.body && this.body.velocity) {
+            if (this.body.velocity.x < -1 && this.animsWalkLeftKey) {
+                this.playAnimationByKey(this.animsWalkLeftKey);
+            } else if (this.body.velocity.x > 1 && this.animsWalkRightKey) {
+                this.playAnimationByKey(this.animsWalkRightKey);
+            } else {
+                if (this.animsIdleKey) this.playAnimationByKey(this.animsIdleKey);
+            }
+        } else {
+            if (this.animsIdleKey) this.playAnimationByKey(this.animsIdleKey);
+            else if (this.anims) this.anims.stop(); // Ensure anims exists before calling stop
+        }
+        this.checkIfStuck(delta);
     }
+
+    private handleItemUsedByPlayer(data: ItemUsedEventPayload): void { // Ensure ItemUsedEventPayload is correctly typed/imported
+        console.log(`[NPC ${this.npcId}] Heard 'itemUsedFromInventory'. Item ID: ${data.itemId}, Player: ${data.player?.name || 'Unknown'}`);
+
+        // 1. Config-level override for event handling
+        if (this.config.handleGlobalEvent) {
+            const gameContextForEvent = { scene: this.scene /* add other managers as needed by handleGlobalEvent */ };
+            const handledByConfig = this.config.handleGlobalEvent.call(this, 'itemUsedFromInventory', data, gameContextForEvent);
+            if (handledByConfig) {
+                console.log(`[NPC ${this.npcId}] Event ${data.itemId} handled by config.handleGlobalEvent.`);
+                return;
+            }
+        }
+
+        // 2. Standard reaction logic
+        if (data.player) {
+            const distanceToPlayer = Phaser.Math.Distance.Between(this.x, this.y, data.player.x, data.player.y);
+            if (distanceToPlayer > this.sensoryRange && this.npcId !== "godWhoSeesAll") {
+                return;
+            }
+        }
+
+        const reactionsToUse = this.reactionsData; // Use the initialized reactionsData
+        if (!reactionsToUse) return;
+
+        const reactionText = reactionsToUse[data.itemId];
+
+        if (reactionText) {
+            console.log(`[NPC ${this.npcId}] Reacting to ${data.itemId}: "${reactionText}"`);
+            this.isReactingToItem = true;
+            this.reactionTimer = 3000;
+            this.setVelocity(0);
+
+            let reactionAnimKeyToPlay: string | undefined;
+            if (data.player) {
+                if (data.player.x < this.x && Math.abs(data.player.x - this.x) > 5 && this.animsWalkLeftKey) {
+                    reactionAnimKeyToPlay = this.animsWalkLeftKey;
+                } else if (data.player.x > this.x && Math.abs(data.player.x - this.x) > 5 && this.animsWalkRightKey) {
+                    reactionAnimKeyToPlay = this.animsWalkRightKey;
+                }
+            }
+
+            if (reactionAnimKeyToPlay) {
+                this.playAnimationByKey(reactionAnimKeyToPlay, true); // Play it
+                if (reactionAnimKeyToPlay === this.animsWalkLeftKey || reactionAnimKeyToPlay === this.animsWalkRightKey) {
+                    if (this.anims) this.anims.stop(); // Stop on current frame
+                }
+            } else if (this.animsIdleKey) {
+                this.playAnimationByKey(this.animsIdleKey, true); // Let idle loop
+            } else {
+                if (this.anims) this.anims.stop();
+            }
+            this.showSpeechBubble(reactionText);
+        }
+    }
+
+
 
     private setupListeners() {
 
         //problem, bliver ikke automatisk kaldt når der bliver brugt et item. Kun i intialiseringen. 
-        GlobalEvents.on('itemUsed', this.reactToItem, this); // Fejl her, den trigger ikke eventet som forventet, selvom det bliver kaldt
+        GlobalEvents.off('itemUsedFromInventory', this.handleItemUsedByPlayer, this); // Good practice to off then on
+        GlobalEvents.on('itemUsedFromInventory', this.handleItemUsedByPlayer, this); // Changed method name for clarity
         //console.log("ItemUsed in, listener reached " + this);
     }
 
-    private reactToItem(item: Item) {
-        //console.log("ItemUsed in, listener reached " + JSON.stringify(item, null, 2));
-        console.log(`[${this.npcId}] reactToItem called with item:`, item?.itemId);
-
-        if (!item || !item.itemId) {
-            //console.warn("⚠️ No valid item provided to reactToItem:", item);
+    private showSpeechBubble(text: string) {
+        // Ensure scene context is valid for adding game objects
+        if (!this.scene || !this.scene.cameras.main) {
+            console.error(`[NPC ${this.npcId}] Cannot show speech bubble: Scene or main camera is not available.`);
             return;
         }
-        if (this.reactions[item.itemId]) {
-            //console.log("ItemUsed in, listener reached, react to item 2") //doesn't trigger
-            //console.log(`💬 ${this.npcId} reacts: "${this.reactions[item.itemId]}"`);
-            this.showSpeechBubble(this.reactions[item.itemId]);
+
+        // Calculate position relative to the NPC, ensuring it's visible
+        const bubbleX = this.x;
+        const bubbleY = this.y - (this.displayHeight / 2) - 15; // Position above the NPC's head
+
+        const bubbleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+            fontSize: "14px",
+            fontFamily: '"Verdana", "Arial", sans-serif', // Ensure fonts are loaded or common
+            color: "#222222", // Dark text for light bubble
+            backgroundColor: "rgba(255,255,255,0.9)", // Light, slightly transparent bubble
+            padding: { x: 10, y: 5 },
+            align: 'center',
+            wordWrap: { width: 180, useAdvancedWrap: true }, // Max width for bubble
+            // borderRadius: 6, // Phaser text objects don't directly support borderRadius for background
+        };
+
+        const bubble = this.scene.add.text(bubbleX, bubbleY, text, bubbleStyle)
+            .setOrigin(0.5, 1) // Origin at bottom-center, so it "points" upwards from NPC
+            .setDepth(this.depth + 5) // Ensure it's above this NPC and other nearby elements
+            .setScrollFactor(this.scrollFactorX, this.scrollFactorY); // Match NPC's scroll factor
+
+        // Auto-destroy with a fade
+        if (this.scene && this.scene.time) {
+            this.scene.time.delayedCall(3000, () => {
+                if (bubble.scene) { // Check if bubble is still valid
+                    this.scene.tweens.add({
+                        targets: bubble,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => {
+                            bubble.destroy();
+                        }
+                    });
+                } else if (bubble.active) { // If scene is gone but bubble somehow still active
+                    bubble.destroy();
+                }
+            });
+        } else { // Fallback if scene.time is not available (e.g., during shutdown)
+            setTimeout(() => { if (bubble.active) bubble.destroy(); }, 3300);
         }
-    }
-
-    private showSpeechBubble(text: string) {
-        const bubble = this.scene.add.text(this.x, this.y - 30, text, {
-            fontSize: "16px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 5, y: 3 },
-        }).setOrigin(0.5).setDepth(1005);
-
-        // Remove bubble after 2 seconds
-        this.scene.time.delayedCall(3000, () => {
-            bubble.destroy();
-        });
     }
 }

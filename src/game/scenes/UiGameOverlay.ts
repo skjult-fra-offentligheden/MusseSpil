@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { Button } from "../scripts/buttonScript";
 import { UIManager } from '../managers/UIManager';
 import { InventoryManager } from '../managers/itemMananger';
 import { ItemActionHandler } from "../scenes/ToturialScene/ItemActionHandler";
+
 import { Item } from "../classes/itemDatastruct";
+
+
 export class UIGameOverlay extends Phaser.Scene {
     private itemSlots: Phaser.GameObjects.Rectangle[] = [];
     private itemIcons: (Phaser.GameObjects.Sprite | null)[] = []
@@ -18,9 +20,17 @@ export class UIGameOverlay extends Phaser.Scene {
     private activeItem: Item | null = null;
     private activeItemIcon: Phaser.GameObjects.Sprite | null = null;
     private itemActionHandler: ItemActionHandler;
+    private inventoryManager: InventoryManager;
 
     constructor() {
         super({ key: "UIGameScene", active: false });
+    }
+
+    preload() {
+        this.load.image('icon_inventory', 'assets/button/inventory.png');
+        this.load.image('icon_guide', 'assets/button/Guide.png');
+        this.load.image('icon_journal', 'assets/button/ClueJournal.png');
+        this.load.image('icon_accuse', 'assets/button/accuse.png');
     }
 
     create(): void {
@@ -30,25 +40,61 @@ export class UIGameOverlay extends Phaser.Scene {
         this.createLimitedSlots();
 
         // Define UI buttons
-        const buttonsConfig = [
-            { text: "Inventory", callback: () => uiManager.showInventory(), key: 'I' },
-            { text: "Guide", callback: () => uiManager.showGuide(), key: 'G' },
-            { text: "Clue Journal", callback: () => uiManager.showJournal(), key: 'J' },
-            { text: "Accuse", callback: () => uiManager.showAccusation(), key: 'A' }
+        const iconButtonsConfig = [
+            // Use the keys from your preloaded images
+            { iconKey: "icon_inventory", callback: () => uiManager.showInventory(), keybind: 'I', tooltip: 'Inventory (I)' },
+            { iconKey: "icon_guide", callback: () => uiManager.showGuide(), keybind: 'G', tooltip: 'Guide (G)' },
+            { iconKey: "icon_journal", callback: () => uiManager.showJournal(), keybind: 'J', tooltip: 'Clue Journal (J)' },
+        //    { iconKey: "icon_accuse", callback: () => uiManager.showAccusation(), keybind: 'A', tooltip: 'Make Accusation (A)' }
         ];
 
-        const buttonWidth = 140, buttonHeight = 40, spacing = 10;
-        const totalWidth = buttonsConfig.length * buttonWidth + (buttonsConfig.length - 1) * spacing;
-        const startX = (this.scale.width - totalWidth) / 2 + buttonWidth / 2;
+        const iconSize = 78; // Adjust size as needed
+        const desiredIconWidth = 78;  // Set the target width in pixels (e.g., 48px)
+        const desiredIconHeight = 78;
+        const spacing = 15;
+        const totalButtonWidth = iconButtonsConfig.length * desiredIconWidth + (iconButtonsConfig.length - 1) * spacing;
+        const startX = (this.scale.width - totalButtonWidth) / 2 + desiredIconWidth / 2;
+        const topY = 40; // Adjust vertical position
 
-        buttonsConfig.forEach((btnConfig, index) => {
-            const x = startX + index * (buttonWidth + spacing);
-            const y = 50;
-            new Button(this, { x, y, width: buttonWidth, height: buttonHeight },
-                { text: btnConfig.text, textColor: '#ffffff', strokeColor: '#000000', fontSize: 24, fontFamily: "Arial", align: "center" },
-                { backgroundColor: 0x000343, transparency: 0.8 },
-                { linewidth: 2, linecolor: 0xffffff }, btnConfig.callback, btnConfig.key);
+        iconButtonsConfig.forEach((btnConfig, index) => {
+            const x = startX + index * (iconSize + spacing);
+            const y = topY;
+
+            const iconButton = this.add.image(x, y, btnConfig.iconKey)
+                .setOrigin(0.5) // Center the icon
+                .setInteractive({ useHandCursor: true }) // Make it clickable, change cursor on hover
+                .setScrollFactor(0); // Keep UI static on screen
+
+            // Adjust icon display size if needed (optional)
+            iconButton.setDisplaySize(desiredIconWidth, desiredIconHeight);
+
+            // Click Action
+            iconButton.on('pointerdown', () => {
+                // Optional: Add visual feedback for click (e.g., scale down slightly)
+                btnConfig.callback(); // Call the UIManager function
+            });
+
+            iconButton.on('pointerup', () => {
+            });
+            this.input.on('pointerup', () => { // Handles cases where pointer moves off before releasing
+            });
+
+
+            // Optional: Hover Effects (Tinting)
+            iconButton.on('pointerover', () => {
+                iconButton.setTint(0xDDDDDD); // Lighten tint on hover
+                // TODO: Display tooltip (requires a text object, managed visibility)
+            });
+            iconButton.on('pointerout', () => {
+                iconButton.clearTint();
+                // TODO: Hide tooltip
+            });
+
+            if (btnConfig.keybind) {
+                this.input.keyboard.on(`keydown-${btnConfig.keybind}`, btnConfig.callback);
+            }
         });
+
         this.inventoryManager = InventoryManager.getInstance();
         this.itemActionHandler = new ItemActionHandler(this);
         this.updateSlotContents(); // Initial update
@@ -108,7 +154,7 @@ export class UIGameOverlay extends Phaser.Scene {
         if (this.activeItemIcon) {
             const prevIndex = this.itemsInSlots.findIndex(item => item?.itemId === this.activeItem?.itemId);
             if (prevIndex !== -1) {
-                this.itemSlots[prevIndex]?.setStrokeStyle(2, 0xffffff).setScale(1);
+                this.itemSlots[prevIndex]?.setStrokeStyle(2, 0xffffff);
                 this.activeItemIcon?.clearTint();
             }
             // Don't nullify activeItem itself here, just the visual representation state
@@ -147,7 +193,6 @@ export class UIGameOverlay extends Phaser.Scene {
                         newItem.iconKey!
                     )
                         .setOrigin(0.5)
-                        .setScale(1) // Adjust scale if needed
                         .setInteractive()
                         .setScrollFactor(0);
 

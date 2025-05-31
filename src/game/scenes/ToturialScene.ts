@@ -13,6 +13,13 @@ import { UIManager } from '../managers/UIManager';
 import { ClueManager } from '../clueScripts/clueManager';
 import { Clue } from '../classes/clue';
 import { ClueDisplayScene } from './clueDisplay';
+import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
+import { ItemConfig, PhaseArt } from '../../data/items/itemTemplate';
+import { CallbackHandler } from '../managers/CallBackManager';
+
+import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'; // Assuming path to your new AllNPCConfigs
+import { NPCConfig } from '../../data/NPCs/npcTemplate';  // Assuming path to your new RichNPCConfig interface
+import { setupAllNPCAnimations, spawnNPCsFromList, NpcSpawnInstruction } from '../../factories/npcFactory'; // Or wherever you put animation setup
 
 const MAX_DIALOGUE_DISTANCE = 70; // SUPER IMPORTANT
 
@@ -23,7 +30,6 @@ export class ToturialScene extends Phaser.Scene {
     interactionPrompt!: Phaser.GameObjects.Text | null;
     Objects!: Body[];
     private dialoguesData!: { [npcId: string]: DialogueNode[] };
-    public dialogueManager!: DialogueManager;
     private player: Player;
     private triggers!: Phaser.Physics.Arcade.StaticGroup;
     private exitX!: number;
@@ -34,11 +40,17 @@ export class ToturialScene extends Phaser.Scene {
     private clueManager!: ClueManager;
     private clueData: { [key: string]: Clue }
     private objectData!: { [npcId: string]: DialogueNode[] };
-    private objectManager!: DialogueManager;
     private suspectsData: any;
     private inventoryManager!: InventoryManager; 
     private isIntroDialogueActive: boolean = false;
+    public callbackHandler!: CallbackHandler; 
+    public dialogueManager!: DialogueManager;
 
+    //NPC Dialogues
+    private cop2dialogue: any;
+    private rockermousedialogue: any;
+    private orangeShirtMouse: any;
+    private pinkdressMouse: any;
     constructor() {
         super({ key: 'ToturialScene' });
     }
@@ -57,11 +69,11 @@ export class ToturialScene extends Phaser.Scene {
         this.load.image('big_furniture', 'assets/tilemaps/toturial_inside/big_furniture.png');
         this.load.image('objects_decoration', 'assets/tilemaps/toturial_inside/objects_decoration.png');
 
-        //OBJECTS
-        this.load.image('clueCheese', 'assets/tilemaps/toturial_inside/cheese.png');
-        this.load.image('clueCoke', 'assets/tilemaps/toturial_inside/cokebag.png');
-        this.load.image('glue', 'assets/tilemaps/toturial_inside/glue.png');
-        this.load.image('cluePhone', 'assets/tilemaps/toturial_inside/phone.png');
+        ////OBJECTS
+        //this.load.image('clueCheese', 'assets/tilemaps/toturial_inside/cheese_64x64.png');
+        //this.load.image('clueCoke', 'assets/tilemaps/toturial_inside/cokebag_full_64x64.png');
+        //this.load.image('glue', 'assets/tilemaps/toturial_inside/glue_64x64.png');
+        //this.load.image('cluePhone', 'assets/tilemaps/toturial_inside/phone_64x64.png');
 
 
         //npc her
@@ -70,13 +82,53 @@ export class ToturialScene extends Phaser.Scene {
         this.load.atlas("rockerMouse", "assets/npc/rockerMouse/rockerMouse.png", "assets/npc/rockerMouse/rockerMouse.json")
         this.load.atlas("pinkDressGirlMouse", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.png", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.json")
 
+
+        console.log("[ToturialScene Preload] Loading item assets from AllItemConfigs...");
+        Object.values(AllItemConfigs).forEach((itemConfig: ItemConfig) => {
+            // Load large art (world sprite)
+            if (itemConfig.art && itemConfig.art.large) {
+                if (typeof itemConfig.art.large === 'string') {
+                    this.load.image(itemConfig.art.large, itemConfig.art.large);
+                    // console.log(`  Loaded large art (string): ${itemConfig.art.large}`);
+                } else { // It's PhaseArt
+                    const phaseArt = itemConfig.art.large as PhaseArt;
+                    this.load.image(phaseArt.full, phaseArt.full);
+                    this.load.image(phaseArt.half, phaseArt.half);
+                    this.load.image(phaseArt.empty, phaseArt.empty);
+                    // console.log(`  Loaded large art (PhaseArt): ${phaseArt.full}, ${phaseArt.half}, ${phaseArt.empty}`);
+                }
+            }
+
+            // Load small art (inventory icon)
+            if (itemConfig.art && itemConfig.art.small) {
+                if (typeof itemConfig.art.small === 'string') {
+                    this.load.image(itemConfig.art.small, itemConfig.art.small);
+                    // console.log(`  Loaded small art (string): ${itemConfig.art.small}`);
+                } else { // It's PhaseArt
+                    const phaseArt = itemConfig.art.small as PhaseArt;
+                    this.load.image(phaseArt.full, phaseArt.full);
+                    this.load.image(phaseArt.half, phaseArt.half);
+                    this.load.image(phaseArt.empty, phaseArt.empty);
+                    // console.log(`  Loaded small art (PhaseArt): ${phaseArt.full}, ${phaseArt.half}, ${phaseArt.empty}`);
+                }
+            }
+        });
+        // Load the fallback texture
+        this.load.image('fallback_missing_item_texture', 'assets/tilemaps/toturial_inside/cheese_32x32.png');
     }
 
     create() {
         //sæt ui elementer.
-        this.clueManager = ClueManager.getInstance(); // crasher hvisden ikke tilføjes 
-        this.inventoryManager = InventoryManager.getInstance();
-        this.inventoryManager.setScene(this);
+        const state = GameState.getInstance(this);
+
+        this.clueData = this.cache.json.get('toturial_clues') || {};
+        this.clueManager = new ClueManager(this.clueData);   // build with the JSON that was just cached
+        this.registry.set('clueManager', this.clueManager);
+        if (Object.keys(this.clueData).length === 0) {
+            console.warn("No clue data loaded for 'toturial_clues'. Check preload path and JSON content.");
+        }
+        this.clueManager = this.registry.get('clueManager');
+
         const uiManager = UIManager.getInstance();
         uiManager.setScene(this, "ToturialScene");
 
@@ -87,20 +139,37 @@ export class ToturialScene extends Phaser.Scene {
         this.events.on('shutdown', () => {
             this.input.keyboard.removeAllListeners();
         });
-        this.dialoguesData = this.cache.json.get("npc_dialogues_toturial") || {};
-        this.objectData = this.cache.json.get("objects_dialogues_toturial");
-        this.clueData = this.cache.json.get("toturial_clues") || {};
+
+        this.cop2dialogue = this.cache.json.get("cop2_toturial") || {};
+        this.rockermousedialogue = this.cache.json.get("rockerMouse_toturial") || {};
+        this.pinkdressMouse = this.cache.json.get("pinkdressMouse_toturial") || {}
+        this.orangeShirtMouse = this.cache.json.get("orangeshirt_toturial") || {}
+
+        //this.dialoguesData = this.cache.json.get("npc_dialogues_toturial") || {}; NO LONGER EXIST
+        this.objectData = this.cache.json.get("objects_dialogues_toturial") || {};
         this.suspectsData = this.cache.json.get('suspectsData');
 
         //this.dialogueManager = data.dialogueManager;
         console.log("suspect data: " + JSON.stringify(this.suspectsData, null, 2))
+        function bundle(id: string, raw: any) {
+            return Array.isArray(raw) || raw?.id ? { [id]: raw } : raw;
+        }
+        this.dialoguesData = {
+            ...bundle('orangeShirtMouse', this.orangeShirtMouse),
+            ...bundle('pinkDressGirlMouse', this.pinkdressMouse),
+            ...bundle('cop2', this.cop2dialogue),
+            ...bundle('rockerMouse', this.rockermousedialogue),
+            ...this.objectData
+        };
+        this.callbackHandler = new CallbackHandler(
+            this,
+            this.clueManager,
+            this.inventoryManager,
+            uiManager
+        );
+        console.log("[ToturialScene Create] CallbackHandler initialized:", this.callbackHandler);
 
-        this.dialoguesData = { ...this.dialoguesData, ...this.objectData };
-
-        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.clueData, this.inventoryManager);
-        
-        this.cursors = this.input.keyboard.createCursorKeys(); //up, down, left, right, spacebar, shift (avoid binding these keys)
-        //this.dialogueManager.setScene(this);
+        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.inventoryManager, this.callbackHandler);
 
         const map = this.make.tilemap({ key: 'policeinside' });
 
@@ -144,6 +213,35 @@ export class ToturialScene extends Phaser.Scene {
         const npcSpawnLayer = map.getObjectLayer('NPCspawnpoints');
         const npcPositions = getNPCPositions(npcSpawnLayer!);
 
+        const npcSpawnInstructions: NpcSpawnInstruction[] = [
+            { npcId: "cop2", x: npcPositions['cop2']?.x || 100, y: npcPositions['cop2']?.y || 100 },
+            { npcId: "orangeShirtMouse", x: npcPositions['orangeShirtMouse']?.x || 150, y: npcPositions['orangeShirtMouse']?.y || 150 },
+            { npcId: "rockerMouse", x: npcPositions['rockerMouse']?.x || 200, y: npcPositions['rockerMouse']?.y || 200 },
+            { npcId: "pinkDressGirlMouse", x: npcPositions['pinkDressGirlMouse']?.x || 250, y: npcPositions['pinkDressGirlMouse']?.y || 250 }
+            //// Add more if defined in AllNPCConfigs and have Tiled spawn points
+        ];
+
+        const npcMapCollisionLayers = [collisionLayer!, collisionLayer2!].filter(Boolean) as Phaser.Tilemaps.TilemapLayer[];
+        this.npcs = [];
+        this.npcs = spawnNPCsFromList(
+            this,
+            npcSpawnInstructions,
+            this.dialogueManager,
+            npcMapCollisionLayers
+        ) || [];
+
+        if (this.npcs.length > 0 && this.player) {
+            this.physics.add.collider(this.player, this.npcs);
+        }
+
+        // Update GameState with NPC idle frames (now derived from AllNPCConfigs)
+        state.npcIdleFrames = Object.values(AllNPCsConfigs).map(config => ({
+            id: config.npcId,
+            textureKey: config.textureKey, // This is the atlas key
+            // Get initialFrame from config, or derive from the first frame of the idle animation definition
+            idleFrame: config.initialFrame || config.animations?.definitions?.find(def => def.keyName === config.animations?.idleKey)?.frameNames[0] || 'default_frame_if_all_else_fails'
+        }));
+
         if (!this.dialogueManager) {
             console.error('DialogueManager is missing in policeinside');
         }
@@ -165,10 +263,12 @@ export class ToturialScene extends Phaser.Scene {
             console.error("Door trigger not found in the 'Triggers' layer");
         }
 
-        this.player = new Player(this, this.exitX, this.exitY - 50);
+        this.player = new Player(this, this.exitX, this.exitY - 50, "Detective Mouse");
+        this.registry.set('player', this.player);
         this.player.setAlpha(1);
         this.player.setDepth(5);
         this.add.existing(this.player);
+        this.cursors = this.input.keyboard.createCursorKeys(); //up, down, left, right, spacebar, shift (avoid binding these keys)
 
         if (door) {
             this.setupExit(this.exitX, this.exitY, door.width!, door.height!);
@@ -188,8 +288,6 @@ export class ToturialScene extends Phaser.Scene {
             debugGraphics.lineStyle(2, 0xff0000, 1);
         }
 
-
-        
         //add collisions:
         this.physics.add.collider(this.player, collisionLayer!);
         this.physics.add.collider(this.player, collisionLayer2!);
@@ -215,55 +313,32 @@ export class ToturialScene extends Phaser.Scene {
         }
         // Launch UI Scene
 
+        this.events.on('dialogueOptionCallback', (callbackId: string) => {
+            if (this.callbackHandler) { // Check if it's initialized
+                this.callbackHandler.handleCallback(callbackId);
+            }
+        }, this);
+
         if (!this.scene.get('ClueDisplayScene')) {
             this.scene.add('ClueDisplayScene', ClueDisplayScene, false);
         }
 
-        const npcConfigs = [
-            {
-                scene: this, x: npcPositions['cop2']?.x || 0 , y: npcPositions['cop2']?.y || 0,
-                texture: "cop2", frame: "cop2.png", dialogues: this.dialoguesData['cop2'],
-                dialogueManager: this.dialogueManager, npcId: "cop2",
-                movementType: "idle", moveArea: new Phaser.Geom.Rectangle(25, 190, 50, 500),
-                speed: 25, atlasKey: "cop2", isUnique: true,
-                animationKeys: { walkLeft: "cop2_walk_left", walkRight: "cop2_walk_right", idle: "cop2_idle" },
-                frames: { walkLeft: ["cop2sprite2.png", "cop2sprite3.png"], walkRight: ["cop2sprite1.png", "cop2sprite2.png"], idle: ["cop2sprite1.png"] }
-            },
-            {
-                scene: this, x: npcPositions['orangeShirtMouse']?.x || 0, y: npcPositions['orangeShirtMouse']?.y || 0,
-                texture: "orangeShirtMouse", frame: "orangeShirtMouse0.png", dialogues: this.dialoguesData['orangeShirtMouse'],
-                dialogueManager: this.dialogueManager, npcId: "orangeShirtMouse",
-                movementType: "idle", patrolPoints: [{ x: 145, y: 220 }, { x: 105, y: 220 }, { x: 115, y: 220 }],
-                speed: 25, atlasKey: "orangeShirtMouse", isUnique: true,
-                animationKeys: { walkLeft: "orangeShirtMouse_walk_left", walkRight: "orangeShirtMouse_walk_right", idle: "orangeShirtMouse_idle" },
-                frames: { walkLeft: ["orangeShirtMouse2.png", "orangeShirtMouse3.png"], walkRight: ["orangeShirtMouse0.png", "orangeShirtMouse1.png"], idle: ["orangeShirtMouse2.png"] }
-            },
-            {
-                scene: this, x: npcPositions['rockerMouse']?.x || 0, y: npcPositions['rockerMouse']?.y || 0, texture: "rockerMouse", frame: "rockerMouse0.png", dialogues: this.dialoguesData['rockerMouse'], dialogueManager: this.dialogueManager, npcId: "rockerMouse",
-                movementType: "idle", speed: 0, atlasKey: "rockerMouse", isUnique: true, animationKeys: { walkLeft: "rockerMouse_walk_left", walkRight: "rockerMouse_walk_right", idle: "rockerMouse_idle" }
-                , frames: { walkLeft: ["rockerMouse2.png", "rockerMouse3.png"], walkRight: ["rockerMouse0.png", "rockerMouse1.png"], idle: ["rockerMouse2.png"] }
-            },
-            {
-                scene: this, x: npcPositions['pinkDressGirlMouse']?.x || 0, y: npcPositions['pinkDressGirlMouse']?.y || 0, texture: "pinkDressGirlMouse", frame: "pinkDressGirlMouse0.png", dialogues: this.dialoguesData['pinkDressGirlMouse'], dialogueManager: this.dialogueManager, npcId: "pinkDressGirlMouse",
-                movementType: "idle", speed: 0, atlasKey: "pinkDressGirlMouse", isUnique: true, animationKeys: { walkLeft: "pinkDressGirlMouse_walk_left", walkRight: "pinkDressGirlMouse_walk_right", idle: "pinkDressGirlMouse_idle" }
-                , frames: { walkLeft: ["pinkDressGirlMouse2.png", "pinkDressGirlMouse3.png"], walkRight: ["pinkDressGirlMouse0.png", "pinkDressGirlMouse1.png"], idle: ["pinkDressGirlMouse2.png"] }
+        console.log("[ToturialScene] About to call setupAllNPCAnimations."); // Add this
+        setupAllNPCAnimations(this); // <--- THIS IS THE CRUCIAL CALL
+        console.log("[ToturialScene] Finished calling setupAllNPCAnimations."); // Add this
 
-            }
-        ];
-
-        this.npcs = createNPCs(this, npcConfigs, [collisionLayer!, collisionLayer2!]);
-        const state = GameState.getInstance();
+        //this.npcs = createNPCs(this, npcConfigs, [collisionLayer!, collisionLayer2!]);
         state.suspectsData = this.suspectsData;
-        state.npcIdleFrames = npcConfigs.map(config => {
-            return {
-                id: config.npcId,
-                textureKey: config.atlasKey,
-                idleFrame: config.frames?.idle?.[0] || config.frame 
-            };
-        });
+        //state.npcIdleFrames = npcConfigs.map(config => {
+        //    return {
+        //        id: config.npcId,
+        //        textureKey: config.atlasKey,
+        //        idleFrame: config.frames?.idle?.[0] || config.frame 
+        //    };
+        //});
         //generate Objects
         const Objectsclue = map.getObjectLayer('ObjectCluesSpawnpoints');
-        this.createObjects(collisionLayer!, collisionLayer!, Objectsclue, mapOffsetX, mapOffsetY)
+        this.createObjects(collisionLayer!, collisionLayer!, Objectsclue)
 
         this.interactables = [...this.npcs, ...this.Objects];
 
@@ -367,7 +442,7 @@ export class ToturialScene extends Phaser.Scene {
                 if (activeInteractable instanceof Body) {
                     activeInteractable.initiateInteraction(this.player);
                 } else {
-                    activeInteractable.initiateDialogue();
+                    activeInteractable.initiateDialogue(); //start dialogue i deleted
                 }
             }
         }
@@ -411,46 +486,64 @@ export class ToturialScene extends Phaser.Scene {
         }
     }
 
-    private createObjects(collisionLayer: Phaser.Tilemaps.TilemapLayer, collisionLayer2: Phaser.Tilemaps.TilemapLayer, Objectsclue: any): void {
+    private createObjects(
+        collisionLayer: Phaser.Tilemaps.TilemapLayer | null, // Allow null if optional
+        collisionLayer2: Phaser.Tilemaps.TilemapLayer | null,
+        ObjectsclueLayer: Phaser.Types.Tilemaps.ObjectLayer | null
+    ): void {
         const gameState = GameState.getInstance();
-        const objectsCluePos = getNPCPositions(Objectsclue)
-        //første del skal være objects layer
-        const orig_objects = [
-            { x: objectsCluePos["cluePhone"].x || 600, y: objectsCluePos["cluePhone"].y || 500, texture: 'cluePhone', dialogueKey: 'cluePhone', itemId: 'cluePhone', description: "A phone used in the drug traficking business", scale: .5, collectible: true },
-            { x: objectsCluePos["clueCoke"].x || 600, y: objectsCluePos["clueCoke"].y  || 400 , texture: 'clueCoke', dialogueKey: 'clueCoke', itemId: 'clueCoke', description: 'A bag of coke.', scale: 0.6, collectible: true },
-            { x: objectsCluePos["glue"].x || 600, y: objectsCluePos["glue"].y  || 400 , texture: 'glue', dialogueKey: 'glue', itemId: 'glue', description: 'some glue ? ', scale: 0.7, collectible: true },
-            { x: objectsCluePos["clueCheese"].x || 600 , y: objectsCluePos["clueCheese"].y || 400 , texture: 'clueCheese', itemId: "clueCheese", dialogueKey: 'clueCheese', description: 'Hmm, some delicious cheese.', scale: 0.6, collectible: true },
+        const objectSpawnPoints = ObjectsclueLayer ? getNPCPositions(ObjectsclueLayer) : {};
+
+        // Define items to spawn with their itemId and Tiled object name (for position)
+        const itemsToSpawn = [
+            { itemId: 'cluePhone', spawnPointName: 'cluePhone' },
+            { itemId: 'coke', spawnPointName: 'clueCoke' },
+            { itemId: 'clueGlue', spawnPointName: 'glue' },
+            { itemId: 'blueCheese', spawnPointName: 'clueCheese' },
+            // ... add all items you want to spawn in this scene
         ];
 
+        this.Objects = []; // Initialize if not already
 
-        this.Objects = [];
-        orig_objects.filter(objectData => !gameState.collectedItems.has(objectData.itemId))
-            .forEach(objectData => {
-                const body = new Body(
-                    this,
-                    objectData.x,
-                    objectData.y,
-                    objectData.texture,
-                    this.dialoguesData[objectData.dialogueKey],
-                    this.dialogueManager,
-                    objectData.itemId,
-                    objectData.itemId,
-                    objectData.itemId,
-                    objectData.description,
-                    objectData.itemId,
-                    objectData.collectible,
-                    undefined,
-                    undefined,
-                    objectData.scale
-                );
-                this.Objects.push(body);
-                this.add.existing(body);
-                this.physics.add.existing(body);
-                body.setDepth(5);
-                this.physics.add.collider(this.player, body);
-                this.physics.add.collider(body, collisionLayer);
-                this.physics.add.collider(body, collisionLayer2);
-            });
+        itemsToSpawn.forEach(itemDataToSpawn => {
+            // 1. Check if item should be spawned (not collected, config exists, spawn point exists)
+            if (gameState.collectedItems.has(itemDataToSpawn.itemId)) {
+                // console.log(`[createObjects] Item ${itemDataToSpawn.itemId} already collected. Skipping.`);
+                return; // Skip this item
+            }
+            if (!AllItemConfigs[itemDataToSpawn.itemId]) {
+                console.warn(`[createObjects] No ItemConfig found for itemId: "${itemDataToSpawn.itemId}". Skipping.`);
+                return; // Skip this item
+            }
+            const spawnPosition = objectSpawnPoints[itemDataToSpawn.spawnPointName];
+            if (!spawnPosition) {
+                console.warn(`[createObjects] No spawn point found for: "${itemDataToSpawn.spawnPointName}" (itemId: ${itemDataToSpawn.itemId}). Skipping.`);
+                return; // Skip this item
+            }
+
+            // 2. Create the Body instance using the new constructor
+            console.log(`[createObjects] Creating Body for itemId: ${itemDataToSpawn.itemId}`);
+            const body = new Body(
+                this,
+                spawnPosition.x,
+                spawnPosition.y,
+                itemDataToSpawn.itemId,
+                this.dialogueManager // Pass the scene's dialogue manager
+            );
+
+            this.Objects.push(body);
+            // scene.add.existing(body) and scene.physics.add.existing(body) are handled in Body constructor.
+            body.setDepth(5); // Set depth if needed (or Body could handle its default depth)
+
+            // Setup colliders (player vs item, item vs world layers)
+            if (this.player && collisionLayer) this.physics.add.collider(this.player, body);
+            if (collisionLayer) this.physics.add.collider(body, collisionLayer);
+            if (collisionLayer2) this.physics.add.collider(body, collisionLayer2);
+        });
+
+        // Update the scene's interactables list
+        this.interactables = [...this.npcs, ...this.Objects]; // Assuming this.npcs is already populated
     }
+
 
 }

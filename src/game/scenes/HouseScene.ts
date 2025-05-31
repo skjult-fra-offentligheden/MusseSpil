@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '../classes/player';
 import { NPC } from '../classes/npc';
-import { createNPCs } from '../../factories/npcFactory';
 import { createNPCAnimations } from '../../factories/animationFactory';
 import { DialogueNode } from "../classes/dialogues"
 import { DialogueManager } from '../managers/dialogueManager';

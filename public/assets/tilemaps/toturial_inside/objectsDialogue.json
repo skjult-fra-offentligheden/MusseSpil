@@ -33,7 +33,7 @@
             "options": []
         }
     ],
-    "glue": [
+    "clueGlue": [
         {
             "id": "greeting",
             "text": "You see a tube of glue on the table",

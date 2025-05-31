@@ -1,0 +1,286 @@
+{
+    "cop2":
+    [
+        {
+            "id": "cop2_tutorial_briefing",
+            "speaker": "Copper Holmes",
+            "text": "Alright Rookie, listen up. We raided a suspected drug operation.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_2",
+            "once": true
+        },
+        {
+            "id": "cop2_tutorial_briefing_2",
+            "speaker": "Copper Holmes",
+            "text": "Nabbed these three mice. Scum of the earth mice.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_3"
+        },
+        {
+            "id": "cop2_tutorial_briefing_3",
+            "speaker": "Copper Holmes",
+            "text": "But well, there's only one bag of cocaine, so there is only one seller",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_4"
+
+        },
+        {
+            "id": "cop2_tutorial_briefing_4",
+            "speaker": "Copper Holmes",
+            "text": "As the newest detective, you need to figure out who it was.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_5"
+
+        },
+        {
+            "id": "cop2_tutorial_briefing_5",
+            "speaker": "Copper Holmes",
+            "text": "Okay, once you examined them, question the suspects about it.",
+            "options": [],
+            "nextDialogueId": "cop2_tutorial_briefing_6"
+        },
+        {
+            "id": "cop2_tutorial_briefing_6",
+            "speaker": "Copper Holmes",
+            "text": "Your job? Figure out which one of these squeakers was the *seller*. Look around, talk to everyone. Got it?",
+            "options": [],
+            "nextDialogueId": null
+        },
+        {
+            "id": "greeting",
+            "speaker": "Copper Holmes",
+            "text": "Need some pointers on how things work around here, Detective?",
+            "once": false,
+            "options": [
+                {
+                    "id": "ask_help",
+                    "speaker": "Detective",
+                    "text": "Yeah, what should I be looking for?",
+                    "nextDialogueId": "ask_help"
+                },
+                {
+                    "id": "no_thanks",
+                    "speaker": "Detective",
+                    "text": "Nah, I think I got this.",
+                    "nextDialogueId": "no_thanks"
+                }
+            ]
+        },
+        {
+            "id": "ask_help",
+            "speaker": "Copper Holmes",
+            "text": "Check the evidence on the table first. Inspect items in your journal, sometimes details hide in plain sight. Then talk to the suspects.",
+            "options": [
+                {
+                    "id": "accept_help",
+                    "speaker": "Detective",
+                    "text": "You got it, Chief.",
+                    "nextDialogueId": "accept_help_response",
+                    "effectKey": "increaseCopReputation",
+                    "once": true
+                },
+                {
+                    "id": "decline_help",
+                    "speaker": "Detective",
+                    "text": "Sounds boring. I'm gonna solve a *real* crime.",
+                    "nextDialogueId": "decline_help"
+                }
+            ]
+        },
+        {
+            "id": "no_thanks",
+            "speaker": "Copper Holmes",
+            "text": "Confidence is good, Rookie, but don't let it blind you. Follow procedure.",
+            "options": [
+
+                {
+                    "id": "accept_help_reluctantly",
+                    "speaker": "Detective",
+                    "text": "Alright, alright. What's the procedure again?",
+                    "nextDialogueId": "ask_help",
+                    "effectKey": "increaseCopReputation",
+                    "once": true
+                },
+                {
+                    "id": "deny_help_persist",
+                    "speaker": "Detective",
+                    "text": "Seriously, I know what I'm doing.",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation",
+                    "once": true
+                }
+            ]
+        },
+        {
+            "id": "accept_help_response",
+            "speaker": "Copper Holmes",
+            "text": "Good. Once you've examined the evidence, see how the suspects react when you ask them about it.",
+            "options": []
+        },
+        {
+            "id": "decline_help",
+            "speaker": "Copper Holmes",
+            "text": "... Just... try not to mess this up too badly, okay?",
+            "options": [],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        },
+        {
+            "id": "special_event_cocaine_gone",
+            "speaker": "Copper Holmes",
+            "text": "WHY DID YOU DO THIS. THIS WAS OUR BIGGEST EVINDENCE. ",
+            "condition": "playerDidCocaine",
+            "once": true,
+            "options": [
+                {
+                    "id": "Excuse_cocaine",
+                    "speaker": "Detective",
+                    "text": "I'm sorry, i'm new to the job, please give me another chance",
+                    "nextDialogueId": "reveal_next_clue",
+                    "effectKey": "decreaseCopReputation"
+                },
+                {
+                    "id": "Hostile_cocaine",
+                    "speaker": "Detective",
+                    "text": "I loooooooveeeeeeecocaiiineeeee",
+                    "nextDialogueId": "Hostile_cocaine",
+                    "effectKey": "decreaseCopReputation"
+                }
+            ]
+        },
+        {
+            "id": "reveal_next_clue",
+            "speaker": "Copper Holmes",
+            "text": "There might be a minor crime related to the cheese",
+            "options": [],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        },
+        {
+            "id": "Hostile_cocaine",
+            "speaker": "Copper Holmes",
+            "text": " And probably going to jail!",
+            "options": [],
+            "effectKey": "triggerGameOverFired",
+            "once": true
+        },
+        {
+            "id": "Sniffed glue_1",
+            "speaker": "Copper Holmes",
+            "text": "Why the hell are you sniffing glue?! ",
+            "condition": "playerDidGlue_1",
+            "once": true,
+            "options": [
+                {
+                    "id": "Excuse_glue_1",
+                    "speaker": "Detective",
+                    "text": "I'm sorry, i'm new to the job, i just wanted a quick smell test",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                },
+                {
+                    "id": "Hostile_glue_1",
+                    "speaker": "Detective",
+                    "text": "Don't be a bummer, i'm just enjoying life.",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                }
+            ],
+            "effectKey": "decreaseCopReputation"
+        },
+        {
+            "id": "SniffedGlue2",
+            "speaker": "Copper Holmes",
+            "text": "Fucking stop sniffing glue",
+            "condition": "playerDidGlue_2",
+            "once": true,
+            "options": [
+                {
+                    "id": "Excuse_glue_2",
+                    "speaker": "Detective",
+                    "text": "I just wanted to make sure it was really glue",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                },
+                {
+                    "id": "Hostile_glue_2",
+                    "speaker": "Detective",
+                    "text": "It smells real good",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                }
+            ],
+            "effectKey": "decreaseCopReputation"
+        },
+        {
+            "id": "SniffedGlue3",
+            "speaker": "Copper Holmes",
+            "text": "You're too retarded to even talk with'",
+            "condition": "playerDidGlue_3",
+            "options": [
+                {
+                    "id": "Excuse_glue_3",
+                    "speaker": "Detective",
+                    "text": "mme luv glu, smells gud",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                },
+                {
+                    "id": "Hostile_glue_3",
+                    "speaker": "Detective",
+                    "text": "me luv glu, glu mak me happi",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                }
+            ],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        },
+        {
+            "id": "ate_cheese_1",
+            "speaker": "Copper Holmes",
+            "text": "Please don't eat the evidence, and save some cheese for me",
+            "condition": "player_ate_cheese_1",
+            "options": [
+                {
+                    "id": "player_ate_cheese_1_excuse",
+                    "speaker": "Detective",
+                    "text": "Sorry chief, it won't happen again",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                },
+                {
+                    "id": "player_ate_cheese_1_hostile",
+                    "speaker": "Detective",
+                    "text": "It's suer tasty though, almost addictive",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                }
+            ],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        },
+        {
+            "id": "ate_cheese_2",
+            "speaker": "Copper Holmes",
+            "text": "I WANTED THAT CHESE!",
+            "condition": "player_ate_cheese_2",
+            "options": [
+                {
+                    "id": "Excuse_glue_3",
+                    "speaker": "Detective",
+                    "text": "After this mystery i'll buy you a better one",
+                    "nextDialogueId": null
+                },
+                {
+                    "id": "Hostile_glue_3",
+                    "speaker": "Detective",
+                    "text": "You should have eaten it before me",
+                    "nextDialogueId": null,
+                    "effectKey": "decreaseCopReputation"
+                }
+            ],
+            "effectKey": "decreaseCopReputation",
+            "once": true
+        }
+    ]}

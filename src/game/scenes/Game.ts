@@ -13,7 +13,6 @@ import { Interactable } from '../managers/interactables';
 import { GuideScene } from '../guideScripts/guide';
 import { ClueDisplayScene } from './clueDisplay';
 import { Clue } from '../classes/clue';
-import { createNPCs } from '../../factories/npcFactory';
 import { getNPCPositions } from '../../factories/npcPositionsPreProcessing';
 import { GameState } from '../managers/GameState';
 import { UIManager } from '../managers/UIManager';

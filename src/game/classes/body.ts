@@ -1,97 +1,135 @@
+// src/classes/Body.ts
 import Phaser from 'phaser';
-import { DialogueNode } from './dialogues';
-import { DialogueManager } from '../managers/dialogueManager';
-import { InventoryManager } from '../managers/itemMananger';
-import { Item } from '../classes/itemDatastruct';
-import { Player } from './player';
-import { Interactable } from '../managers/interactables';
+import { DialogueManager } from '../dialogues/dialogueManager'; // Adjust path
+import { Player } from './player'; // Adjust path
+import { Interactable } from '../managers/interactables'; // Adjust path
+import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
+import { ItemConfig, DialogueNode, PhaseArt, EvidencePhase } from '../../data/items/itemTemplate'; // Adjusted DialogueEntry to DialogueNode for consistency
 
 export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
-    itemName: string;
-    itemId: string;
-    itemDescription: string;
-    iconKey: string;
-    quantity: number;
-    isCollectible: boolean;
-    dialogueData: DialogueNode[];
-    dialogueManager: DialogueManager;
-    uniqueId: string;
-    inventoryManager!: InventoryManager;
-    isClue?: boolean;
+    public itemId: string;
+    private itemConfig: ItemConfig;
+    private dialogueManager: DialogueManager;
 
     constructor(
         scene: Phaser.Scene,
         x: number,
         y: number,
-        texture: string,
-        dialogueData: DialogueNode[],
-        dialogueManager: DialogueManager,
-        uniqueId: string,
-        itemName?: string,
-        itemId?: string,
-        itemDescription?: string,
-        iconKey?: string,
-        isCollectible: boolean = false,
-        public desiredWidth?: number,     
-        public desiredHeight?: number,     
-        public desiredScale?: number       
+        itemId: string,
+        dialogueManager: DialogueManager
     ) {
-        super(scene, x, y, texture);
+        const configFromGlobal = AllItemConfigs[itemId];
+        let determinedInitialTextureKey: string;
+        let configToUse: ItemConfig;
 
-        if (desiredScale !== undefined) {
-            this.setScale(desiredScale);
+        if (!configFromGlobal) {
+            console.error(`[Body Constructor] ItemConfig not found for itemId "${itemId}". Using fallback.`);
+            determinedInitialTextureKey = 'fallback_missing_item_texture';
+            configToUse = {
+                id: itemId,
+                name: 'Unknown Item', // Added name for fallback
+                art: { small: determinedInitialTextureKey, large: determinedInitialTextureKey },
+                description: 'An unknown item.', // Added description
+                collectible: false,
+                dialogue: [],
+                initialStatus: 'full', // Added fallback state
+                timesUsed: 0,          // Added fallback state
+                currentStatus: 'full',   // Added fallback state
+                getArt: function (this: ItemConfig, size: 'small' | 'large') { // Added fallback getArt
+                    const artPath = this.art[size];
+                    return typeof artPath === 'string' ? artPath : artPath.full;
+                },
+                use: function (this: ItemConfig) { // Added fallback use
+                    return { newStatus: this.currentStatus, message: "Cannot use unknown item.", artChanged: false, consumed: false };
+                }
+                // defaultScale: 0.5, // Ensure defaultScale is on ItemConfig or provide here
+            } as ItemConfig; // Cast, make sure ALL required ItemConfig fields are present
+        } else {
+            configToUse = configFromGlobal;
+            if (typeof configToUse.art.large === 'string') {
+                determinedInitialTextureKey = configToUse.art.large;
+            } else { // It's PhaseArt, use getArt for current status if possible, else default to full
+                determinedInitialTextureKey = configToUse.getArt ? configToUse.getArt.call(configToUse, 'large') : configToUse.art.large.full;
+            }
         }
 
-        if (desiredWidth && desiredHeight) {
-            this.displayWidth = desiredWidth;
-            this.displayHeight = desiredHeight;
-        }
-        // Enable physics body
-        scene.physics.world.enable(this);
-        this.body.setImmovable(true);
+        super(scene, x, y, determinedInitialTextureKey);
 
-        // Assign parameters to class properties
-        this.dialogueData = dialogueData;
+        this.itemConfig = configToUse;
+        this.itemId = itemId;
         this.dialogueManager = dialogueManager;
-        this.uniqueId = uniqueId;
 
-        this.itemName = itemName || '';
-        this.itemId = itemId || uniqueId;
-        this.itemDescription = itemDescription || '';
-        this.iconKey = iconKey || texture;
-        this.isCollectible = isCollectible;
-        this.setInteractive();
-        console.log("set it interactive. object")
+        // Standard Phaser way to store custom data, usable by gameObject.getData()
+        this.setData('itemId', this.itemId);
 
+        this.setScale(this.itemConfig.defaultScale || 0.5); // Use 0.5 as a fallback if not on itemConfig
 
+        scene.add.existing(this);
+        scene.physics.world.enable(this); // Redundant if extending Physics.Arcade.Sprite, but harmless
+        if (this.body) { // body will exist if physics is enabled for the scene
+            (this.body as Phaser.Physics.Arcade.Body).setImmovable(true);
+        }
+
+        this.setInteractive({ useHandCursor: true });
+
+        console.log(`[Body Created] ItemID: ${this.itemId}, Name: ${this.itemConfig.name || this.itemConfig.id}, Texture: ${this.texture.key}`);
     }
 
-    public collect(inventoryManager: InventoryManager): void {
-        if (this.isCollectible) {
-            const item: Item = {
-                itemId: this.itemId,
-                itemName: this.itemName,
-                itemDescription: this.itemDescription,
-                iconKey: this.iconKey,
-                quantity: 1,
-                isClue: this.isClue,
-            };
-            console.log('Collecting item:', item);
-            inventoryManager.addItem(item);
-            this.scene.events.emit('itemCollected', this);
+    // --- THIS IS THE CORRECT VERSION ---
+    public initiateInteraction(player?: Player): void {
+        console.log(`[Body initiateInteraction] For item: ${this.itemId}`);
+        const gameScene = this.scene as any; // Or use a typed interface: const gameScene = this.scene as IMyGameScene;
 
-            // Remove the item from the world
-            this.destroy();
+        if (gameScene.callbackHandler && typeof gameScene.callbackHandler.setContext === 'function') {
+            gameScene.callbackHandler.setContext(this); // Pass 'this' (the Body Sprite instance) directly
+        } else {
+            console.warn(`[Body initiateInteraction] Scene does not have a valid callbackHandler or setContext method.`);
+        }
+        this.initiateDialogue(); // Proceed to initiate dialogue
+    }
+
+    public setArtPhase(phase: EvidencePhase): void {
+        if (!this.itemConfig || typeof this.itemConfig.art.large === 'string') {
+            console.warn(`[Body setArtPhase] Item ${this.itemId} does not use phased art or itemConfig is missing.`);
+            return;
+        }
+        const phaseArt = this.itemConfig.art.large as PhaseArt;
+        const newTextureKey = phaseArt[phase as keyof PhaseArt] || phaseArt.full; // Use phase, fallback to full
+
+        if (newTextureKey && this.texture.key !== newTextureKey) {
+            try {
+                this.setTexture(newTextureKey);
+                console.log(`[Body setArtPhase] Item ${this.itemId} texture set to phase: ${phase} (${newTextureKey})`);
+            } catch (e) {
+                console.error(`[Body setArtPhase] Failed to set texture ${newTextureKey} for ${this.itemId}:`, e);
+                if (this.texture.key !== 'fallback_missing_item_texture') {
+                    this.setTexture('fallback_missing_item_texture');
+                }
+            }
         }
     }
 
-    public initiateInteraction(player: Player, inventoryManager: InventoryManager): void {
-        this.inventoryManager = inventoryManager;
-        // Only initiate dialogue
-        this.initiateDialogue();
+    // Refreshes texture based on current itemConfig state
+    public refreshTexture(): void {
+        if (this.itemConfig && this.itemConfig.getArt) {
+            const newTextureKey = this.itemConfig.getArt.call(this.itemConfig, 'large');
+            if (this.texture.key !== newTextureKey) {
+                try {
+                    this.setTexture(newTextureKey);
+                    console.log(`[Body ${this.itemId}] Texture refreshed to ${newTextureKey}`);
+                } catch (error) {
+                    console.error(`[Body ${this.itemId}] Error setting texture to ${newTextureKey}:`, error);
+                    if (this.texture.key !== 'fallback_missing_item_texture') {
+                        this.setTexture('fallback_missing_item_texture');
+                    }
+                }
+            }
+        }
     }
+
 
     public checkProximity(player: Player, range: number, onInRange: () => void): void {
+        if (!this.active) return; // Check if the Body sprite itself is active
         const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
         if (distance <= range) {
             onInRange();
@@ -99,26 +137,39 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
     }
 
     public initiateDialogue(): void {
-        this.bindCallbacks();
-        // Pass 'this' as the context to the dialogue manager
-        this.dialogueManager.startDialogue(this.itemId, 'greeting', undefined, this.dialogueData, this);
+        if (!this.itemConfig) {
+            console.warn(`[Body initiateDialogue] itemConfig not initialized for ${this.itemId}.`);
+            return;
+        }
+        // Use itemConfig.dialogue, which should be an array of DialogueNode
+        if (this.itemConfig.dialogue && this.itemConfig.dialogue.length > 0) {
+            this.dialogueManager.startDialogue(
+                this.itemId, // Context for dialogue manager (e.g., to find related ItemConfig)
+                this.itemConfig.dialogue[0].id, // ID of the first dialogue node to start with
+                this // The interactor (this Body instance)
+            );
+        } else {
+            // Fallback if no dialogue: maybe show description or allow direct pickup?
+            console.log(`[Body initiateDialogue] No dialogue for ${this.itemId}. Description: ${this.itemConfig.description}`);
+            // If collectible and no dialogue, maybe trigger pickup directly?
+            // const gameScene = this.scene as any;
+            // if (this.itemConfig.collectible && gameScene.callbackHandler) {
+            //     gameScene.callbackHandler.setContext(this);
+            //     gameScene.callbackHandler.handleCallback('ACTION_PICKUP');
+            // }
+        }
     }
 
-    private bindCallbacks(): void {
-        // Ensure callbacks are bound correctly
-        console.log("pre load " + this.dialogueData);
-        if (this.dialogueData) {
-            console.log("this dialogue data " + this.dialogueData);
-            this.dialogueData.forEach((node) => {
-                node.options.forEach((option) => {
-                    if (option.callback && typeof option.callback === 'function') {
-                        option.callback = option.callback.bind(this);
-                    }
-                });
-            });
-        } else { console.warn("Dialogue data not initilized ") }
+    public update(): void {
+        // Optional: any per-frame updates for the Body sprite itself
     }
 
-    // Bodies don't need to update movement or AI behaviors
-    public update(): void { }
+    public get isItemCollectible(): boolean {
+        return this.itemConfig ? this.itemConfig.collectible : false;
+    }
+
+    public getItemName(): string {
+        if (!this.itemConfig) return this.itemId;
+        return this.itemConfig.name || this.itemConfig.id;
+    }
 }
