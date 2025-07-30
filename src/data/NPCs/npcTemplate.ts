@@ -89,7 +89,7 @@ export interface NPCConfig {
     initialMentalState?: NPCMentalState;
     sensoryRange?: number;      // For reacting to player item use, etc.
     faction?: string;           // e.g., "police", "gang_A", "civilians"
-
+    isSuspect?: boolean; 
     // --- Animations ---
     animations: NPCAnimationConfig;
 

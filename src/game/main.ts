@@ -6,12 +6,13 @@ import { GuideScene } from '../game/guideScripts/guide';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
-import { ClueJournal } from "../game/clueScripts/clueScene"
-import { AccusationScene } from "../game/Accusation_scripts/AccusationScene"
-import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene"
-import { GameOver } from "./scenes/GameScriptScenes/GameOver"
-import { HouseScene } from "./scenes/HouseScene"
-import { ToturialScene } from "./scenes/ToturialScene"
+import { ClueJournal } from "./clueScripts/clueScene";
+import { DragAbleClueScene } from "./clueScripts/dragAbleClueScene";
+import { AccusationScene } from "./Accusation_scripts/AccusationScene";
+import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene";
+import { GameOver } from "./scenes/GameScriptScenes/GameOver";
+import { HouseScene } from "./scenes/HouseScene";
+import { ToturialScene } from "./scenes/ToturialScene";
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 
@@ -55,7 +56,8 @@ const config: Phaser.Types.Core.GameConfig = {
         VictoryScene,
         GameOver,
         HouseScene,
-        ToturialScene
+        ToturialScene,
+        DragAbleClueScene
     ]
 };
 

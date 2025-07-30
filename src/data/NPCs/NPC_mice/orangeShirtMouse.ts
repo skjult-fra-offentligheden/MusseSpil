@@ -2,14 +2,7 @@ import { NPCConfig, NPCMovementType, NPCAnimationConfig as NPCAnimationData, NPC
 import { DialogueNode } from "../../../game/dialogues/dialogues";
 // Assuming DialogueNode is also imported or defined in npcTemplate for simplicity
 
-//scene: this, x: npcPositions['orangeShirtMouse']?.x || 0, y: npcPositions['orangeShirtMouse']?.y || 0,
-//        texture: "orangeShirtMouse", frame: "orangeShirtMouse0.png", dialogues: this.dialoguesData['orangeShirtMouse'],
-//        dialogueManager: this.dialogueManager, npcId: "orangeShirtMouse",
-//        movementType: "idle", patrolPoints: [{ x: 145, y: 220 }, { x: 105, y: 220 }, { x: 115, y: 220 }],
-//        speed: 25, atlasKey: "orangeShirtMouse", isUnique: true,
-//        animationKeys: { walkLeft: "orangeShirtMouse_walk_left", walkRight: "orangeShirtMouse_walk_right", idle: "orangeShirtMouse_idle" },
-//        frames: { walkLeft: ["orangeShirtMouse2.png", "orangeShirtMouse3.png"], walkRight: ["orangeShirtMouse0.png", "orangeShirtMouse1.png"], idle: ["orangeShirtMouse2.png"] },
-//        sensoryRange: 500
+
 
 const OrangeShirtMouse: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAnimationConfig
     atlasKey: "orangeShirtMouse", 
@@ -42,7 +35,7 @@ export const OrangeShirtMouseConfig: NPCConfig = {
     animations: OrangeShirtMouse, // Assign the animation details we defined above
 
     dialogues: orangeShirtMouseDialogues,   // Assign the dialogue we defined above
-    
+    isSuspect: true, // This NPC is a suspect in the case
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
     sensoryRange: 250,
@@ -53,6 +46,6 @@ export const OrangeShirtMouseConfig: NPCConfig = {
     // ... add other necessary properties like defaultScale, description etc.
     // defaultScale: 1,
     // description: "The stern but fair police chief.",
-    // initialMentalState: NPCMentalState.Neutral,
-    // faction: "police",
+     // initialMentalState: NPCMentalState.Neutral,
+     faction: "CocaineGang",
 };

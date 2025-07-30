@@ -179,7 +179,7 @@ export class GameState {
 
     public hasEventBeenAddressed(eventName: string): boolean {
         const isAddressed = this.eventsAddressed.has(eventName);
-        // console.log(`[GameState] Checking if event '${eventName}' has been addressed: ${isAddressed}`); // Optional: for debugging
+        console.log(`[GameState] Checking if event '${eventName}' has been addressed: ${isAddressed}`); // Optional: for debugging
         return isAddressed;
     }
 

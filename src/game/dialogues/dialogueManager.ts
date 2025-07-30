@@ -62,7 +62,7 @@ export class DialogueManager {
         // dialogueData?: DialogueNode[], // REMOVE this if we fetch from AllItemConfigs for items
         //context?: any // REMOVE this if speakerContext is the main context
     ) {
-        console.log("[DialogueManager] passed vars", sourceId, startDialogueNodeId, speakerContext, this.isActive)
+        //console.log("[DialogueManager] passed vars", sourceId, startDialogueNodeId, speakerContext, this.isActive)
 
 
         if (this.isActive) return;
@@ -78,14 +78,14 @@ export class DialogueManager {
         const itemConfig = AllItemConfigs[sourceId]; // Check if it's an item
         if (itemConfig && itemConfig.dialogue) {
             this.currentDialogues = itemConfig.dialogue;
-            console.log(`[DialogueManager] Using ITEM dialogue for: ${sourceId}`);
+        //    console.log(`[DialogueManager] Using ITEM dialogue for: ${sourceId}`);
         } else if (this.dialoguesData[sourceId]) { // Fallback to NPC dialogues from preloaded JSON
             // Ensure this.dialoguesData[sourceId] is an array of DialogueNode
             // If it's a single DialogueNode (as your constructor param type suggests), you might need to wrap it.
             // Assuming this.dialoguesData[npcId] is DialogueNode[] for NPCs:
 
             //IT ENTER HEREE
-            console.log("[DialogueManager] else if", this.dialoguesData[sourceId])
+            //console.log("[DialogueManager] else if", this.dialoguesData[sourceId])
             this.currentDialogues = Array.isArray(this.dialoguesData[sourceId])
                 ? this.dialoguesData[sourceId] as DialogueNode[]
                 : [this.dialoguesData[sourceId] as DialogueNode]; // Wrap if it's a single node
@@ -98,21 +98,19 @@ export class DialogueManager {
         }
 
 
-        // Filter dialogues based on conditions (if applicable, mostly for NPCs)
-        if (this.currentNpc && this.currentNpc.npcMemory) {
-            this.currentDialogues = this.currentDialogues.filter(node => {
-                // 'node.condition' is the text like "playerDidCocaine"
-                // We pass this text to our "Question Answerer" (evaluateCondition)
-                console.log("[DialogueManager] if this.currentNPC and this.currentNPC.memory", node.condition, this.evaluateCondition(node.condition))
-                //results:
-                //undefined true
-                //playerDidGlue_1 false
-                //all conditions, and false
-                return this.evaluateCondition(node.condition);
-            }); // <<< ADDED ')' HERE
-        } // <<< ADDED '}' HERE
+        let specialEventNode: DialogueNode | undefined = undefined;
+        for (const node of this.currentDialogues) {
+            if (node.condition) {
+                const result = this.evaluateCondition(node.condition, node.id);
+                if (typeof result === "string" && node.id === result) {
+                    specialEventNode = node;
+                    break;
+                }
+            }
+        }
 
-        console.log("[DialogueManager] currentDialogues.length", this.currentDialogues.length)
+        //console.log("[DialogueManager] currentDialogues.length", this.currentDialogues.length)
+        //console.log("[DialogueManager] currentDialogues.length", this.currentDialogues)
         // console log result 13 (with npc  cop2)
         // It's possible that after filtering, no dialogues remain, or the startDialogueNodeId is filtered out.
         if (this.currentDialogues.length === 0) {
@@ -120,9 +118,10 @@ export class DialogueManager {
             this.isActive = false;
             return;
         }
+        let startDialogue = specialEventNode || this.getDialogueById(startDialogueNodeId);
 
-        let startDialogue = this.getDialogueById(startDialogueNodeId);
-        console.log(`[DialogueManager] Node found for ${startDialogueNodeId}:`, startDialogue); // Moved for clarity
+        //let startDialogue = this.getDialogueById(startDialogueNodeId);
+        //console.log(`[DialogueManager] Node found for ${startDialogueNodeId}:`, startDialogue); // Moved for clarity
         if (!startDialogue) {
             // pick the first remaining node as a fallback
             startDialogue = this.currentDialogues[0];
@@ -130,11 +129,11 @@ export class DialogueManager {
                 `falling back to "${startDialogue?.id}".`);
         }
         if (startDialogue) {
-            console.log(`[DialogueManager] Starting with node for ${startDialogueNodeId}:`, startDialogue);
+            //console.log(`[DialogueManager] Starting with node for ${startDialogueNodeId}:`, startDialogue);
             this.currentDialogueNode = startDialogue;
             this.dialogueUI.showDialogue(startDialogue, this.handleOptionSelection.bind(this), this.handleExitTalk.bind(this));
         } else {
-            console.warn(`Dialogue ID "${startDialogueNodeId}" not found for source "${sourceId}" (possibly filtered out by condition).`);
+            //console.warn(`Dialogue ID "${startDialogueNodeId}" not found for source "${sourceId}" (possibly filtered out by condition).`);
             this.isActive = false;
         }
     }
@@ -186,7 +185,7 @@ export class DialogueManager {
 
         if (npcIdThatWasTalking) { // Only emit if there was an active NPC
             const specificEventName = `dialogueEnded_${npcIdThatWasTalking}`;
-            console.log(`[DialogueManager] Emitting specific event: ${specificEventName}`);
+            //console.log(`[DialogueManager] Emitting specific event: ${specificEventName}`);
             this.scene.events.emit(specificEventName, npcIdThatWasTalking); // Emit specific event
 
             // Log listener count for the specific event if you want to debug that
@@ -214,8 +213,8 @@ export class DialogueManager {
         return this.selectedOptionIndex;
     }
 
-    private evaluateCondition(conditionKey: string): boolean {
-        if (!conditionKey) return true;
+    private evaluateCondition(conditionKey: string, nodeId?: string): string | false {
+        if (!conditionKey) return false;
 
         const gameState = GameState.getInstance(this.scene); // Still useful for eventsAddressed or other global flags
 
@@ -224,7 +223,7 @@ export class DialogueManager {
         const getItemState = (itemId: string) => {
             const itemConfig = AllItemConfigs[itemId];
             if (!itemConfig) {
-                console.warn(`[DialogueManager] Item config not found for ID: ${itemId} in getItemState`);
+                //console.warn(`[DialogueManager] Item config not found for ID: ${itemId} in getItemState`);
                 return null; // Or some default state
             }
             return {
@@ -239,37 +238,58 @@ export class DialogueManager {
             case "playerDidCocaine": // This implies the coke is now 'empty' or used at least once
                 itemState = getItemState('coke');
                 // Condition is true if coke has been used at least once OR is empty
-                return itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false;
+                //console.log(`[DialogueManager] Evaluating condition 'playerDidCocaine':`, itemState);
+                //console.log(`[DialogueManager] Item state for 'coke':`, itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false);
+                if (itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false){
+                    return nodeId || "special_event_cocaine_gone";
+                }
+                return false;
 
             case "playerDidGlue_1":
                 itemState = getItemState('clueGlue'); // Assuming 'clueGlue' is the ID
-                return itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerDidGlue_1_event") : false;
+                if (itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerDidGlue_1_event") : false) {
+                    return nodeId || "special_event_glue_used_once"; // Return the nodeId if provided
+                } return false; // If condition not met, return false
 
             case "playerDidGlue_2":
                 itemState = getItemState('clueGlue');
-                return itemState ? itemState.timesUsed === 2 && !gameState.hasEventBeenAddressed("playerDidGlue_2_event") : false;
+                if (itemState ? itemState.timesUsed === 2 && !gameState.hasEventBeenAddressed("playerDidGlue_2_event") : false) {
+                    return nodeId || "special_event_glue_used_twice"; // Return the nodeId if provided
+                }
+                return false; // If condition not met, return false
 
             case "playerDidGlue_3":
                 itemState = getItemState('clueGlue');
-                return itemState ? itemState.timesUsed >= 3 && !gameState.hasEventBeenAddressed("playerDidGlue_3_event") : false;
+                if (itemState ? itemState.timesUsed >= 3 && !gameState.hasEventBeenAddressed("playerDidGlue_3_event") : false) {
+                    return nodeId || "special_event_glue_used_thrice"; // Return the nodeId if provided
+                } return false;
 
             case "player_ate_cheese_1":
                 itemState = getItemState('blueCheese'); // Assuming 'blueCheese' is the ID
-                return itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerAteCheese_1_event") : false;
+                if (itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerAteCheese_1_event") : false) {
+                    return nodeId || "special_event_cheese_1_used"; // Return the nodeId if provided
+                } return false;
 
             case "player_ate_cheese_2":
                 itemState = getItemState('blueCheese');
-                return itemState ? itemState.timesUsed >= 2 && !gameState.hasEventBeenAddressed("playerAteCheese_2_event") : false;
+                if (itemState ? itemState.timesUsed >= 2 && !gameState.hasEventBeenAddressed("playerAteCheese_2_event") : false) {
+                    return nodeId || "special_event_cheese_2_used"; // Return the nodeId if provided
+                } return false;
+                
 
             // ... other non-item-consumption conditions ...
             case "hasBlueCheeseClue":
-                return this.clueManager.hasClue("blueCheese_clue_id_from_config"); // Use actual clue ID
+                if (this.clueManager.hasClue("blueCheese_clue_id_from_config")) {
+                    return nodeId || "blueCheese_clue_found"; // Use actual clue ID
+                } return false; // Use actual clue ID
             case "cokeSellerIdentified":
-                return gameState.getFlag("cokeSellerFound"); // Example if using globalFlags
+                if (gameState.getFlag("cokeSellerFound")) {
+                    return nodeId || "cokeSeller_identified"; // Use actual node ID
+                } return false; // Example if using globalFlags
 
             default:
                 console.warn(`[DialogueManager] Unknown condition key in evaluateCondition: ${conditionKey}`);
-                return true; // Or false
+                return false; // Or false
         }
     }
 
@@ -280,7 +300,7 @@ export class DialogueManager {
 
             // Check for SPACE key press
             if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-                console.log("[DialogueManager Update] Spacebar JustDown detected!"); // Debug log
+                //console.log("[DialogueManager Update] Spacebar JustDown detected!"); // Debug log
 
                 if (this.currentDialogueNode.options.length > 0) {
                     // Case 1: Node HAS options -> Select the highlighted option
@@ -295,15 +315,15 @@ export class DialogueManager {
 
                 } else if (this.currentDialogueNode.nextDialogueId) {
                     // Case 2: Node has NO options BUT has a nextDialogueId -> Advance
-                    console.log("[DialogueManager Update] Advancing dialogue (no options, next ID). Current Node:", this.currentDialogueNode.id, "Next ID:", this.currentDialogueNode.nextDialogueId); // Debug log
+                    //console.log("[DialogueManager Update] Advancing dialogue (no options, next ID). Current Node:", this.currentDialogueNode.id, "Next ID:", this.currentDialogueNode.nextDialogueId); // Debug log
                     const nextNodeId = this.currentDialogueNode.nextDialogueId;
                     const nextDialogue = this.getDialogueById(nextNodeId);
                     if (nextDialogue) {
-                        console.log("[DialogueManager Update] Found next node object:", nextDialogue.id); // Debug log
+                        //console.log("[DialogueManager Update] Found next node object:", nextDialogue.id); // Debug log
                         this.currentDialogueNode = nextDialogue; // Update the current node *before* showing UI
-                        console.log("[DialogueManager Update] Calling UI.showDialogue for:", nextDialogue.id); // Debug log
+                        //console.log("[DialogueManager Update] Calling UI.showDialogue for:", nextDialogue.id); // Debug log
                         this.dialogueUI.showDialogue(nextDialogue, this.handleOptionSelection.bind(this), this.handleExitTalk.bind(this));
-                        console.log("[DialogueManager Update] Finished calling UI.showDialogue"); // Debug log
+                    //    console.log("[DialogueManager Update] Finished calling UI.showDialogue"); // Debug log
                     } else {
                         console.warn(`[DialogueManager Update] Next dialogue ID "${nextNodeId}" not found.`);
                         this.endDialogue(); // End if next node is invalid

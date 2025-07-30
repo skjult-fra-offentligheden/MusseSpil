@@ -30,7 +30,7 @@ export const pinkDressGirlMouseConfig: NPCConfig = {
     animations: pinkDressGirlMouseAnimationsData, // Assign the animation details we defined above
 
     dialogues: pinkDressGirlMouseDialogues,   // Assign the dialogue we defined above
-    
+    isSuspect: false, // function to be included, if cheese is used as primary clue then it should change to true
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
     sensoryRange: 250,

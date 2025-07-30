@@ -132,7 +132,7 @@ export class ClueManager {
         return Array.from(this.clues.values());
     }
     private isValidCategory(category: string): category is ClueCategory {
-        const validCategories: ClueCategory[] = ["evidence", "people", "places", "timeline", "misc"];
+        const validCategories: ClueCategory[] = ["evidence", "people", "places", "timeline"];
         return validCategories.includes(category as ClueCategory);
     }
 }

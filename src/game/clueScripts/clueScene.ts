@@ -143,6 +143,10 @@ export class ClueJournal extends Phaser.Scene {
         this.switchCat(this.activeCat);
         this.setupInputHandlers();
 
+
+
+
+
         // --- Final check logs ---
         // --- Final check logs ---
         console.log(`Page Area: x=${pageAreaX.toFixed(0)}, y=${pageAreaY.toFixed(0)}, w=${this.PAGE_W}, h=${this.PAGE_H}`);
@@ -170,9 +174,49 @@ export class ClueJournal extends Phaser.Scene {
                 initialTextureKey
             )
                 .setInteractive({ useHandCursor: true })
-                .on('pointerdown', () => this.switchCat(cat));
+                .on('pointerdown', () => {
+                    if (cat == "timeline") {
+                        this.openTimelineBoard()
+                    } else { this.switchCat(cat)  }
+                    
+                });
             this.tabs[cat] = btn;
         });
+    }
+
+    private openTimelineBoard() {
+        // give the tab its “active” art so UI still reacts
+        this.activeCat = 'timeline';
+        Object.entries(this.tabs).forEach(([c, img]) => {
+            img.setTexture(`${c}_tab-${c === 'timeline' ? 'active' : 'idle'}`);
+        });
+
+        const allSuspects = Object.values(this.gameState.getSuspectsData());
+        const npcDataForBoard = allSuspects.map(suspect => {
+            return {
+                id: suspect.id,         // Drag scene expects `id`
+                name: suspect.name,      // Drag scene expects `name`
+                portraitKey: suspect.imageKey || 'blank-ico' // Use portraitKey, or fallback
+            };
+        });
+        const allClues = this.clueManager.getAllClues().filter(clue => clue.discovered);
+
+        // launch or wake the drag scene, passing the manager
+        if (!this.scene.isActive('DragAbleClueScene')) {
+            this.scene.launch('DragAbleClueScene', {
+                clues: allClues,
+                npcs: npcDataForBoard,
+                originScene: this.scene.key      // let it know who to resume later
+            });
+        } else {
+            this.scene.wake('DragAbleClueScene');
+        }
+
+        this.scene.bringToTop('DragAbleClueScene');
+        this.scene.sleep(this.scene.key);
+
+        // freeze the journal underneath (optional—remove if you prefer overlap)
+        this.scene.pause();       // resumes when DragAbleClueScene calls .resume()
     }
 
     private setupInputHandlers(): void {
@@ -386,6 +430,7 @@ export class ClueJournal extends Phaser.Scene {
 
         let currentY = 0;
         // Apply the defined styles
+        console.log("[CLUESCENE] Showing details for suspect", suspect);
         const nameText = this.add.text(0, currentY, suspect.name, this.SUSPECT_TITLE_STYLE);
         this.preview.add(nameText);
         currentY += nameText.height + 10;
