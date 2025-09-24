@@ -1,0 +1,125 @@
+{ "compressionlevel":-1,
+ "height":30,
+ "infinite":false,
+ "layers":[
+        {
+         "id":3,
+         "image":"..\/..\/mouseGame\/public\/assets\/journal_assets\/case_journal_clues_mock.png",
+         "name":"background",
+         "opacity":1,
+         "type":"imagelayer",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":4,
+         "name":"objects",
+         "objects":[
+                {
+                 "height":758,
+                 "id":3,
+                 "name":"Clue_row_area",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":532,
+                 "x":62,
+                 "y":92
+                }, 
+                {
+                 "height":300,
+                 "id":4,
+                 "name":"Image display area",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":302,
+                 "x":616,
+                 "y":88
+                }, 
+                {
+                 "height":438,
+                 "id":5,
+                 "name":"image_description_area",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":302,
+                 "x":622,
+                 "y":410
+                },
+            {
+                "height": 56.5,
+                "id": 9,
+                "name": "caseMainpage",
+                "rotation": 0,
+                "type": "",
+                "visible": true,
+                "width": 299.5,
+                "x": 618,
+                "y": 13
+            }, 
+                {
+                 "height":98,
+                 "id":10,
+                 "name":"Clues",
+                 "rotation":0,
+                 "type":"tabs",
+                 "visible":true,
+                 "width":33,
+                 "x":1000,
+                 "y":75
+                }, 
+                {
+                 "height":98,
+                 "id":16,
+                 "name":"People",
+                 "rotation":0,
+                 "type":"tabs",
+                 "visible":true,
+                 "width":33,
+                 "x":1000,
+                 "y":195
+                }, 
+                {
+                 "height":123,
+                 "id":17,
+                 "name":"Clueboard",
+                 "rotation":0,
+                 "type":"tabs",
+                 "visible":true,
+                 "width":33,
+                 "x":1000,
+                 "y":323
+                }, 
+                {
+                 "height":98,
+                 "id":18,
+                 "name":"Accuse",
+                 "rotation":0,
+                 "type":"tabs",
+                 "visible":true,
+                 "width":33,
+                 "x":1000,
+                 "y":471
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":5,
+ "nextobjectid":19,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.11.0",
+ "tileheight":32,
+ "tilesets":[],
+ "tilewidth":32,
+ "type":"map",
+ "version":"1.10",
+ "width":40
+}

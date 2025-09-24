@@ -16,20 +16,20 @@ const rockerMouseAnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE
     walkRightKey: "rockerMouse_anim_walk_right"
 };
 
-const rockerMouseDialogues: DialogueNode[] = [
-    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
-    { id: "rockerMouse_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
-];
+//const rockerMouseDialogues: DialogueNode[] = [
+//    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
+//    { id: "rockerMouse_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
+//];
  
 export const rockerMouseConfig: NPCConfig = {
     npcId: "rockerMouse",
-    displayName: "Rocker ratto",
+    displayName: "Mouse Jared",
     textureKey: "rockerMouse",         // The spritesheet to use (matches animations.atlasKey)
     initialFrame: "rockerMouse2.png",   // The picture to show when Cop2 first appears
 
     animations: rockerMouseAnimationsData, // Assign the animation details we defined above
-
-    dialogues: rockerMouseDialogues,   // Assign the dialogue we defined above
+    isSuspect: true,
+    //dialogues: rockerMouseDialogues,   // Assign the dialogue we defined above
     
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
@@ -38,9 +38,13 @@ export const rockerMouseConfig: NPCConfig = {
         "clueGlue": "Don't sniff that on the job, Detective!",
         "coke": "Evidence, detective. Don't get any ideas."
     },
+    portrait: {
+        textureKey: 'portrait_rockermouse'
+    }
     // ... add other necessary properties like defaultScale, description etc.
     // defaultScale: 1,
     // description: "The stern but fair police chief.",
     // initialMentalState: NPCMentalState.Neutral,
     // faction: "police",
+
 };

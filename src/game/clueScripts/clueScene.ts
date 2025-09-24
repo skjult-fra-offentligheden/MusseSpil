@@ -1,10 +1,20 @@
-import Phaser from 'phaser';
+import Phaser, { Scene } from 'phaser';
 import { ClueManager } from './clueManager'; // Adjust path if needed
 import { Clue } from '../classes/clue';    // Adjust path if needed
 import { GameState } from '../managers/GameState'; // Adjust path if needed
-type ClueCat = 'people' | 'places' | 'evidence' | 'timeline' | 'accuse';
-
-export class ClueJournal extends Phaser.Scene {
+import { Suspect } from './Accusation_scripts/suspect';
+import { ClueCat, ICategorySwitcher } from "./journalTabs"; 
+import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'
+import { createJournalTabs, updateTabVisuals } from './journalTabs';
+import { tutorialCases } from '../../data/cases/tutorialCases';
+const TAB_SCENES: Record<ClueCat, string | null> = {
+    caseMainpage: null,             
+    Clues: 'CluesScene',       
+    People: 'PeopleScene',      
+    Clueboard: 'DragAbleClueScene',
+    Accuse: 'AccusationScene',
+};
+export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
     private clueManager!: ClueManager;
     private originScene!: string;
     private gameState!: GameState;
@@ -16,13 +26,15 @@ export class ClueJournal extends Phaser.Scene {
     private preview!: Phaser.GameObjects.Container;
 
     /* ---------- State refs ---------- */
-    private activeCat: ClueCat = 'evidence';
+    private activeCat: ClueCat = 'caseMainpage';
     private selectedSuspect: Suspect | null = null;
     private selectedClueId: number | string | null = null;
 
     /* ---------- constants ---------- */
     private readonly PANEL_W = 1200;
     private readonly PANEL_H = 660;
+    private readonly MainPAGE_W = 600;
+    private readonly MainPAGE_H = 700;
     private readonly ROW_H = 48;
     private readonly PAGE_X = 80;
     private readonly PAGE_Y = 150;
@@ -32,6 +44,28 @@ export class ClueJournal extends Phaser.Scene {
     private readonly LIST_W = 445;  // Width of the left list panel
     // Calculated width for the right preview panel
     private get PREVIEW_W() { return this.PAGE_W - this.LIST_W - this.GAP; }
+
+    private casesData!: {
+        cases: Record<string, {
+            active: boolean;
+            main_toturial_case: string;
+            case_title: string;
+            case_description_player_task: string;
+            case_description_task: string;
+        }>
+    };
+    private activeCaseIds: string[] = [];
+    private currentCaseIdx = 0;
+
+    private casetitle!: any;
+    private casedescription!: any;
+
+    private titleText!: Phaser.GameObjects.Text;
+    private playerTaskText!: Phaser.GameObjects.Text;
+    private taskBodyText!: Phaser.GameObjects.Text;
+    private caseIndexLabel!: Phaser.GameObjects.Text;
+    private navPrevBtn?: Phaser.GameObjects.Text;
+    private navNextBtn?: Phaser.GameObjects.Text;
 
     // --- Text Styles (Make sure these offer good contrast) ---
     private readonly ACCUSE_BUTTON_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -59,21 +93,35 @@ export class ClueJournal extends Phaser.Scene {
     private readonly PROMPT_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
         fontSize: '16px', color: '#888888', align: 'center', wordWrap: { width: this.PREVIEW_W - 20 } // Gray prompt
     };
+
+    private frontContainer!: Phaser.GameObjects.Container;
+    private frontNS!: any;
     constructor() { super({ key: 'ClueJournal' }); }
 
     preload() {
         // --- Keep your existing preload ---
-        this.load.image('journal-frame', 'assets/journal_assets/journal_1000_625.png');
-        this.load.image('evidence_tab-idle', 'assets/journal_assets/Evidence_idle_tab.png');
-        this.load.image('evidence_tab-active', 'assets/journal_assets/Evidence_activity_tab.png');
-        this.load.image('people_tab-active', 'assets/journal_assets/People_active_tab.png');
-        this.load.image('people_tab-idle', 'assets/journal_assets/People_idle_tab.png');
+        this.load.tilemapTiledJSON('caseFrontPage', 'assets/journal_assets/journalMainPage.tmj');
+        this.load.image("caseJournalFrontPage", "assets/journal_assets/caseFileFrontPage.png");
+        //this.load.image('journal-frame', 'assets/journal_assets/journal_1000_625.png');
+        this.load.image('Clues_tab-idle', 'assets/journal_assets/clues_tab_idle.png');
+        this.load.image('Clues_tab-active', 'assets/journal_assets/clues_tab_idle.png');
+        // Ensure common placeholder textures exist to avoid warnings when sub-scenes reference them later
+        if (!this.textures.exists('blank-ico')) {
+            this.load.image('blank-ico', 'assets/journal_assets/blank_icon.png');
+        }
+        if (!this.textures.exists('placeholder-clue-art')) {
+            this.load.image('placeholder-clue-art', 'assets/journal_assets/placeholder_clue_art.png');
+        }
+        this.load.image('People_tab-active', 'assets/journal_assets/people_tab_idle.png');
+        this.load.image('People_tab-idle', 'assets/journal_assets/people_tab_idle.png');
         this.load.image('places_tab-idle', 'assets/journal_assets/Places_idle_tab.png');
         this.load.image('places_tab-active', 'assets/journal_assets/Places_active_tab.png');
-        this.load.image('timeline_tab-idle', 'assets/journal_assets/Timeline_idle_tab.png');
-        this.load.image('timeline_tab-active', 'assets/journal_assets/Timeline_activity_tab.png');
-        this.load.image('accuse_tab-idle', 'assets/journal_assets/accuse_idle_tab.png');
-        this.load.image('accuse_tab-active', 'assets/journal_assets/accuse_active_tab.png');
+        this.load.image('Clueboard_tab-idle', 'assets/journal_assets/clueboard_tab_idle.png');
+        this.load.image('Clueboard_tab-active', 'assets/journal_assets/clueboard_tab_idle.png');
+        this.load.image('Accuse_tab-idle', 'assets/journal_assets/accuse_tab_idle.png');
+        this.load.image('Accuse_tab-active', 'assets/journal_assets/accuse_tab_idle.png');
+        this.load.image('caseMainpage_tab-idle', 'assets/journal_assets/case_return_to_main_mock.png');
+        this.load.image("caseMainpage_tab-active", "assets/journal_assets/case_return_to_main_mock.png");
         this.load.image('blank-ico', 'assets/journal_assets/blank_icon.png'); // Example path for default icon
         // --- ADD Placeholder for Clue Preview ---
         this.load.image('placeholder-clue-art', 'assets/journal_assets/placeholder_clue_art.png'); // Create a simple placeholder image asset
@@ -82,8 +130,8 @@ export class ClueJournal extends Phaser.Scene {
     init(data: { clueManager: ClueManager; originScene: string }) {
         this.clueManager = data.clueManager;
         this.originScene = data.originScene;
-        this.gameState = GameState.getInstance(this);
-        this.activeCat = 'evidence';
+        this.gameState = GameState.getInstance();
+        this.activeCat = 'caseMainpage';
         this.selectedSuspect = null;
         this.selectedClueId = null;
     }
@@ -97,411 +145,409 @@ export class ClueJournal extends Phaser.Scene {
 
         const cx = this.cameras.main.centerX;
         const cy = this.cameras.main.centerY;
-        this.add.nineslice(
-            cx, cy, 'journal-frame', undefined,
-            this.PANEL_W, this.PANEL_H, 48, 48, 48, 48
-        ).setOrigin(0.5);
 
-        this.createTabs(cx, cy);
-
-        // --- Calculate precise top-left corner of the INNER page area ---
-        const pageAreaX = cx - this.PANEL_W / 2 + this.PAGE_X;
-        const pageAreaY = cy - this.PANEL_H / 2 + this.PAGE_Y;
-
-        // --- Debug: Draw the outline of the intended page area ---
-        // this.add.graphics().lineStyle(1, 0xff00ff).strokeRect(pageAreaX, pageAreaY, this.PAGE_W, this.PAGE_H);
-
-        /* ------------ Left List Panel ------------ */
-        const listX = pageAreaX; // List starts at the left edge of the page area
-        const listY = pageAreaY; // List starts at the top edge of the page area
-
-        // Create and position the list container
-        this.list = this.add.container(listX, listY);
-
-        // Create the mask EXACTLY matching the list's intended area
-        const maskGfx = this.make.graphics()
-            .fillRect(listX, listY, this.LIST_W, this.PAGE_H); // Use precise coords and size
-        this.listMask = maskGfx.createGeometryMask();
-        this.list.setMask(this.listMask); // Apply mask
-
-        // --- Debug: Draw the outline of the list area ---
-        // this.add.graphics().lineStyle(1, 0x00ff00).strokeRect(listX, listY, this.LIST_W, this.PAGE_H);
-
-
-        /* ------------ Right Preview Panel ------------ */
-        // Calculate the X position for the preview panel
-        const previewX = listX + this.LIST_W + this.GAP; // Position it AFTER the list + GAP
-        const previewY = pageAreaY; // Align top with the list
-
-        // Create and position the preview container
-        this.preview = this.add.container(previewX, previewY);
-
-        // --- Debug: Draw the outline of the preview area ---
-        // this.add.graphics().lineStyle(1, 0xff0000).strokeRect(previewX, previewY, this.PREVIEW_W, this.PAGE_H);
-
-        /* ------------ Initial Population & Input ------------ */
-        this.switchCat(this.activeCat);
-        this.setupInputHandlers();
-
-
-
-
-
-        // --- Final check logs ---
-        // --- Final check logs ---
-        console.log(`Page Area: x=${pageAreaX.toFixed(0)}, y=${pageAreaY.toFixed(0)}, w=${this.PAGE_W}, h=${this.PAGE_H}`);
-        console.log(`List Pos: x=${this.list.x.toFixed(0)}, y=${this.list.y.toFixed(0)}, w=${this.LIST_W}`);
-        console.log(`Preview Pos: x=${this.preview.x.toFixed(0)}, y=${this.preview.y.toFixed(0)}, w=${this.PREVIEW_W.toFixed(0)}`);
-        console.log(`List Width (${this.LIST_W}) + Gap (${this.GAP}) + Preview Width (${this.PREVIEW_W.toFixed(0)}) = ${(this.LIST_W + this.GAP + this.PREVIEW_W).toFixed(0)} vs Page Width (${this.PAGE_W})`);
-
-    }
-
-    private createTabs(cx: number, cy: number): void {
-        // (Keep this function as it was in the previous correct version)
-        const cats: ClueCat[] = ['people', 'places', 'evidence', 'timeline', 'accuse'];
-        this.tabs = {} as Record<ClueCat, Phaser.GameObjects.Image>;
-
-        cats.forEach((cat, i) => {
-            const initialTextureKey = `${cat}_tab-${cat === this.activeCat ? 'active' : 'idle'}`;
-            if (!this.textures.exists(initialTextureKey)) {
-                console.error(`[Create Tabs] Texture key not found: ${initialTextureKey}`);
-                return;
-            }
-            const btn = this.add.image(
-                // Adjust X position calculation if tabs are misaligned
-                cx - (this.PANEL_W * 0.4) + (i * (this.PANEL_W * 0.18)), // Example adjustment
-                cy - this.PANEL_H / 2 + (this.PANEL_H * 0.145), // Adjust Y position if needed
-                initialTextureKey
-            )
-                .setInteractive({ useHandCursor: true })
-                .on('pointerdown', () => {
-                    if (cat == "timeline") {
-                        this.openTimelineBoard()
-                    } else { this.switchCat(cat)  }
-                    
-                });
-            this.tabs[cat] = btn;
-        });
-    }
-
-    private openTimelineBoard() {
-        // give the tab its “active” art so UI still reacts
-        this.activeCat = 'timeline';
-        Object.entries(this.tabs).forEach(([c, img]) => {
-            img.setTexture(`${c}_tab-${c === 'timeline' ? 'active' : 'idle'}`);
-        });
-
-        const allSuspects = Object.values(this.gameState.getSuspectsData());
-        const npcDataForBoard = allSuspects.map(suspect => {
-            return {
-                id: suspect.id,         // Drag scene expects `id`
-                name: suspect.name,      // Drag scene expects `name`
-                portraitKey: suspect.imageKey || 'blank-ico' // Use portraitKey, or fallback
-            };
-        });
-        const allClues = this.clueManager.getAllClues().filter(clue => clue.discovered);
-
-        // launch or wake the drag scene, passing the manager
-        if (!this.scene.isActive('DragAbleClueScene')) {
-            this.scene.launch('DragAbleClueScene', {
-                clues: allClues,
-                npcs: npcDataForBoard,
-                originScene: this.scene.key      // let it know who to resume later
+        // Load cases for the Tutorial scene from shared data
+        this.casesData = tutorialCases;
+        try {
+            console.log('[ClueJournal] Loaded cases data:', Object.keys(this.casesData.cases));
+            Object.entries(this.casesData.cases).forEach(([id, c]) => {
+                // @ts-ignore
+                console.log(`  - ${id}: active=${(c as any).active}`);
             });
-        } else {
-            this.scene.wake('DragAbleClueScene');
+        } catch {}
+        // If assault case was flagged active during gameplay, reflect it here
+        try {
+            const gs = GameState.getInstance();
+            const oc: any = (this.casesData as any).cases?.['officer_whiskers_case'];
+            if (oc && gs.getFlag('assaultCaseActive')) oc.active = true;
+        } catch {}
+        this.activeCaseIds = Object.entries(this.casesData.cases)
+            .filter(([, v]) => v.active)
+            .map(([k]) => k);
+        try { console.log('[ClueJournal] Active cases after merge:', this.activeCaseIds); } catch {}
+
+        if (this.activeCaseIds.length === 0) {
+            // fallback: allow all if none active
+            this.activeCaseIds = Object.keys(this.casesData.cases);
+        }
+        this.currentCaseIdx = 0;
+
+        // get placements for tabs
+        const { container, page } = this.generateMainScreenCasePage(tutorialCases, cy, cx)
+
+        const map = this.make.tilemap({ key: 'caseFrontPage' });
+        const layer =
+            map.getObjectLayer('Object Layer 1') ||
+            map.getObjectLayer('tabs') ||
+            (map as any).objects?.[0];
+
+        if (!layer) {
+            console.error('TMJ missing a tabs layer');
+            // tabPositions will just be empty/fallbacks
         }
 
-        this.scene.bringToTop('DragAbleClueScene');
-        this.scene.sleep(this.scene.key);
+        // Build positions from TMJ "tabs" objects
+        type Rect = { x: number; y: number; w: number; h: number };
+        const VALID: ClueCat[] = ['caseMainpage', 'Clues', 'People', 'Clueboard', 'Accuse', 'Evidence', 'Places', 'Timeline'];
 
-        // freeze the journal underneath (optional—remove if you prefer overlap)
-        this.scene.pause();       // resumes when DragAbleClueScene calls .resume()
-    }
-
-    private setupInputHandlers(): void {
-        // (Keep this function as it was in the previous correct version)
-        const listStartY = this.list.y;
-        this.input.on(Phaser.Input.Events.POINTER_WHEEL, (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[], deltaX: number, deltaY: number) => {
-            // More robust check if pointer is over the list's visual area
-            const listScreenBounds = this.list.getBounds(); // Get actual screen bounds
-            if (Phaser.Geom.Rectangle.Contains(listScreenBounds, pointer.x, pointer.y)) {
-                const contentHeight = this.list.getBounds().height; // Recalculate content height inside
-                const maxScroll = Math.max(0, contentHeight - this.PAGE_H);
-                // Prevent scrolling beyond content bounds
-                this.list.y = Phaser.Math.Clamp(
-                    this.list.y - deltaY * 0.5, // Adjust scroll speed if needed
-                    listStartY - maxScroll,    // Most scrolled down point
-                    listStartY                 // Original top point
-                );
+        const tabPositions: Partial<Record<ClueCat, Rect>> = {};
+        for (const o of (layer?.objects ?? []) as any[]) {
+            if ((o.type || '').trim() !== 'tabs') continue;
+            const name = (o.name || '').trim() as ClueCat;
+            if (!VALID.includes(name)) {
+                console.warn('[tabs] Unknown tab name in TMJ:', o.name);
+                continue;
             }
-        });
-        this.input.keyboard.on('keydown-ESC', () => this.close());
-        this.input.keyboard.on('keydown-J', () => this.close());
-    }
-
-    private switchCat(cat: ClueCat) {
-        // (Keep this function as it was in the previous correct version)
-        console.log(`--- switchCat called with: ${cat}, Current active: ${this.activeCat} ---`);
-        this.activeCat = cat;
-        this.selectedSuspect = null;
-        this.selectedClueId = null;
-        // Reset scroll position when switching tabs
-        const listStartY = this.cameras.main.centerY - this.PANEL_H / 2 + this.PAGE_Y; // Recalculate start Y just in case
-        this.list.y = listStartY;
-
-
-        Object.entries(this.tabs).forEach(([c, img]) => {
-            const shouldBeActive = (c === this.activeCat);
-            const desiredState = shouldBeActive ? 'active' : 'idle';
-            const textureKey = `${c}_tab-${desiredState}`;
-            if (img && img.scene && this.textures.exists(textureKey)) {
-                img.setTexture(textureKey);
-            } else {
-                console.error(`Cannot set texture for tab '${c}'. Image invalid or texture '${textureKey}' missing.`);
-            }
-        });
-
-        this.list.removeAll(true);
-        this.clearPreview();
-
-        if (cat === 'accuse') {
-            this.populateSuspectList();
-            this.showPromptInPreview("Select a suspect to accuse.");
-        } else {
-            this.populateClueList(cat);
-            const firstClue = this.getCluesByCategory(cat).find(c => c.discovered);
-            if (firstClue) {
-                this.showClueDetail(firstClue);
-            } else {
-                this.showPromptInPreview(`No discovered items found for ${cat}.`);
-            }
+            tabPositions[name] = {
+                x: Number(o.x) || 0,
+                y: Number(o.y) || 0,
+                w: Number(o.width) || 0,
+                h: Number(o.height) || 0
+            };
         }
-        console.log(`--- switchCat finished for: ${cat} ---`);
+
+        // Ensure all tabs you plan to show have an entry (keeps shape stable)
+        (['Clues', 'People', 'Clueboard', 'Accuse'] as ClueCat[]).forEach(k => {
+            if (!tabPositions[k]) tabPositions[k] = { x: 0, y: 0, w: 0, h: 0 };
+        });
+
+        console.log('[tabs] positions:', tabPositions);
+        createJournalTabs(
+            this,                      // ITabbedJournalScene
+            page,       // wherever you place the tabs
+            undefined,              // your NineSlice / frame
+            ['Clues', 'People', 'Clueboard', 'Accuse'],
+            {
+                controller: this,        // central controller
+                sceneMap: {
+                    Clues: { sceneKey: 'ClueDisplayJournalScene', sleepCurrent: true },
+                    People: { sceneKey: 'PeopleDisplayJournalScene', sleepCurrent: true },
+                    Clueboard: { sceneKey: 'DragAbleClueScene', sleepCurrent: true },
+                },
+                positions: tabPositions,
+                launchData: {
+                    Clues: () => ({ clueManager: this.clueManager, switcher: this }),
+                    People: () => ({ clueManager: this.clueManager, switcher: this, activeCategory: 'People' as ClueCat }),
+                    Clueboard: () => ({
+                        clues: this.clueManager.getAllClues(),
+                        npcs: Object.values(AllNPCsConfigs).map(npc => ({ id: npc.npcId, name: npc.displayName, imageKey: npc.portrait?.textureKey ?? npc.textureKey })),
+                        originScene: this.scene.key,
+                    }),
+                },
+            }
+        );
+
+        // Visual close button (top-right) to exit the journal
+        const addClose = () => {
+            const xBtnSize = 28, xBtnPad = 16;
+            const x = this.cameras.main.width - xBtnPad - xBtnSize;
+            const y = xBtnPad;
+            const cont = this.add.container(x, y).setDepth(99999).setScrollFactor(0);
+            const bg = this.add.rectangle(0, 0, xBtnSize, xBtnSize, 0xcc0000, 1)
+                .setOrigin(0, 0)
+                .setStrokeStyle(2, 0xffffff, 0.95);
+            const tx = this.add.text(xBtnSize / 2, xBtnSize / 2, 'X', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+                .setOrigin(0.5);
+            cont.add([bg, tx]).setSize(xBtnSize, xBtnSize).setInteractive({ useHandCursor: true });
+            cont.on('pointerdown', () => this.close());
+            cont.on('pointerover', () => bg.setAlpha(0.85));
+            cont.on('pointerout', () => bg.setAlpha(1));
+        };
+        addClose();
+
+        this.events.on('shutdown', () => {
+            // Make sure to remove the listener from the same emitter you added it to.
+        });
+
     }
 
-    private close() {
-        // (Keep this function as it was)
-        this.scene.stop();
-        this.scene.resume(this.originScene);
+    private renderCaseAtIndex(idx: number, pageWidth: number) {
+        const id = this.activeCaseIds[idx];
+        const c = this.casesData.cases[id];
+        if (!c) return;
+
+        this.titleText.setText(c.case_title);
+        this.fitTitleToWidth(this.titleText, pageWidth * 0.835, 36, 14);
+
+        this.caseIndexLabel.setText(`${idx + 1}/${this.activeCaseIds.length}`);
+
+        //this.playerTaskText.setText(c.case_description_player_task);
+        this.taskBodyText.setText(c.case_description_task);
     }
 
-    private populateClueList(cat: ClueCat) {
-        // (Keep this function as it was)
-        const clues = this.getCluesByCategory(cat);
-        clues.forEach((c, i) => this.buildClueRow(c, i));
-        const listStartY = this.cameras.main.centerY - this.PANEL_H / 2 + this.PAGE_Y;
-        this.list.y = listStartY; // Ensure scroll reset here too
+    private changeCase(delta: number) {
+        const n = this.activeCaseIds.length;
+        if (n <= 1) return;
+        this.currentCaseIdx = (this.currentCaseIdx + delta + n) % n;
+
+        // recompute width quickly from current title’s world (safe enough),
+        // or cache imgWidth from generateMainScreenCasePage if you prefer.
+        const maxWidthGuess = this.cameras.main.width / 2.5 * 0.835;
+        this.renderCaseAtIndex(this.currentCaseIdx, maxWidthGuess);
     }
 
-    private populateSuspectList() {
-        // (Keep this function as it was)
-        const suspects = Object.values(this.gameState.getSuspectsData());
-        if (suspects.length === 0) {
-            console.warn("Accuse tab opened, but no suspect data found in GameState.");
-            this.showPromptInPreview("No suspects available.");
+    private fitTitleToWidth(textObj: Phaser.GameObjects.Text, maxWidth: number, maxPx = 36, minPx = 14) {
+        // ensure no wrapping on the title
+        if (!this.cache.tilemap.exists('caseFrontPage')) {
+            console.error('[ClueJournal] Tilemap key "caseFrontPage" not found in cache.',
+                'Loaded tilemaps:', this.cache.tilemap.getKeys());
             return;
         }
-        suspects.forEach((s, i) => this.buildSuspectRow(s, i));
-        const listStartY = this.cameras.main.centerY - this.PANEL_H / 2 + this.PAGE_Y;
-        this.list.y = listStartY; // Ensure scroll reset here too
-    }
 
-    private buildClueRow(clue: Clue, index: number) {
-        // (Keep this function mostly as it was, ensure styles are correct)
-        const rowY = index * this.ROW_H;
-        const rowWidth = this.LIST_W;
-        const row = this.add.container(0, rowY).setData('itemKey', clue.id);
+        (textObj.style as any).wordWrap = undefined;
 
-        const bg = this.add.rectangle(rowWidth / 2, this.ROW_H / 2, rowWidth, this.ROW_H, 0xffffff, 0);
-        const icoKey = clue.imageKey && this.textures.exists(clue.imageKey) ? clue.imageKey : 'blank-ico';
-        const ico = this.add.sprite(6, this.ROW_H / 2, icoKey)
-            .setOrigin(0, 0.5)
-            .setDisplaySize(this.ROW_H * 0.7, this.ROW_H * 0.7);
-        const txt = this.add.text(
-            ico.x + ico.displayWidth + 8, // Increased spacing slightly
-            this.ROW_H / 2,
-            clue.title, this.LIST_ROW_STYLE // Use LIST_ROW_STYLE
-        ).setOrigin(0, 0.5)
-            .setAlpha(clue.discovered ? 1 : 0.4);
-
-        row.add([bg, ico, txt])
-            .setSize(rowWidth, this.ROW_H)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover', () => { if (row.getData('itemKey') !== this.selectedClueId) bg.setFillStyle(0xffffff, 0.2) }) // Subtle hover
-            .on('pointerout', () => { if (row.getData('itemKey') !== this.selectedClueId) bg.setFillStyle(0xffffff, 0) })
-            .on('pointerdown', () => {
-                if (clue.discovered) {
-                    this.showClueDetail(clue);
-                } else {
-                    this.showPromptInPreview("This clue hasn't been discovered yet.");
-                }
-            });
-        this.list.add(row);
-    }
-
-    private buildSuspectRow(suspect: Suspect, index: number) {
-        // (Keep this function mostly as it was, ensure styles are correct)
-        const rowY = index * this.ROW_H;
-        const rowWidth = this.LIST_W;
-        const row = this.add.container(0, rowY).setData('itemKey', suspect.key);
-
-        const bg = this.add.rectangle(rowWidth / 2, this.ROW_H / 2, rowWidth, this.ROW_H, 0x161616, 0);
-        const textX = 10;
-        const txt = this.add.text(textX, this.ROW_H / 2, suspect.name, this.LIST_ROW_STYLE) // Use LIST_ROW_STYLE
-            .setOrigin(0, 0.5);
-
-        row.add([bg, txt])
-            .setSize(rowWidth, this.ROW_H)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerover', () => { if (row.getData('itemKey') !== this.selectedSuspect?.key) bg.setFillStyle(0xffffff, 0.2); })
-            .on('pointerout', () => { if (row.getData('itemKey') !== this.selectedSuspect?.key) bg.setFillStyle(0xffffff, 0); })
-            .on('pointerdown', () => {
-                this.showSuspectDetail(suspect);
-            });
-        this.list.add(row);
-    }
-
-    private clearPreview() {
-        // (Keep this function as it was)
-        this.preview.removeAll(true);
-    }
-
-    private showPromptInPreview(message: string) {
-        // (Keep this function as it was, ensure PROMPT_STYLE is used)
-        this.clearPreview();
-        const promptText = this.add.text(
-            this.PREVIEW_W / 2, this.PAGE_H / 3,
-            message, this.PROMPT_STYLE // Use defined style
-        ).setOrigin(0.5);
-        this.preview.add(promptText);
-    }
-
-    // --- MODIFIED: Ensure correct styles are applied ---
-    private showClueDetail(clue: Clue) {
-        this.clearPreview();
-        this.selectedClueId = clue.id;
-        this.selectedSuspect = null;
-        // const displacement_right = 0; // If you still need this for layout
-
-        // --- Use the imageKey directly from the Clue object ---
-        // This imageKey should have been set when the Clue was created,
-        // ideally from itemConfig.getArt('small').
-        const textureKey = (clue.imageKey && this.textures.exists(clue.imageKey))
-            ? clue.imageKey
-            : 'placeholder-clue-art'; // Fallback
-
-        // Adjust position and scale for the preview panel
-        // PREVIEW_W is the width of your preview area.
-        const art = this.add.image(this.PREVIEW_W / 2, 80, textureKey) // Centered, Y=80
-            .setOrigin(0.5, 0.5) // Center the image
-            .setScale(1.5); // Adjust scale as needed for preview, maybe smaller than world sprite
-
-        // Ensure the image doesn't overflow the preview area
-        if (art.displayWidth > this.PREVIEW_W - 20) {
-            art.displayWidth = this.PREVIEW_W - 20;
-            art.scaleY = art.scaleX; // Maintain aspect ratio
+        let lo = minPx, hi = maxPx, best = minPx;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            textObj.setFontSize(mid);
+            if (textObj.width <= maxWidth) { best = mid; lo = mid + 1; }
+            else { hi = mid - 1; }
         }
-        if (art.displayHeight > 120) { // Max height for art
-            art.displayHeight = 120;
-            art.scaleX = art.scaleY;
+        textObj.setFontSize(best);
+        // single super-long word safety
+        if (textObj.width > maxWidth) textObj.setScale(maxWidth / textObj.width, 1);
+        else textObj.setScale(1, 1);
+    }
+
+    private generateMainScreenCasePage(cases: JSON, cy: number, cx: number) {
+        // use your loaded map key (no renames)
+        const map = this.make.tilemap({ key: 'caseFrontPage' }); // <-- CHANGED
+
+        const pageW = 500;
+        const pageH = 800;
+        if (this.scale.width < 800 || this.scale.height < 600) {
+            const pageW = map.widthInPixels || this.scale.width;
+            const pageH = map.heightInPixels || this.scale.height;
         }
 
+        const container = this.add.container(cx, cy);
+        const page = this.add.container(-pageW / 2, -pageH / 2);
+        container.add(page);
 
-        let currentY = art.y + art.displayHeight / 2 + 20; // Start text below image
-
-        const title = this.add.text(0, currentY, clue.title, this.CLUE_TITLE_STYLE)
-            .setOrigin(0, 0); // Align text to top-left of its block
-        currentY += title.getBounds().height + 10;
-
-        const bodyText = `${clue.description}\n\nFound at: ${clue.foundAt || 'Unknown Location'}`;
-        const body = this.add.text(0, currentY, bodyText, this.CLUE_BODY_STYLE)
+        // use your loaded image key (no renames)
+        const bg = this.add.image(0, 0, 'caseJournalFrontPage') // <-- CHANGED
             .setOrigin(0, 0);
 
-        this.preview.add([art, title, body]);
-        this.highlightListRow(clue.id);
-    }
+        // ensure PNG matches the TMJ size so object coords line up
+        bg.setDisplaySize(pageW, pageH); // <-- ADD
 
-    // --- MODIFIED: Ensure correct styles are applied ---
-    private showSuspectDetail(suspect: Suspect) {
-        this.clearPreview();
-        this.selectedSuspect = suspect;
-        this.selectedClueId = null;
+        page.addAt(bg, 0);
 
-        let currentY = 0;
-        // Apply the defined styles
-        console.log("[CLUESCENE] Showing details for suspect", suspect);
-        const nameText = this.add.text(0, currentY, suspect.name, this.SUSPECT_TITLE_STYLE);
-        this.preview.add(nameText);
-        currentY += nameText.height + 10;
+        console.log("[ClueScene] pageW, pageH:", pageW, pageH);
+        const objLayer =
+            map.getObjectLayer('Object Layer 1') ||
+            map.getObjectLayer('objects') ||       // fallback if you rename later
+            map.getObjectLayer('ui') ||
+            (map as any).objects?.[0];
+        if (!objLayer) {
+            console.warn('TMJ missing "objects" layer');
+            return;
+        }
 
-        const infoText = this.add.text(0, currentY,
-            `Motive Notes:\n${suspect.motive || 'None recorded.'}\n\nAlibi Notes:\n${suspect.alibi || 'None provided.'}`,
-            this.SUSPECT_INFO_STYLE // Apply SUSPECT_INFO_STYLE
-        );
-        this.preview.add(infoText);
-        currentY += infoText.height + 25;
+        // Use the helper to normalize numbers
+        this.casetitle = this.findObj(objLayer, 'Case Title');
+        this.casedescription = this.findObj(objLayer, 'Case Description');
+        console.log("[ClueScene] objLayer:", objLayer);
 
-        const accuseButton = this.add.text(0, currentY, `Accuse ${suspect.name}`, this.ACCUSE_BUTTON_STYLE)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.showAccusationConfirmation(suspect));
-        this.preview.add(accuseButton);
+        const SHOW_DEBUG = false;
+        if (SHOW_DEBUG) {
+            const g = this.add.graphics();
+            page.add(g); // IMPORTANT: add to 'page' so (x,y) matches Tiled
 
-        this.highlightListRow(suspect.key);
-    }
+            // Title (red)
+            g.lineStyle(2, 0xff3b30, 1)
+                .strokeRect(
+                    this.casetitle.x,
+                    this.casetitle.y,
+                    this.casetitle.width,
+                    this.casetitle.height
+                );
 
-    private highlightListRow(key: string | number | null) {
-        // (Keep this function as it was)
-        this.list.getAll().forEach((rowContainer) => {
-            if (!(rowContainer instanceof Phaser.GameObjects.Container)) return;
-            const bg = rowContainer.getAt(0) as Phaser.GameObjects.Rectangle;
-            if (!bg || typeof bg.setFillStyle !== 'function') return;
-            if (rowContainer.getData('itemKey') === key) {
-                bg.setFillStyle(0xffd700, 0.3); // Slightly less intense gold highlight
-            } else {
-                bg.setFillStyle(0xffffff, 0);
+            // Description (green)
+            g.lineStyle(2, 0x34c759, 1)
+                .strokeRect(
+                    this.casedescription.x,
+                    this.casedescription.y,
+                    this.casedescription.width,
+                    this.casedescription.height
+                );
+
+            // debug fills removed
+        }
+
+        this.titleText = this.add.text(
+            this.casetitle.x + this.casetitle.width / 2,
+            this.casetitle.y,
+            "",
+            {
+                fontSize: '36px',
+                fontStyle: 'bold',
+                color: '#000000',
+                wordWrap: { width: Math.max(20, this.casetitle.width), useAdvancedWrap: true },
+                align: 'center',
             }
-        });
+        ).setOrigin(0.5, 0);
+        page.add(this.titleText);
+
+        this.taskBodyText = this.add.text(
+            this.casetitle.x + this.casetitle.width / 2,
+            this.casedescription.y,
+            'hi',
+            {
+                fontSize: '18px',
+                color: '#000000',
+                lineSpacing: 6,
+                wordWrap: {
+                    width: Math.max(20, this.casedescription.width),
+                    useAdvancedWrap: true,
+                },
+            }
+        ).setOrigin(0.5, 0);
+        //this.taskBodyText.setMask(descMaskGfx.createGeometryMask());
+        page.add(this.taskBodyText);
+        console.info("[ClueScene] taskBodyText:", this.taskBodyText.x, this.taskBodyText.y);
+        console.info("[ClueScene] titleText:", this.titleText.x, this.titleText.y);
+
+        const _id = this.activeCaseIds[this.currentCaseIdx];
+        const c = this.casesData.cases[_id];
+        if (c) {
+            this.titleText.setText(c.case_title || 'Untitled Case');
+            this.fitTitleToWidth(this.titleText, this.casetitle.width, 36, 14);
+            this.taskBodyText.setText(c.case_description_task || '');
+        }
+
+        //// ----- Case switcher (keep functionality) -----
+        if (this.activeCaseIds?.length > 1) {
+            // index label above the title (e.g. "1/2")
+            this.caseIndexLabel = this.add.text(
+                this.casetitle.x + this.casetitle.width / 2,
+                Math.max(0, this.casetitle.y - 16),
+                `${this.currentCaseIdx + 1}/${this.activeCaseIds.length}`,
+                { fontSize: '14px', color: '#333333' }
+            ).setOrigin(0.5, 1);
+            page.add(this.caseIndexLabel);
+
+            // arrows left/right of the title box
+            const yMid = this.casetitle.y + 18;
+
+            this.navPrevBtn = this.add.text(
+                Math.max(8, this.casetitle.x - 18), yMid, '◀',
+                { fontSize: '22px', color: '#333333', backgroundColor: '#e6e6e6', padding: { x: 8, y: 4 } }
+            ).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            this.navPrevBtn.on('pointerdown', () => this.changeCase(-1));
+            page.add(this.navPrevBtn);
+
+            this.navNextBtn = this.add.text(
+                this.casetitle.x + this.casetitle.width + 18, yMid, '▶',
+                { fontSize: '22px', color: '#333333', backgroundColor: '#e6e6e6', padding: { x: 8, y: 4 } }
+            ).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+            this.navNextBtn.on('pointerdown', () => this.changeCase(+1));
+            page.add(this.navNextBtn);
+
+            // keyboard shortcuts
+            this.input.keyboard?.on('keydown-LEFT', () => this.changeCase(-1));
+            this.input.keyboard?.on('keydown-RIGHT', () => this.changeCase(+1));
+            // Hotkey: J to close journal and return to game
+            this.input.keyboard?.on('keydown-J', () => this.close());
+
+            // seed using your existing renderer (keeps your font fit + label update)
+            if (typeof this.renderCaseAtIndex === 'function') {
+                this.renderCaseAtIndex(this.currentCaseIdx, this.casetitle.width);
+            }
+
+
+        } return {container, page};
     }
 
-    private getCluesByCategory(cat: ClueCat): Clue[] {
-        // (Keep this function as it was)
-        if (!this.clueManager) {
-            console.error("ClueManager is not initialized!");
-            return [];
+
+    private close() {
+        // Close the journal and return to the gameplay scene without immediately reopening
+        try {
+            const { UIManager } = require('../managers/UIManager');
+            const ui = UIManager.getInstance();
+            // Prevent the overlay J hotkey from reopening the journal on the same keypress
+            ui.setJournalHotkeyEnabled(false);
+        } catch {}
+
+        if (this.scene.isActive('AccusationScene')) {
+            this.scene.stop('AccusationScene');
         }
-        return this.clueManager
-            .getAllClues()
-            .filter(c => (c.category as ClueCat) === cat)
-            .sort((a, b) => {
-                if (a.discovered !== b.discovered) {
-                    return a.discovered ? -1 : 1;
-                }
-                return a.title.localeCompare(b.title);
+        const originKey = this.originScene;
+        const sm = this.scene;
+        // Stop this journal scene
+        sm.stop(this.scene.key);
+        // Resume/wake origin gameplay
+        if (sm.isSleeping(originKey)) sm.wake(originKey);
+        sm.resume(originKey);
+
+        // Wake or relaunch the UI overlay so it returns after closing the journal
+        try {
+            if (sm.isSleeping('UIGameScene')) {
+                sm.wake('UIGameScene');
+            } else if (!sm.isActive('UIGameScene')) {
+                sm.launch('UIGameScene');
+            }
+            sm.bringToTop('UIGameScene');
+        } catch {}
+
+        // Re-enable the overlay journal hotkey a moment later from the origin scene's clock
+        const origin = sm.get(originKey) as Phaser.Scene | undefined;
+        if (origin) {
+            origin.time.delayedCall(150, () => {
+                try {
+                    const { UIManager } = require('../managers/UIManager');
+                    UIManager.getInstance().setJournalHotkeyEnabled(true);
+                } catch {}
             });
-    }
-
-    private showAccusationConfirmation(suspect: Suspect): void {
-        // (Keep this function as it was - consider replacing confirm() later)
-        const confirmation = confirm(`Are you sure you want to accuse ${suspect.name}? This decision is final and cannot be undone.`);
-        if (confirmation) {
-            this.resolveAccusation(suspect);
         } else {
-            console.log("Accusation cancelled.");
+            // Fallback
+            setTimeout(() => {
+                try {
+                    const { UIManager } = require('../managers/UIManager');
+                    UIManager.getInstance().setJournalHotkeyEnabled(true);
+                } catch {}
+            }, 150);
         }
     }
 
-    private resolveAccusation(suspect: Suspect): void {
-        // (Keep this function as it was)
-        console.log(`Resolving accusation for ${suspect.name}. Correct Culprit: ${suspect.isCulprit}`);
-        this.scene.stop(this.key);
-        if (this.scene.get(this.originScene)?.scene?.isActive()) {
-            this.scene.stop(this.originScene);
-        } else {
-            console.warn(`Origin scene '${this.originScene}' not found or not active.`);
+    // ---- ICategorySwitcher implementation ----
+    public switchCat(category: ClueCat, force = false): void {
+        if (!force && this.activeCat === category) return;
+        this.activeCat = category;
+
+        // Always stop other overlay scenes before switching to a new tab
+        const overlays = ['ClueDisplayJournalScene', 'PeopleDisplayJournalScene', 'AccusationScene', 'DragAbleClueScene'];
+        overlays.forEach(k => { if (this.scene.isActive(k)) this.scene.stop(k); });
+
+        if (category === 'caseMainpage') {
+            // Ensure the main page is visible again
+            if (this.scene.isSleeping(this.scene.key)) this.scene.wake(this.scene.key);
+            this.scene.bringToTop(this.scene.key);
         }
-        const endSceneKey = suspect.isCulprit ? 'VictoryScene' : 'GameOverScene';
-        console.log(`Starting ${endSceneKey}`);
-        this.scene.start(endSceneKey, { accusedSuspect: suspect });
+
+        // If needed, additional categories can be routed here
+        updateTabVisuals(this as any);
     }
+
+    public getActiveCat(): ClueCat {
+        return this.activeCat;
+    }
+
+    public updateTabVisuals(): void {
+        updateTabVisuals(this as any);
+    }
+
+    private findObj(layer: Phaser.Types.Tilemaps.TiledObjectLayer, name: string) {
+        const o = layer.objects.find((ob: any) => ob.name === name);
+        if (!o) throw new Error(`TMJ object not found: ${name}`);
+        // Tiled rectangles give x,y,width,height; ensure numbers
+        return {
+            x: Number(o.x) || 0,
+            y: Number(o.y) || 0,
+            width: Number(o.width) || 0,
+            height: Number(o.height) || 0
+        };
+    }
+
+
 }

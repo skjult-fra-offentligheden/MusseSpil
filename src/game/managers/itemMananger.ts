@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { Item } from "../classes/itemDatastruct";
 import { GameState } from './GameState';
-import { ItemActionHandler } from '../scenes/ToturialScene/ItemActionHandler';
 import { UIManager } from '../managers/UIManager';
-import { UIGameOverlay } from "../scenes/UiGameOverlay";
 import { AllItemConfigs } from "../../data/items/AllItemConfig";
+import { ClueManager } from "../clueScripts/clueManager";
+import { ItemGameContext } from "./CallBackManager";
+import { Player } from "../classes/player";
+import { ItemConfig } from '../../data/items/itemTemplate';
 export class InventoryManager {
     private static instance: InventoryManager;
     private items: Map<string, Item> = new Map();
@@ -13,7 +15,6 @@ export class InventoryManager {
     // UI Elements
     private inventoryContainer!: Phaser.GameObjects.Container;
     private itemSlots: Phaser.GameObjects.Sprite[] = [];
-    private itemActionHandler: ItemActionHandler; // Add this
     private sceneForEvents: Phaser.Scene | null = null;
 
     private constructor() {
@@ -30,8 +31,25 @@ export class InventoryManager {
     public setScene(scene: Phaser.Scene) {
         this.scene = scene;
         this.sceneForEvents = scene;
-        this.itemActionHandler = new ItemActionHandler(this.scene);
         //this.initializeUI(); //so far destroys item degradation and item slots on scene change
+        // Rehydrate inventory from GameState on scene attach (silent add)
+        try {
+            const gs = GameState.getInstance();
+            gs.collectedItems.forEach((id) => {
+                const cfg = AllItemConfigs[id];
+                if (!cfg) return;
+                if (!this.items.has(id)) {
+                    const item = this.createInventoryItemData(cfg);
+                    // add without duplicate notifications
+                    this.items.set(id, item);
+                }
+                // Ensure icon reflects saved phase
+                this.updateItemDisplay(id);
+            });
+            this.refreshInventoryUI();
+        } catch (e) {
+            console.warn('[InventoryManager] rehydrate failed:', e);
+        }
     }
 
     public addItem(newItem: Item) {
@@ -113,15 +131,21 @@ export class InventoryManager {
 
     public createInventoryItemData(itemConfig: ItemConfig): Item {
         let iconAssetKey: string | undefined;
+
+        // Get the authoritative state from GameState
+        const gameState = GameState.getInstance();
+        const clueId = itemConfig.clueId || itemConfig.id;
+        const currentPhase = gameState.getOrInitClueState(clueId).phase;
+
         if (itemConfig.art && itemConfig.art.small) {
             if (typeof itemConfig.art.small === 'string') {
                 iconAssetKey = itemConfig.art.small;
             } else { // PhasedArt
-                // Use itemConfig.getArt() to get the current state's art
-                iconAssetKey = itemConfig.getArt ? itemConfig.getArt.call(itemConfig, 'small') : itemConfig.art.small.full;
+                // Call getArt with the current phase from GameState
+                iconAssetKey = itemConfig.getArt ? itemConfig.getArt.call(itemConfig, 'small', currentPhase) : itemConfig.art.small.full;
             }
         }
-        const quantity = 1; // Or itemConfig.initialQuantity if you add that
+        const quantity = 1;
         const itemName = itemConfig.name || itemConfig.id;
 
         return new Item(
@@ -137,19 +161,28 @@ export class InventoryManager {
     public updateItemDisplay(itemId: string): void {
         console.log(`[InventoryManager updateItemDisplay] Called for item ID: ${itemId}`);
 
-        const itemInstance = this.items.get(itemId); // Get the Item object stored in the inventory (Map)
-        const itemConfig = AllItemConfigs[itemId];   // Get the stateful ItemConfig object
+        const itemInstance = this.items.get(itemId);
+        const itemConfig = AllItemConfigs[itemId];
+        const gameState = GameState.getInstance();
 
         if (!itemInstance || !itemConfig || typeof itemConfig.getArt !== 'function') {
             console.warn(`[InventoryManager updateItemDisplay] Cannot update data for ${itemId}. Missing instance, config, or getArt.`);
             return;
         }
-        const newIconKey = itemConfig.getArt.call(itemConfig, 'small');
+
+        // 1. Get the authoritative phase from GameState
+        const clueId = itemConfig.clueId || itemId;
+        const currentPhase = gameState.getOrInitClueState(clueId).phase;
+
+        // 2. Call getArt with the correct phase to get the new texture
+        const newIconKey = itemConfig.getArt.call(itemConfig, 'small', currentPhase);
+
         if (newIconKey && itemInstance.iconKey !== newIconKey) {
-            itemInstance.iconKey = newIconKey;
+            itemInstance.iconKey = newIconKey; // Update the data object in the inventory
             console.log(`[InventoryManager] Data for ${itemId} iconKey updated to ${newIconKey}.`);
         }
-        // Data has potentially changed, so call refreshInventoryUI which will emit the event
+
+        // 3. Notify the UI to refresh
         this.refreshInventoryUI();
     }
 
@@ -176,6 +209,63 @@ export class InventoryManager {
         }
     }
 
+    public useItem(inventoryItem: Item | null, callingScene: Phaser.Scene) {
+        if (!inventoryItem) {
+            console.warn("useItem called with no item.");
+            // Optionally show a UI message via UIManager
+            return;
+        }
+
+        const itemConfig = AllItemConfigs[inventoryItem.itemId];
+        if (!itemConfig || !itemConfig.use) {
+            console.warn(`Item ${inventoryItem.itemId} has no use method.`);
+            return;
+        }
+
+        // Get managers from singletons or the calling scene's registry
+        const clueManager = callingScene.registry.get('clueManager') as ClueManager;
+        const uiManager = UIManager.getInstance();
+        const gameState = GameState.getInstance();
+
+        if (!clueManager) {
+            console.error("FATAL: useItem could not find ClueManager in the calling scene's registry.");
+            return;
+        }
+
+        // Build the complete game context object
+        const gameContext: ItemGameContext = {
+            scene: callingScene,
+            inventoryManager: this, // 'this' is the InventoryManager instance
+            clueManager: clueManager,
+            ui: uiManager,
+            gameState: gameState,
+            interactedObject: undefined, // Not relevant for inventory use
+            targetItem: undefined, // Can be populated if using an item on another
+            world: { removeItemSprite: () => { } }
+        };
+
+        // Call the item's use function
+        const useResult = itemConfig.use.call(itemConfig, gameContext);
+
+        // Process the results (art changes, consumption)
+        if (useResult.artChanged) {
+            this.updateItemDisplay(inventoryItem.itemId);
+        }
+
+        if (useResult.consumed) {
+            this.removeItem(inventoryItem.itemId);
+        } else {
+            // Even if not consumed, refresh UI in case quantity changes (if you add that later)
+            this.refreshInventoryUI();
+        }
+
+        // Emit the event for NPCs to hear
+        callingScene.events.emit('itemUsedFromInventory', {
+            itemId: inventoryItem.itemId,
+            player: callingScene.registry.get('player') as Player,
+            result: useResult
+        });
+    }
 
     private showItemNotification(item: Item) {
         if (!this.scene) return;

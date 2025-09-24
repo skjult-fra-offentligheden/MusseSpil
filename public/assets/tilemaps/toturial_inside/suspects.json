@@ -25,6 +25,6 @@
         "name": "Pink Dress Girl Mouse",
         "description": "A stylish mouse who stands out in any crowd.",
         "imageKey": "pinkDressGirlMouseImage",
-        "isCulprit": false
+        "isCulprit": true
     }
 }

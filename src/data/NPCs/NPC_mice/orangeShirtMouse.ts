@@ -21,21 +21,26 @@ const OrangeShirtMouse: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAnim
     walkRightKey: "orangeshirtmouse_anim_walk_right"
 };
 
-const orangeShirtMouseDialogues: DialogueNode[] = [
-    { id: "greeting", text: "orange shirt mouse. What do you need?", options: [/* your options here */] },
-    { id: "orangeshitymouse_briefing", text: "Listen up, newbie, i didn't do it. just let me go", options: [/* ... */] },
-];
+//const orangeShirtMouseDialogues: DialogueNode[] = [
+//    { id: "greeting", text: "orange shirt mouse. What do you need?", options: [/* your options here */] },
+//    { id: "orangeshitymouse_briefing", text: "Listen up, newbie, i didn't do it. just let me go", options: [/* ... */] },
+//];
  
 export const OrangeShirtMouseConfig: NPCConfig = {
     npcId: "orangeShirtMouse",
-    displayName: "Orange shirt",
+    displayName: "Mouse Jerry",
     textureKey: "orangeShirtMouse",         // The spritesheet to use (matches animations.atlasKey)
     initialFrame: "orangeShirtMouse0.png",   // The picture to show when Cop2 first appears
 
     animations: OrangeShirtMouse, // Assign the animation details we defined above
 
-    dialogues: orangeShirtMouseDialogues,   // Assign the dialogue we defined above
+    //dialogues: orangeShirtMouseDialogues,   // Assign the dialogue we defined above
     isSuspect: true, // This NPC is a suspect in the case
+    culpritDetails: {
+        crimeCommitted: 'Illegal cheese possession',
+        keyEvidence: ['blueCheese'],
+        motive: 'Loves contraband cheese'
+    },
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
     sensoryRange: 250,
@@ -47,5 +52,8 @@ export const OrangeShirtMouseConfig: NPCConfig = {
     // defaultScale: 1,
     // description: "The stern but fair police chief.",
      // initialMentalState: NPCMentalState.Neutral,
-     faction: "CocaineGang",
+    faction: "CocaineGang",
+    portrait: {
+        textureKey: 'portrait_orangeshirt'
+    }
 };

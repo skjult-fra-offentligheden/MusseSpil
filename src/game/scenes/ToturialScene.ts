@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '../classes/player';
 import { NPC } from '../NPCgeneral/npc';
-import { createNPCs } from '../../factories/npcFactory';
 import { DialogueNode } from "../dialogues/dialogues"
 import { DialogueManager } from '../dialogues/dialogueManager';
 import { Interactable } from '../managers/interactables';
@@ -12,18 +11,24 @@ import { InventoryManager } from '../managers/itemMananger';
 import { UIManager } from '../managers/UIManager';
 import { ClueManager } from '../clueScripts/clueManager';
 import { Clue } from '../classes/clue';
-import { ClueDisplayScene } from './clueDisplay';
 import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
 import { ItemConfig, PhaseArt } from '../../data/items/itemTemplate';
 import { CallbackHandler } from '../managers/CallBackManager';
-
+import { ItemActionHandler, ItemUsedEventPayload } from './ToturialScene/ItemActionHandler';
 import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'; // Assuming path to your new AllNPCConfigs
 import { NPCConfig } from '../../data/NPCs/npcTemplate';  // Assuming path to your new RichNPCConfig interface
 import { setupAllNPCAnimations, spawnNPCsFromList, NpcSpawnInstruction } from '../../factories/npcFactory'; // Or wherever you put animation setup
+import { ReactionManager } from '../NPCgeneral/toturialScene/ReactionsManager';
+import { CaseDirector } from '../../cases/CaseDirector';
+import { TutorialCase } from '../../cases/TutorialCase';
+import { tutorialCases } from '../../data/cases/tutorialCases';
+import { GlobalEvents } from '../../factories/globalEventEmitter';
+import { tutorialCallbacks } from './ToturialScene/callbackToturialScene';
 
 const MAX_DIALOGUE_DISTANCE = 70; // SUPER IMPORTANT
 
 export class ToturialScene extends Phaser.Scene {
+    private camera!: Phaser.Cameras.Scene2D.Camera;
     private interactionText!: Phaser.GameObjects.Text;
     npcs!: NPC[];
     public cursors: Phaser.Types.Input.Keyboard.CursorKeys | undefined;
@@ -40,7 +45,6 @@ export class ToturialScene extends Phaser.Scene {
     private clueManager!: ClueManager;
     private clueData: { [key: string]: Clue }
     private objectData!: { [npcId: string]: DialogueNode[] };
-    private suspectsData: any;
     private inventoryManager!: InventoryManager; 
     private isIntroDialogueActive: boolean = false;
     public callbackHandler!: CallbackHandler; 
@@ -51,6 +55,12 @@ export class ToturialScene extends Phaser.Scene {
     private rockermousedialogue: any;
     private orangeShirtMouse: any;
     private pinkdressMouse: any;
+
+    public itemActionHandler!: ItemActionHandler;
+
+    //Case
+    public caseDirector!: CaseDirector;
+
     constructor() {
         super({ key: 'ToturialScene' });
     }
@@ -60,7 +70,12 @@ export class ToturialScene extends Phaser.Scene {
         //this.load.json("npc_dialogues_toturial", "tilemaps/toturial_inside/npcdialogue.json");
         //this.load.json("objects_dialogues_toturial", "tilemaps/toturial_inside/objectsDialogue.json");
         //this.load.json("toturial_clues", "tilemaps/toturial_inside/clues.json");
-
+        console.log("[ToturialScene Preload] Loading NPC portraits...");
+        this.load.image('portrait_cop2', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
+        this.load.image('portrait_rockermouse', 'assets/npc/rockerMouse/Neutral_rockermouse_portrait.png');
+        this.load.image('portrait_orangeshirt', 'assets/npc/orangeShirtMouse/Neutralorangeshirtmouseportrait.png');
+        this.load.image('portrait_pinkdress', 'assets/npc/pinkDressGirlMouse/Neutralpinkdressgirlmouse.png');
+        this.load.image('portrait_unknown', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
         // Load the house interior tilemap JSON file
         this.load.tilemapTiledJSON('policeinside', 'assets/tilemaps/toturial_inside/policeroom.tmj');
 
@@ -68,13 +83,6 @@ export class ToturialScene extends Phaser.Scene {
         this.load.image('background_toturial', 'assets/tilemaps/toturial_inside/background.png');
         this.load.image('big_furniture', 'assets/tilemaps/toturial_inside/big_furniture.png');
         this.load.image('objects_decoration', 'assets/tilemaps/toturial_inside/objects_decoration.png');
-
-        ////OBJECTS
-        //this.load.image('clueCheese', 'assets/tilemaps/toturial_inside/cheese_64x64.png');
-        //this.load.image('clueCoke', 'assets/tilemaps/toturial_inside/cokebag_full_64x64.png');
-        //this.load.image('glue', 'assets/tilemaps/toturial_inside/glue_64x64.png');
-        //this.load.image('cluePhone', 'assets/tilemaps/toturial_inside/phone_64x64.png');
-
 
         //npc her
         this.load.atlas("cop2", "assets/npc/cop2Sprite/cop2sprite.png", "assets/npc/cop2Sprite/cop2sprite.json")
@@ -120,9 +128,30 @@ export class ToturialScene extends Phaser.Scene {
     create() {
         //sæt ui elementer.
         const state = GameState.getInstance(this);
+        {
+            const gs = GameState.getInstance();
+            const _setFlag = gs.setFlag.bind(gs);
 
+            gs.setFlag = (id: string, value: any) => {
+                if (id === 'cokeDepleted' || id === 'cheeseDepleted') {
+                    console.trace(`[TRACE setFlag] ${id} := ${value}`);
+                }
+                return _setFlag(id, value);
+            };
+        }
+        // Set culprit by first active case mapping for simplicity
+        const firstActive = Object.entries(tutorialCases.cases).find(([id, c]: any) => c && (c as any).active);
+        if (firstActive && (firstActive[1] as any).culpritNpcId) {
+            const npcId = (firstActive[1] as any).culpritNpcId as string;
+            state.culpritId = npcId;
+            const cfg: any = (AllNPCsConfigs as any)[npcId];
+            state.culpritDetails = cfg?.culpritDetails ?? state.culpritDetails;
+        } else {
+            // Fallback to first NPC with culpritDetails
+            state.determineCulprit(AllNPCsConfigs);
+        }
         this.clueData = this.cache.json.get('toturial_clues') || {};
-        this.clueManager = new ClueManager(this.clueData);   // build with the JSON that was just cached
+        this.clueManager = new ClueManager(this.clueData, state, this);   // build with the JSON that was just cached
         this.registry.set('clueManager', this.clueManager);
         if (Object.keys(this.clueData).length === 0) {
             console.warn("No clue data loaded for 'toturial_clues'. Check preload path and JSON content.");
@@ -131,10 +160,17 @@ export class ToturialScene extends Phaser.Scene {
 
         const uiManager = UIManager.getInstance();
         uiManager.setScene(this, "ToturialScene");
+        uiManager.setClueManager(this.clueManager);
 
         this.inventoryManager = InventoryManager.getInstance();
         this.inventoryManager.setScene(this);
         console.log("i set scene")
+        this.itemActionHandler = new ItemActionHandler(this);
+
+        // Ensure the UI overlay is running in gameplay
+        if (!this.scene.isActive('UIGameScene')) {
+            this.scene.launch('UIGameScene');
+        }
 
         this.events.on('shutdown', () => {
             this.input.keyboard.removeAllListeners();
@@ -147,10 +183,7 @@ export class ToturialScene extends Phaser.Scene {
 
         //this.dialoguesData = this.cache.json.get("npc_dialogues_toturial") || {}; NO LONGER EXIST
         this.objectData = this.cache.json.get("objects_dialogues_toturial") || {};
-        this.suspectsData = this.cache.json.get('suspectsData');
 
-        //this.dialogueManager = data.dialogueManager;
-        console.log("suspect data: " + JSON.stringify(this.suspectsData, null, 2))
         function bundle(id: string, raw: any) {
             return Array.isArray(raw) || raw?.id ? { [id]: raw } : raw;
         }
@@ -167,6 +200,8 @@ export class ToturialScene extends Phaser.Scene {
             this.inventoryManager,
             uiManager
         );
+        this.callbackHandler.registerHandlers('tutorial', tutorialCallbacks);
+
         console.log("[ToturialScene Create] CallbackHandler initialized:", this.callbackHandler);
 
         this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.inventoryManager, this.callbackHandler);
@@ -230,6 +265,30 @@ export class ToturialScene extends Phaser.Scene {
             npcMapCollisionLayers
         ) || [];
 
+        const triggersLayer = map.getObjectLayer('Triggers');
+        const door = triggersLayer?.objects.find((obj) => obj.name === 'Door');
+        this.triggers = this.physics.add.staticGroup();
+
+        if (door) {
+            this.exitX = door.x! + (door.width! / 2);
+            this.exitY = door.y! + (door.height! / 2);
+            console.log("exitX " + this.exitX)
+        } else {
+            console.error("Door trigger not found in the 'Triggers' layer");
+        }
+
+        //add player
+        this.player = new Player(this, this.exitX, this.exitY - 50, "Detective Mouse");
+        this.registry.set('player', this.player);
+        this.player.setAlpha(1);
+        this.player.setDepth(5);
+        this.add.existing(this.player);
+        this.cursors = this.input.keyboard.createCursorKeys(); //up, down, left, right, spacebar, shift (avoid binding these keys
+
+        if (door) {
+            this.setupExit(this.exitX, this.exitY, door.width!, door.height!);
+        }
+
         if (this.npcs.length > 0 && this.player) {
             this.physics.add.collider(this.player, this.npcs);
         }
@@ -249,30 +308,8 @@ export class ToturialScene extends Phaser.Scene {
             console.error('DialoguesData is missing or empty in policeinside');
         }
 
-        //console.log('DialoguesData ' + this.dialogueManager);
-
-        const triggersLayer = map.getObjectLayer('Triggers');
-        const door = triggersLayer?.objects.find((obj) => obj.name === 'Door');
-        this.triggers = this.physics.add.staticGroup();
-
-        if (door) {
-            this.exitX = door.x! + (door.width! / 2);
-            this.exitY = door.y! + (door.height! / 2);
-            console.log("exitX " + this.exitX)
-        } else {
-            console.error("Door trigger not found in the 'Triggers' layer");
-        }
-
-        this.player = new Player(this, this.exitX, this.exitY - 50, "Detective Mouse");
-        this.registry.set('player', this.player);
-        this.player.setAlpha(1);
-        this.player.setDepth(5);
-        this.add.existing(this.player);
-        this.cursors = this.input.keyboard.createCursorKeys(); //up, down, left, right, spacebar, shift (avoid binding these keys)
-
-        if (door) {
-            this.setupExit(this.exitX, this.exitY, door.width!, door.height!);
-        }
+        //Lav reactions:
+        ReactionManager.getInstance().init(this, this.npcs.map(n => ({ id: n.npcId, sprite: n })));
 
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor('#000000');
@@ -319,16 +356,21 @@ export class ToturialScene extends Phaser.Scene {
             }
         }, this);
 
-        if (!this.scene.get('ClueDisplayScene')) {
-            this.scene.add('ClueDisplayScene', ClueDisplayScene, false);
-        }
+        //if (!this.scene.get('ClueDisplayScene')) {
+        //    this.scene.add('ClueDisplayScene', ClueDisplayScene, false);
+        //}
+
+        this.caseDirector = new CaseDirector(
+            this,
+            TutorialCase,
+            this.npcs.map(n => ({ npcId: n.npcId, sprite: n, sensoryRange: (n as any).sensoryRange }))
+        );
 
         console.log("[ToturialScene] About to call setupAllNPCAnimations."); // Add this
         setupAllNPCAnimations(this); // <--- THIS IS THE CRUCIAL CALL
         console.log("[ToturialScene] Finished calling setupAllNPCAnimations."); // Add this
 
         //this.npcs = createNPCs(this, npcConfigs, [collisionLayer!, collisionLayer2!]);
-        state.suspectsData = this.suspectsData;
         //state.npcIdleFrames = npcConfigs.map(config => {
         //    return {
         //        id: config.npcId,
@@ -373,9 +415,10 @@ export class ToturialScene extends Phaser.Scene {
         // first scene will the the cop going up to the player, introducing himself, the case, the controls.
         // 1 stop player movements. or take control of player movements.
         // initiate the dialogue screen with the player, start talking, here it's ok it's only the npc talking.
-        // introduce something. 
+        // introduce something.
         // go back to start location and release the player.
 
+        //to do. Make depeleted
 
     }
 
@@ -391,6 +434,9 @@ export class ToturialScene extends Phaser.Scene {
         });
 
         this.triggers.add(trigger);
+
+
+
     }
 
     exitHouse() {
@@ -522,7 +568,6 @@ export class ToturialScene extends Phaser.Scene {
             }
 
             // 2. Create the Body instance using the new constructor
-            console.log(`[createObjects] Creating Body for itemId: ${itemDataToSpawn.itemId}`);
             const body = new Body(
                 this,
                 spawnPosition.x,

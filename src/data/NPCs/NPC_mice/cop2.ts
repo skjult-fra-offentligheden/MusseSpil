@@ -19,11 +19,7 @@ const cop2AnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAn
     walkRightKey: "cop2_anim_walk_right"
 };
 
-const cop2Dialogues: DialogueNode[] = [
-    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
-    { id: "cop2_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
-];
- 
+
 export const cop2Config: NPCConfig = {
     npcId: "cop2",
     displayName: "Chief Whiskers",
@@ -31,8 +27,13 @@ export const cop2Config: NPCConfig = {
     initialFrame: "cop2sprite.png",   // The picture to show when Cop2 first appears
 
     animations: cop2AnimationsData, // Assign the animation details we defined above
-
-    dialogues: cop2Dialogues,   // Assign the dialogue we defined above
+    isSuspect: true, // This NPC is a suspect in the case
+    culpritDetails: {
+        crimeCommitted: 'Assault',
+        keyEvidence: [],
+        motive: 'Lost his temper'
+    },
+    //dialogues: cop2Dialogues,   // Assign the dialogue we defined above
     
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
@@ -41,6 +42,10 @@ export const cop2Config: NPCConfig = {
         "clueGlue": "Don't sniff that on the job, Detective!",
         "coke": "Evidence, detective. Don't get any ideas."
     },
+
+    portrait: {
+        textureKey: 'portrait_cop2' // The key for the preloaded portrait image
+    }
     // ... add other necessary properties like defaultScale, description etc.
     // defaultScale: 1,
     // description: "The stern but fair police chief.",

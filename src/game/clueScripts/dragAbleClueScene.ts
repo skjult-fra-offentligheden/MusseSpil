@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Clue } from '../classes/clue';
+import { UIManager } from '../managers/UIManager';
 
 interface NpcData {
     id: string;
@@ -155,6 +156,62 @@ export class DragAbleClueScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(this.DEPTH.UI);
 
+        // Quick red "X" close button in the top-right (non-overlapping)
+        const xBtnSize = 28;
+        const xBtnPad = 16;
+        const xBtnX = this.scale.width - xBtnPad - xBtnSize;
+        const xBtnY = xBtnPad;
+        const xBtnContainer = this.add.container(xBtnX, xBtnY).setDepth(this.DEPTH.UI);
+        const xBtnBg = this.add.rectangle(0, 0, xBtnSize, xBtnSize, 0xcc0000, 1)
+            .setOrigin(0, 0)
+            .setStrokeStyle(2, 0xffffff, 0.95);
+        const xBtnText = this.add.text(xBtnSize / 2, xBtnSize / 2, 'X', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+            .setOrigin(0.5);
+        xBtnContainer.add([xBtnBg, xBtnText]);
+        // Keep fixed to the camera so it stays in the corner
+        xBtnContainer.setScrollFactor(0);
+        // Make the whole area clickable
+        xBtnContainer.setSize(xBtnSize, xBtnSize).setInteractive({ useHandCursor: true });
+        xBtnContainer.on('pointerdown', () => {
+            this.scene.stop();
+            this.scene.wake(this.originSceneKey);
+        });
+        xBtnContainer.on('pointerover', () => xBtnBg.setAlpha(0.85));
+        xBtnContainer.on('pointerout', () => xBtnBg.setAlpha(1));
+
+        
+        const escapeButton = this.add.text(40, 40, '<< Back to Journal', {
+            fontSize: '18px',
+            color: '#ffffff',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            padding: { x: 10, y: 5 }
+        })
+            .setOrigin(0, 0.5) // Anchor to its top-left corner
+            .setDepth(this.DEPTH.UI)
+            .setInteractive({ useHandCursor: true });
+
+        escapeButton.on('pointerdown', () => {
+            this.scene.stop();
+            this.scene.wake(this.originSceneKey);
+        });
+
+        escapeButton.on('pointerover', () => escapeButton.setAlpha(0.8));
+        escapeButton.on('pointerout', () => escapeButton.setAlpha(1));
+
+        // Hotkey: Close journal to game
+        this.input.keyboard?.on('keydown-J', () => {
+            const ui = UIManager.getInstance();
+            ui.setJournalHotkeyEnabled(false);
+            const sm = this.scene;
+            const cj: any = sm.get('ClueJournal');
+            const originKey: string = cj?.originScene || 'ToturialScene';
+            ['ClueDisplayJournalScene','PeopleDisplayJournalScene','AccusationScene','DragAbleClueScene','ClueJournal']
+                .forEach(k=>{ if(sm.isActive(k) || sm.isSleeping(k)) sm.stop(k); });
+            if (sm.isSleeping(originKey)) sm.wake(originKey);
+            sm.resume(originKey);
+            setTimeout(() => ui.setJournalHotkeyEnabled(true), 150);
+        });
+
         // Create panels
         this.createPanels();
 
@@ -192,7 +249,7 @@ export class DragAbleClueScene extends Phaser.Scene {
 
         // Create and position Clue cards (Left side)
         this.clues.forEach((clue, index) => {
-            const card = this.createCards('item', clue.id, clue.title ?? 'Unknown Clue', clue.description ?? '');
+            const card = this.createCards('item', clue.id, clue.title ?? 'Unknown Clue', clue.imageKey || 'blank-ico');
             const centeredPaddingX = (this.panelsPlacement.leftPanel.width - card.width) / 2;
             const globalX = this.panelsPlacement.leftPanel.x + centeredPaddingX; // Center the card
             const globalY = this.leftPanel.y + ((index + 0.5) * slotHLeft);
@@ -210,57 +267,57 @@ export class DragAbleClueScene extends Phaser.Scene {
             this.cardRegistry.set(card, cardData);
         });
 
-        const debugColor = 0xff00ff; // Bright magenta
-        const debugGraphics = this.add.graphics({ fillStyle: { color: debugColor } });
-        debugGraphics.setDepth(this.DEPTH.UI + 1); // Ensure it's on top of everything
+        //const debugColor = 0xff00ff; // Bright magenta
+        //const debugGraphics = this.add.graphics({ fillStyle: { color: debugColor } });
+        //debugGraphics.setDepth(this.DEPTH.UI + 1); // Ensure it's on top of everything
 
-        // 1. Get the very first NPC card you created.
-        // We need to find it in the 'allCards' array. A bit tricky, but we can get it.
-        const firstNpcCard = allCards.find(card => card.getData('type') === 'npc');
+        //// 1. Get the very first NPC card you created.
+        //// We need to find it in the 'allCards' array. A bit tricky, but we can get it.
+        //const firstNpcCard = allCards.find(card => card.getData('type') === 'npc');
 
-        if (firstNpcCard) {
-            console.log('--- DEBUGGING FIRST NPC CARD ---');
-            console.log('Card Container (Top-Left Origin):', `x: ${firstNpcCard.x}`, `y: ${firstNpcCard.y}`);
-            console.log('Card Dimensions:', `width: ${firstNpcCard.width}`, `height: ${firstNpcCard.height}`);
+        //if (firstNpcCard) {
+        //    console.log('--- DEBUGGING FIRST NPC CARD ---');
+        //    console.log('Card Container (Top-Left Origin):', `x: ${firstNpcCard.x}`, `y: ${firstNpcCard.y}`);
+        //    console.log('Card Dimensions:', `width: ${firstNpcCard.width}`, `height: ${firstNpcCard.height}`);
 
-            const cardOriginX = firstNpcCard.x;
-            const cardOriginY = firstNpcCard.y;
+        //    const cardOriginX = firstNpcCard.x;
+        //    const cardOriginY = firstNpcCard.y;
 
-            // 2. VISUALIZE THE CARD'S ORIGIN (its x, y)
-            // This is the point your line is currently drawn FROM when dragging.
-            debugGraphics.fillCircle(cardOriginX, cardOriginY, 10); // Big circle at the top-left
-            this.add.text(cardOriginX, cardOriginY - 20, 'Card Origin (x, y)', {
-                fontSize: '12px',
-                color: '#ff00ff',
-                backgroundColor: '#000'
-            }).setOrigin(0.5, 1);
+        //    // 2. VISUALIZE THE CARD'S ORIGIN (its x, y)
+        //    // This is the point your line is currently drawn FROM when dragging.
+        //    debugGraphics.fillCircle(cardOriginX, cardOriginY, 10); // Big circle at the top-left
+        //    this.add.text(cardOriginX, cardOriginY - 20, 'Card Origin (x, y)', {
+        //        fontSize: '12px',
+        //        color: '#ff00ff',
+        //        backgroundColor: '#000'
+        //    }).setOrigin(0.5, 1);
 
-            // 3. CALCULATE AND VISUALIZE THE CENTER POINT
-            // This is where the line SHOULD be drawn from.
-            const calculatedCenterX = cardOriginX + (firstNpcCard.width / 2);
-            const calculatedCenterY = cardOriginY + (firstNpcCard.height / 2);
-            console.log('Calculated Center:', `x: ${calculatedCenterX}`, `y: ${calculatedCenterY}`);
+        //    // 3. CALCULATE AND VISUALIZE THE CENTER POINT
+        //    // This is where the line SHOULD be drawn from.
+        //    const calculatedCenterX = cardOriginX + (firstNpcCard.width / 2);
+        //    const calculatedCenterY = cardOriginY + (firstNpcCard.height / 2);
+        //    console.log('Calculated Center:', `x: ${calculatedCenterX}`, `y: ${calculatedCenterY}`);
 
 
-            debugGraphics.lineStyle(2, 0x00ff00); // Green line for the center
-            debugGraphics.strokeCircle(calculatedCenterX, calculatedCenterY, 12); // Circle at the calculated center
-            this.add.text(calculatedCenterX, calculatedCenterY + 20, 'Calculated Center', {
-                fontSize: '12px',
-                color: '#00ff00',
-                backgroundColor: '#000'
-            }).setOrigin(0.5, 0);
+        //    debugGraphics.lineStyle(2, 0x00ff00); // Green line for the center
+        //    debugGraphics.strokeCircle(calculatedCenterX, calculatedCenterY, 12); // Circle at the calculated center
+        //    this.add.text(calculatedCenterX, calculatedCenterY + 20, 'Calculated Center', {
+        //        fontSize: '12px',
+        //        color: '#00ff00',
+        //        backgroundColor: '#000'
+        //    }).setOrigin(0.5, 0);
 
             // 4. VISUALIZE THE PANEL'S ORIGIN for reference
-            const panelOriginX = this.panelsPlacement.rightPanel.x;
-            const panelOriginY = this.panelsPlacement.rightPanel.y;
-            debugGraphics.fillStyle(0xffff00); // Yellow
-            debugGraphics.fillCircle(panelOriginX, panelOriginY, 8);
-            this.add.text(panelOriginX, panelOriginY, 'Panel Origin', {
-                fontSize: '12px',
-                color: '#ffff00',
-                backgroundColor: '#000'
-            }).setOrigin(0, 1);
-        }
+        //    const panelOriginX = this.panelsPlacement.rightPanel.x;
+        //    const panelOriginY = this.panelsPlacement.rightPanel.y;
+        //    debugGraphics.fillStyle(0xffff00); // Yellow
+        //    debugGraphics.fillCircle(panelOriginX, panelOriginY, 8);
+        //    this.add.text(panelOriginX, panelOriginY, 'Panel Origin', {
+        //        fontSize: '12px',
+        //        color: '#ffff00',
+        //        backgroundColor: '#000'
+        //    }).setOrigin(0, 1);
+        //}
         //const allCards = [...this.leftPanel.getAll(), ...this.rightPanel.getAll()];
 
 
@@ -370,8 +427,9 @@ export class DragAbleClueScene extends Phaser.Scene {
         //     'CONFESSION'
         // ];
         const stringTexts = [
-            'simpleString',
-            'CONFESSION'
+            'Connected',
+            'Alibi',
+            'Suspecious'
         ];
 
         const buttonWidth = this.int_string_buttonWitdh;
@@ -383,7 +441,7 @@ export class DragAbleClueScene extends Phaser.Scene {
 
         stringTexts.forEach((text, index) => {
             const x = startX + index * (buttonWidth + spacing);
-            console.info(`Creating string button "${text}" at (${x}, ${y}) with size (${buttonWidth}, ${buttonHeight})`);
+            //console.info(`Creating string button "${text}" at (${x}, ${y}) with size (${buttonWidth}, ${buttonHeight})`);
             const button = this.createStringButton(text, x, y, buttonWidth, buttonHeight);
             this.stringButtons.push(button);
         });
@@ -392,7 +450,8 @@ export class DragAbleClueScene extends Phaser.Scene {
     private createStringButton(text: string, x: number, y:number, width: number, height: number): StringButton {
         const container = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, width, height, this.STRING_BUTTON_COLOR)
+        const initialColor = this.getButtonColor(text, false);
+        const bg = this.add.rectangle(0, 0, width, height, initialColor)
             .setOrigin(0, 0);
         
         const buttonText = this.add.text(width / 2, height / 2, text, {
@@ -421,10 +480,12 @@ export class DragAbleClueScene extends Phaser.Scene {
     }
 
     private selectStringButton(stringButton: StringButton): void {
+
+        
         if (this.selectedStringButton === stringButton) {
             // Already selected, deselect
             const prevBg = this.selectedStringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
-            if (prevBg) prevBg.setFillStyle(this.STRING_BUTTON_COLOR);
+            if (prevBg) prevBg.setFillStyle(this.getButtonColor(stringButton.text, false));
             this.resetConnectionState();
             //this.showInstruction(`Deselected "${stringButton.text}". Click a string button to select again.`);
             return;
@@ -433,13 +494,14 @@ export class DragAbleClueScene extends Phaser.Scene {
         // Deselect previous button
         if (this.selectedStringButton) {
             const prevBg = this.selectedStringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
-            if (prevBg) prevBg.setFillStyle(this.STRING_BUTTON_COLOR);
+            if (prevBg) prevBg.setFillStyle(this.getButtonColor(stringButton.text, false));
         }
 
         // Select new button
         this.selectedStringButton = stringButton;
-        const bg = stringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
-        if (bg) bg.setFillStyle(this.SELECTED_STRING_COLOR);
+        const newBg = stringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
+        // Set the new button to the universal "selected" color.
+        newBg.setFillStyle(this.getButtonColor(stringButton.text, true));
 
         // Reset connection state
         this.resetConnectionState();
@@ -555,50 +617,43 @@ export class DragAbleClueScene extends Phaser.Scene {
 
     private handleCardClick(card: Phaser.GameObjects.Container): void {
         if (!this.selectedStringButton) {
-            this.showInstruction('Select a string button first, then click on cards to connect them');
+            this.showInstruction('Select a connection type first.');
             return;
         }
 
         if (!this.isConnecting) {
-            // First card selection
+            // This is the first card click, logic is fine here.
             this.firstSelectedCard = card;
             this.isConnecting = true;
-            
-            // Highlight the selected card
-            const bg = card.getAt(0) as Phaser.GameObjects.Rectangle;
-            if (bg) bg.setFillStyle(this.SELECTED_STRING_COLOR, 0.9);
-            
+            (card.getAt(0) as Phaser.GameObjects.Rectangle).setFillStyle(this.SELECTED_STRING_COLOR, 0.9);
             this.showInstruction(`Selected first card. Now click the second card to complete the "${this.selectedStringButton.text}" connection.`);
         } else {
-            // Second card selection - create the connection
+            // This is the second card click.
             if (this.firstSelectedCard === card) {
-                this.showInstruction('Cannot connect a card to itself. Click a different card.');
+                this.showInstruction('Cannot connect a card to itself.');
                 return;
             }
 
-            // Check if this connection already exists
-            const existingLink = this.links.find(link => 
-                link.label?.text === this.selectedStringButton!.text && 
-                ((link.a === this.firstSelectedCard && link.b === card) ||
-                 (link.a === card && link.b === this.firstSelectedCard))
-            );
+            // Create the connection
+            this.createStringLink(this.firstSelectedCard!, card, this.selectedStringButton);
 
-            if (existingLink) {
-                // Remove existing link
-                this.removeLink(existingLink.line);
-                this.showInstruction(`Removed "${this.selectedStringButton.text}" connection`);
-            } else {
-                // Create new connection
-                this.createStringLink(this.firstSelectedCard!, card, this.selectedStringButton);
+            // --- FIX STARTS HERE ---
+            // After the link is made, explicitly reset the color of both cards.
+            const firstCardBg = this.firstSelectedCard!.getAt(0) as Phaser.GameObjects.Rectangle;
+            firstCardBg.setFillStyle(0xffffff, 0.9); // Reset to default white
+
+            const secondCardBg = card.getAt(0) as Phaser.GameObjects.Rectangle;
+            secondCardBg.setFillStyle(0xffffff, 0.9); // Reset to default white
+            // --- FIX ENDS HERE ---
+
+            // Now, deselect the button and reset the connection state machine
+            if (this.selectedStringButton) {
+                const bg = this.selectedStringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
+                bg.setFillStyle(this.getButtonColor(this.selectedStringButton.text, false));
+                this.selectedStringButton = null;
             }
 
-            // Reset connection state
             this.resetConnectionState();
-            
-            // Deselect the string button
-            const bg = this.selectedStringButton.container.getAt(0) as Phaser.GameObjects.Rectangle;
-            if (bg) bg.setFillStyle(this.STRING_BUTTON_COLOR);
-            this.selectedStringButton = null;
         }
     }
 
@@ -626,9 +681,7 @@ export class DragAbleClueScene extends Phaser.Scene {
         // --- END OF FIX ---
 
 
-        console.info(`Debug (getBounds): Creating link between card centers at (${centerA_x}, ${centerA_y}) and (${centerB_x}, ${centerB_y})`);
-
-        const line = this.add.line(0, 0, centerA_x, centerA_y, centerB_x, centerB_y, this.LINK_LINE_COLOR).setLineWidth(3)
+        const line = this.add.line(0, 0, centerA_x, centerA_y, centerB_x, centerB_y, this.getButtonColor(stringButton.text, false)).setLineWidth(3)
             .setOrigin(0, 0)
             .setDepth(this.DEPTH.LINES)
             .setInteractive({ useHandCursor: true })
@@ -665,8 +718,6 @@ export class DragAbleClueScene extends Phaser.Scene {
             this.links.forEach(link => {
                 if (link.a === gameObject || link.b === gameObject) {
 
-                    // --- THE FIX ---
-                    // Get the updated bounds of the cards and redraw the line between their centers
                     const boundsA = link.a.getBounds();
                     const boundsB = link.b.getBounds();
                     link.line.setTo(boundsA.centerX, boundsA.centerY, boundsB.centerX, boundsB.centerY);
@@ -675,7 +726,6 @@ export class DragAbleClueScene extends Phaser.Scene {
             });
         });
 
-        // Add hover effects for cards when connecting
         allCards.forEach(card => {
             if (card instanceof Phaser.GameObjects.Container) {
                 card.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -731,6 +781,25 @@ export class DragAbleClueScene extends Phaser.Scene {
                 color: '#bdc3c7'
             }).setDepth(this.DEPTH.UI);
         });
+    }
+
+    private getButtonColor(text: string, isSelected: boolean): number {
+        if (isSelected) {
+            // Return a single, consistent "selected" color for all buttons
+            return this.SELECTED_STRING_COLOR; // e.g., 0xe67e22 (dark orange)
+        }
+
+        // Return a specific color based on the button's text when not selected
+        switch (text) {
+            case "Connected":
+                return 0x2ecc71; // Green
+            case "Alibi":
+                return 0x3498db; // Blue
+            case "Suspecious": // Typo: Should probably be "Suspicious"
+                return 0xe74c3c; // Red
+            default:
+                return this.STRING_BUTTON_COLOR; // Default fallback color
+        }
     }
 
     private addEscapeKeyHandler(): void {

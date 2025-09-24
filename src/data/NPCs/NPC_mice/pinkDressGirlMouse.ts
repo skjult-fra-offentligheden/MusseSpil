@@ -16,21 +16,28 @@ const pinkDressGirlMouseAnimationsData: NPCAnimationSet = { // <<< USE THE CORRE
     walkRightKey: "pinkDressGirlMouse_anim_walk_right"
 };
 
-const pinkDressGirlMouseDialogues: DialogueNode[] = [
-    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
-    { id: "pinkDressGirlMouse_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
-];
- 
+//const pinkDressGirlMouseDialogues: DialogueNode[] = [
+//    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
+//    { id: "pinkDressGirlMouse_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
+//];
+
+const theCrime: CulpritDetails = {
+    crimeCommitted: "Doing cocaine",
+    keyEvidence: ["clueGlue", "cluePhone"],
+    motive: "She's a bum, she's an addict, she belongs behind BAAARRS"
+};
+
 export const pinkDressGirlMouseConfig: NPCConfig = {
     npcId: "pinkDressGirlMouse",
-    displayName: "Chief Whiskers2",
+    displayName: "Mouse Jennie",
     textureKey: "pinkDressGirlMouse",         // The spritesheet to use (matches animations.atlasKey)
     initialFrame: "pinkDressGirlMouse2.png",   // The picture to show when Cop2 first appears
 
     animations: pinkDressGirlMouseAnimationsData, // Assign the animation details we defined above
 
-    dialogues: pinkDressGirlMouseDialogues,   // Assign the dialogue we defined above
-    isSuspect: false, // function to be included, if cheese is used as primary clue then it should change to true
+    //dialogues: pinkDressGirlMouseDialogues,   // Assign the dialogue we defined above
+    isSuspect: true, 
+    culpritDetails: theCrime,
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
     sensoryRange: 250,
@@ -43,4 +50,7 @@ export const pinkDressGirlMouseConfig: NPCConfig = {
     // description: "The stern but fair police chief.",
     // initialMentalState: NPCMentalState.Neutral,
     // faction: "police",
+    portrait: {
+        textureKey: 'portrait_pinkdress'
+    }
 };

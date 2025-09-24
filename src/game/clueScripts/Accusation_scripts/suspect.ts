@@ -4,4 +4,6 @@ export interface Suspect {
     description: string;
     imageKey?: string;
     isCulprit: boolean;
+    motive?: string;
+    alibi?: string;
 }

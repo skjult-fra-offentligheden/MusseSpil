@@ -36,6 +36,11 @@ export interface NPCReaction {
     once?: boolean;    // Can this reaction only happen once?
 }
 
+export interface CulpritDetails {
+    crimeCommitted: string; // A description of the crime for the victory screen.
+    keyEvidence: string[];  // A list of clue IDs that prove guilt (optional, but useful for advanced logic).
+    motive: string;         // A summary of their motive.
+}
 export interface NPCAnimationConfig {
     atlasKey: string;                       // The texture key of the atlas/spritesheet (e.g., "cop2")
     definitions: NPCAnimationDefinition[];  // Array of all animations to create for this atlas
@@ -90,6 +95,8 @@ export interface NPCConfig {
     sensoryRange?: number;      // For reacting to player item use, etc.
     faction?: string;           // e.g., "police", "gang_A", "civilians"
     isSuspect?: boolean; 
+    culpritDetails?: CulpritDetails;
+    alibi?: string;
     // --- Animations ---
     animations: NPCAnimationConfig;
 
@@ -99,6 +106,13 @@ export interface NPCConfig {
     // Or the more complex reactions array:
     detailedReactions?: NPCReaction[];
 
+
+    //portrait
+    portrait?: {
+        textureKey: string; // Key for the portrait image
+        frame?: string | number; // Specific frame if using a spritesheet
+        scale?: number; // Optional scale for the portrait
+    };
     // --- NPC-Specific Methods/Callbacks (Optional, for highly unique NPCs) ---
     // These would be functions defined directly in the NPC's config object.
     // 'this' context would be the NPC instance if called correctly.

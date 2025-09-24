@@ -1,5 +1,5 @@
 import { ItemConfig, EvidencePhase, DialogueNode } from '../itemTemplate'; // Adjust path
-import { ItemGameContext } from '../../handlers/CallbackHandler';      // Adjust path
+import { ItemGameContext } from '../../../game/managers/CallBackManager';      // Adjust path
 
 export const glue: ItemConfig = {
     id: 'clueGlue', // Maybe rename to 'glueTube' or similar if 'clue' prefix is just for Tiled
@@ -83,111 +83,61 @@ export const glue: ItemConfig = {
     clueFoundAt: 'police Table',
 
     // --- METHODS ---
-    getArt: function (this: ItemConfig, size: 'small' | 'large'): string {
+    getArt: function (this: ItemConfig, size: 'small' | 'large', phase?: EvidencePhase | 'fixed'): string {
         const artPath = this.art[size];
         if (typeof artPath === 'string') {
-            return artPath; // Direct path for non-phased art
+            return artPath;
         }
-        // If it were PhasedArt, you'd select based on this.currentStatus:
-        // const statusKey = this.currentStatus as keyof typeof artPath;
-        // return artPath[statusKey] || artPath.full;
-        return artPath.full; // Default to 'full' if using PhasedArt structure with one entry
+        return artPath.full;
     },
 
-    use: function (this: ItemConfig, gameContext?: Partial<ItemGameContext> & { targetItem?: ItemConfig }) {
-        // Called when "used" from inventory, possibly on another item/object.
-        // For glue, 'use' might require a target.
-        if (this.currentStatus === 'empty') { // 'empty' means "used for its purpose"
-            return {
-                newStatus: this.currentStatus,
-                message: "You've already used this glue.",
-                artChanged: false,
-                consumed: false // It's already "consumed" in the sense of being used up
-            };
+    // --- FIX: Updated use method to be stateless ---
+    use: function (this: ItemConfig, gameContext: ItemGameContext) {
+        const { gameState } = gameContext;
+        const currentState = gameState.getOrInitClueState(this.clueId!);
+
+        if (currentState.phase === 'empty') {
+            return { message: "You've already used this glue for something.", artChanged: false, consumed: false };
         }
 
-        if (gameContext?.targetItem) {
-            // Example: Trying to use glue on a 'brokenVase'
-            if (gameContext.targetItem.id === 'brokenVase' && gameContext.targetItem.currentStatus === 'broken') {
-                this.currentStatus = 'empty'; // Glue is now "used up"
-                this.timesUsed++;
-                // gameContext.targetItem.currentStatus = 'repaired'; // Update target item's state
-                // (gameContext.targetItem as any).updateArt?.(); // If target item needs visual update
-                return {
-                    newStatus: this.currentStatus,
-                    message: `You skillfully used the glue to repair the ${gameContext.targetItem.name || 'item'}! The glue tube is now empty.`,
-                    artChanged: false, // Glue's art doesn't change, but it's "conceptually" empty
-                    consumed: true    // The glue item is now "used up" and could be removed
-                };
-            } else {
-                return {
-                    newStatus: this.currentStatus,
-                    message: `You can't use the glue on the ${gameContext.targetItem.name || 'item'} right now.`,
-                    artChanged: false,
-                    consumed: false
-                };
-            }
-        }
-
-        // If used without a target, or on an invalid target
-        return {
-            newStatus: this.currentStatus,
-            message: "You look at the tube of glue. What do you want to use it on?",
-            artChanged: false, // Glue's art itself doesn't change based on doses
-            consumed: false   // Not consumed if just inspected or used improperly
-        };
+        // Logic for using glue on a target would go here
+        // For now, default message:
+        return { message: "You look at the tube of glue. What do you want to use it on?", artChanged: false, consumed: false };
     },
 
+    // --- FIX: Updated handleCallback to be stateless ---
     handleCallback: function (this: ItemConfig, callbackId: string, gameContext: ItemGameContext) {
-        const itemName = this.name || 'Glue Tube';
+        const { clueManager, inventoryManager, ui, world, interactedObject } = gameContext;
 
         switch (callbackId) {
             case 'pick_up_glue':
             case 'pick_up_glue_and_note':
                 if (!this.collectible) {
-                    gameContext.ui.showPlayerMessage(`You can't pick up the ${itemName}.`);
-                    return;
-                }
-                if (!(gameContext.inventoryManager as any).createInventoryItemData) {
-                    console.error("FATAL: InventoryManager missing createInventoryItemData method!");
-                    gameContext.ui.showPlayerMessage("Error: Could not pick up item.");
+                    ui.showPlayerMessage(`You can't pick up the ${this.name}.`);
                     return;
                 }
 
-                gameContext.ui.showPlayerMessage(`You pick up the ${itemName}.`);
-                const invItem = (gameContext.inventoryManager as any).createInventoryItemData(this);
-                gameContext.inventoryManager.addItem(invItem);
+                ui.showPlayerMessage(`You pick up the ${this.name}.`);
+                inventoryManager.addItem(inventoryManager.createInventoryItemData(this));
 
                 let clueDescription = `A tube of strong adhesive collected.`;
                 if (callbackId === 'pick_up_glue_and_note') {
-                    clueDescription += ` It appears to be unused. Could it be related to something?`;
+                    clueDescription += ` It appears to be unused.`;
                 }
 
-                gameContext.clueManager.addClue({
-                    id: this.clueId || `${this.id}_collected`,
-                    title: `${itemName} Obtained`,
+                clueManager.addClue({
+                    id: this.clueId!,
+                    title: `${this.name} Obtained`,
                     description: clueDescription,
                     imageKey: this.getArt.call(this, 'small'),
-                    category: this.clueCategory || 'tool',
+                    category: this.clueCategory!,
                     discovered: true,
                 });
 
-                if (gameContext.world.removeItemSprite && gameContext.interactedObject) {
-                    gameContext.world.removeItemSprite(gameContext.interactedObject);
+                if (world.removeItemSprite && interactedObject) {
+                    world.removeItemSprite(interactedObject);
                 }
-                // Optionally, trigger a specific dialogue node if desired, e.g., by setting nextDialogueId
-                // in the dialogue option, or by having DialogueManager react to an event.
-                // For example, after pickup, directly go to 'inspectionEnd' if you want that text.
-                // This usually requires gameContext to have a reference to dialogueManager.
-                // if (gameContext.dialogueManager) gameContext.dialogueManager.goToNode('inspectionEnd');
                 break;
         }
-    },
-
-    onCollect: function (this: ItemConfig, gameContext: ItemGameContext) {
-        // Fallback for generic 'ACTION_PICKUP'.
-        const itemName = this.name || 'Glue Tube';
-        gameContext.ui.showPlayerMessage(`The ${itemName} might come in handy.`);
-        return { collected: true, message: `${itemName} added to inventory.` };
     }
 };

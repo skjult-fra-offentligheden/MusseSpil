@@ -1,5 +1,5 @@
 import { ItemConfig, EvidencePhase, DialogueNode } from '../itemTemplate'; // Adjust path
-import { ItemGameContext } from '../../handlers/CallbackHandler';      // Adjust path
+import { ItemGameContext } from '../../../game/managers/CallBackManager';      // Adjust path
 
 export const coke: ItemConfig = {
     id: 'coke',
@@ -81,47 +81,63 @@ export const coke: ItemConfig = {
     clueCategory: 'evidence',
     // clueFoundAt: 'Scene of Crime - Back Alley',
 
-    // --- METHODS ---
-    getArt: function (this: ItemConfig, size: 'small' | 'large'): string {
+    getArt: function (this: ItemConfig, size: 'small' | 'large', phase: EvidencePhase | 'fixed'): string {
         const artSet = this.art[size];
-        if (typeof artSet === 'string') return artSet; // Should not happen for coke if it's phased
-        const statusKey = this.currentStatus as keyof typeof artSet;
-        return artSet[statusKey] || artSet.full; // Fallback to full if status art is missing
+        if (typeof artSet === 'string') return artSet;
+
+        // Determine art from the phase passed as an argument, NOT from 'this.currentStatus'
+        const phaseKeyForArt = (phase === 'fixed' ? 'full' : phase) as keyof typeof artSet;
+        return artSet[phaseKeyForArt] || artSet.full;
     },
 
-    use: function (this: ItemConfig, gameContext?: Partial<ItemGameContext>) {
-        // Called when "used" from inventory (e.g., player character "takes a hit" or "tests it")
+    use: function (this: ItemConfig, gameContext: ItemGameContext) {
+        const { gameState, clueManager } = gameContext;
+        const clueId = this.clueId || this.id;
+
+        // 1. Get current state FROM GameState
+        const currentState = gameState.getOrInitClueState(clueId);
+
         let message = "There's nothing left in the bag.";
         let artChanged = false;
         let aPortionWasUsed = false;
 
-        if (this.currentStatus !== 'empty') {
-            this.timesUsed++;
-            const previousStatus = this.currentStatus;
+        if (currentState.phase !== 'empty' && currentState.phase !== 'fixed') {
+            aPortionWasUsed = true;
+            artChanged = true;
 
-            if (this.currentStatus === 'full') {
-                this.currentStatus = 'half';
+            // 2. DEGRADE the state IN GameState
+            const newPhase = gameState.degradeClue(clueId);
+
+            if (newPhase === 'half') {
                 message = 'You take a small sample. The powder is fine and has a slight chemical smell.';
-                // Potentially: gameContext.gameState.playerEffects.applyEffect('coke_high_mild');
-            } else if (this.currentStatus === 'half') {
-                this.currentStatus = 'empty';
+            } else if (newPhase === 'empty') {
                 message = 'You use the last of the powder. The bag is now empty.';
-                // Potentially: gameContext.gameState.playerEffects.applyEffect('coke_high_strong');
             }
-            artChanged = this.currentStatus !== previousStatus;
-            aPortionWasUsed = artChanged;
+
+            // 3. Update the clue using the new state
+            if (clueManager) {
+                clueManager.updateClueDetails(clueId, {
+                    title: `${this.name} (${newPhase === 'half' ? 'Sampled' : 'Empty'})`,
+                    description: `You used the item. The official report reads: "${message}"`,
+                    // 4. Get the new art using the new state
+                    imageKey: this.getArt.call(this, 'small', newPhase)
+                });
+            }
         }
 
         return {
-            newStatus: this.currentStatus,
+            newStatus: gameState.getOrInitClueState(clueId).phase,
             message: message,
             artChanged: artChanged,
-            consumed: this.currentStatus === 'empty' && aPortionWasUsed // True if the bag is now empty
+            consumed: gameState.getOrInitClueState(clueId).phase === 'empty' && aPortionWasUsed
         };
     },
 
     handleCallback: function (this: ItemConfig, callbackId: string, gameContext: ItemGameContext) {
         const itemName = this.name || 'Coke Bag';
+        const { gameState, clueManager, inventoryManager, ui, world, interactedObject } = gameContext;
+        const clueId = this.clueId || this.id;
+        const currentPhase = gameState.getOrInitClueState(clueId).phase;
 
         switch (callbackId) {
             case 'pick_up_cocaine':
@@ -149,7 +165,7 @@ export const coke: ItemConfig = {
                     id: this.clueId || `${this.id}_collected`,
                     title: `${itemName} Collected`,
                     description: clueDescription,
-                    imageKey: this.getArt.call(this, 'small'),
+                    imageKey: this.getArt.call(this, 'small', currentPhase),
                     category: this.clueCategory || 'evidence',
                     discovered: true,
                     relatedNPCs: (callbackId === 'pick_up_cocaine_and_note_hair') ? ['SUSPECT_WITH_BROWN_HAIR'] : undefined // Example

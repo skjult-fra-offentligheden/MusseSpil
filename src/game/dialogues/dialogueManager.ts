@@ -66,11 +66,22 @@ export class DialogueManager {
 
 
         if (this.isActive) return;
-
-
         this.isActive = true;
-        this.currentNpcId = sourceId; 
-        this.currentNpc = (speakerContext instanceof NPC) ? speakerContext : null;
+        this.currentNpcId = sourceId;
+
+        // --- MODIFIED: Check for NPC instance and set portrait ---
+        if (speakerContext instanceof NPC) {
+            this.currentNpc = speakerContext;
+            // Use the UI's new method to show the portrait
+            if (this.currentNpc.portraitTextureKey) {
+                this.dialogueUI.setPortrait(this.currentNpc.portraitTextureKey);
+            } else {
+                this.dialogueUI.hidePortrait(); // Hide if this NPC has no portrait
+            }
+        } else {
+            this.currentNpc = null;
+            this.dialogueUI.hidePortrait(); // Hide for non-NPC speakers (like items)
+        }
 
         console.log("[DialogueManager] current NPC", this.currentNpc, this.currentNpcId)
 
@@ -176,7 +187,7 @@ export class DialogueManager {
         this.isActive = false;
         this.currentNpc = null;
         this.currentNpcId = ''; // Reset DM's state
-        this.dialogueUI.hideDialogue();
+        this.dialogueUI.hideDialogue(); 
         if (this.scene.physics.world) { // Check if world exists (e.g. scene not shutting down)
             this.scene.physics.world.resume();
         }
@@ -213,83 +224,34 @@ export class DialogueManager {
         return this.selectedOptionIndex;
     }
 
-    private evaluateCondition(conditionKey: string, nodeId?: string): string | false {
+    private evaluateCondition(conditionKey: string | ((s: GameState)=> boolean), nodeId?: string) {
         if (!conditionKey) return false;
+        if (typeof conditionKey === 'function') return conditionKey(GameState.getInstance()) ? nodeId! : false;
 
-        const gameState = GameState.getInstance(this.scene); // Still useful for eventsAddressed or other global flags
-
-        // Helper to get item state (assuming unique evidence items for now, so we check AllItemConfigs)
-        // In a more complex system, you'd get the item instance from InventoryManager
-        const getItemState = (itemId: string) => {
-            const itemConfig = AllItemConfigs[itemId];
-            if (!itemConfig) {
-                //console.warn(`[DialogueManager] Item config not found for ID: ${itemId} in getItemState`);
-                return null; // Or some default state
-            }
-            return {
-                timesUsed: itemConfig.timesUsed || 0, // Default to 0 if not present
-                currentStatus: itemConfig.currentStatus || itemConfig.initialStatus || 'full' // Default status
-            };
-        };
-
-        let itemState; // To hold the state of the relevant item
+        const gameState = GameState.getInstance();// Still useful for eventsAddressed or other global flags
 
         switch (conditionKey) {
-            case "playerDidCocaine": // This implies the coke is now 'empty' or used at least once
-                itemState = getItemState('coke');
-                // Condition is true if coke has been used at least once OR is empty
-                //console.log(`[DialogueManager] Evaluating condition 'playerDidCocaine':`, itemState);
-                //console.log(`[DialogueManager] Item state for 'coke':`, itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false);
-                if (itemState ? (itemState.timesUsed > 0 || itemState.currentStatus === 'empty') && !gameState.hasEventBeenAddressed("playerDidCocaine_event") : false){
-                    return nodeId || "special_event_cocaine_gone";
+            // remember to add dialogue
+            // Example for the cheese crime
+            case "PLAYER_ATE_CHEESE_ONCE":
+                const cheeseState = gameState.getOrInitClueState('blueCheese');
+                // Check if the cheese has been used and is now 'half'
+                if (cheeseState.phase === 'half') {
+                    // If the condition is met, return the ID of the special dialogue node
+                    return nodeId;
+                }
+                return false; // Otherwise, the condition is false
+
+            // Example for the cocaine crime
+            case "HAS_PHONE_CLUE":
+                if (gameState.isClueDiscovered('clue_phone_gang_connection')) {
+                    return nodeId;
                 }
                 return false;
 
-            case "playerDidGlue_1":
-                itemState = getItemState('clueGlue'); // Assuming 'clueGlue' is the ID
-                if (itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerDidGlue_1_event") : false) {
-                    return nodeId || "special_event_glue_used_once"; // Return the nodeId if provided
-                } return false; // If condition not met, return false
-
-            case "playerDidGlue_2":
-                itemState = getItemState('clueGlue');
-                if (itemState ? itemState.timesUsed === 2 && !gameState.hasEventBeenAddressed("playerDidGlue_2_event") : false) {
-                    return nodeId || "special_event_glue_used_twice"; // Return the nodeId if provided
-                }
-                return false; // If condition not met, return false
-
-            case "playerDidGlue_3":
-                itemState = getItemState('clueGlue');
-                if (itemState ? itemState.timesUsed >= 3 && !gameState.hasEventBeenAddressed("playerDidGlue_3_event") : false) {
-                    return nodeId || "special_event_glue_used_thrice"; // Return the nodeId if provided
-                } return false;
-
-            case "player_ate_cheese_1":
-                itemState = getItemState('blueCheese'); // Assuming 'blueCheese' is the ID
-                if (itemState ? itemState.timesUsed === 1 && !gameState.hasEventBeenAddressed("playerAteCheese_1_event") : false) {
-                    return nodeId || "special_event_cheese_1_used"; // Return the nodeId if provided
-                } return false;
-
-            case "player_ate_cheese_2":
-                itemState = getItemState('blueCheese');
-                if (itemState ? itemState.timesUsed >= 2 && !gameState.hasEventBeenAddressed("playerAteCheese_2_event") : false) {
-                    return nodeId || "special_event_cheese_2_used"; // Return the nodeId if provided
-                } return false;
-                
-
-            // ... other non-item-consumption conditions ...
-            case "hasBlueCheeseClue":
-                if (this.clueManager.hasClue("blueCheese_clue_id_from_config")) {
-                    return nodeId || "blueCheese_clue_found"; // Use actual clue ID
-                } return false; // Use actual clue ID
-            case "cokeSellerIdentified":
-                if (gameState.getFlag("cokeSellerFound")) {
-                    return nodeId || "cokeSeller_identified"; // Use actual node ID
-                } return false; // Example if using globalFlags
-
+            // Add more cases here for all your story conditions...
             default:
-                console.warn(`[DialogueManager] Unknown condition key in evaluateCondition: ${conditionKey}`);
-                return false; // Or false
+                return false;
         }
     }
 

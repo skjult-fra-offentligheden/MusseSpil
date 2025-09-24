@@ -1,9 +1,12 @@
 import { GameState } from '../managers/GameState';
 import { InventoryManager } from '../managers/itemMananger';
+import { ClueManager } from '../clueScripts/clueManager';
 export class UIManager {
     private static instance: UIManager;
     private currentScene: Phaser.Scene | null = null;
     private originScene: string;
+    private clueManager: ClueManager | null = null;
+    private journalHotkeyEnabled = true;
     private constructor() { }
 
     init(data: { originScene: string }) {
@@ -16,6 +19,10 @@ export class UIManager {
             UIManager.instance = new UIManager();
         }
         return UIManager.instance;
+    }
+
+    public setClueManager(manager: ClueManager) {
+        this.clueManager = manager;
     }
 
     public setScene(scene: Phaser.Scene, originSceneKey: string) {
@@ -66,14 +73,17 @@ export class UIManager {
     }
 
     public showJournal() {
-        const gameState = GameState.getInstance();
-        const clueManager = gameState.getClueManager();
+        if (!this.journalHotkeyEnabled) {
+            return;
+        }
+        //const gameState = GameState.getInstance();
+        //const clueManager = gameState.getClueManager();
 
         if (!this.currentScene) {
             console.error('No current scene set in UIManager.');
             return;
         }
-        if (!clueManager) {
+        if (!this.clueManager) {
             console.error('ClueManager is not available.');
             return;
         }
@@ -81,10 +91,24 @@ export class UIManager {
             console.log('Guide scene is already active, not launching again.');
             return;
         }
-        console.log('Launching ClueJournal with ClueManager:', clueManager);
+        console.log('Launching ClueJournal with ClueManager:', this.clueManager);
+        // Put overlay to sleep while in journal to avoid clicks
+        try {
+            if (this.currentScene.scene.isActive('UIGameScene')) {
+                this.currentScene.scene.sleep('UIGameScene');
+            }
+        } catch {}
         this.currentScene.scene.pause();
-        this.currentScene.scene.launch('ClueJournal', { clueManager, originScene: this.originScene });
+        this.currentScene.scene.launch('ClueJournal', { clueManager: this.clueManager, originScene: this.originScene });
         this.currentScene.scene.bringToTop('ClueJournal');
+    }
+
+    // QoL: allow scenes to temporarily disable J hotkey relaunch
+    public setJournalHotkeyEnabled(enabled: boolean) {
+        this.journalHotkeyEnabled = enabled;
+    }
+    public isJournalHotkeyEnabled() {
+        return this.journalHotkeyEnabled;
     }
 
     public showNotification(message: string): void {
@@ -95,7 +119,20 @@ export class UIManager {
             return;
         }
         console.log(`[UIManager] Showing notification: "${message}" on scene ${this.currentScene.scene.key}`);
-
+        if (
+            typeof message === "string" &&
+            (message.includes("You're fired for misconduct") ||
+                message.includes("Fired for misconduct"))
+        ) {
+            const gs = GameState.getInstance();
+            console.trace('[TRACE] UIManager.showNotification fired-misconduct');
+            console.log('[TRACE] Flags at toast', {
+                usedCoke: gs.getFlag?.('usedCoke'),
+                tastedCheese: gs.getFlag?.('tastedCheese'),
+                cokeDepleted: gs.getFlag?.('cokeDepleted'),
+                cheeseDepleted: gs.getFlag?.('cheeseDepleted'),
+            });
+        }
         // Simple notification display logic
         const notificationText = this.currentScene.add.text(
             this.currentScene.cameras.main.centerX,    // Center X of the camera
@@ -126,30 +163,4 @@ export class UIManager {
             }
         });
     }
-
-    //public showAccusation() {
-    //    if (!this.currentScene) {
-    //        console.error('No current scene set in UIManager.');
-    //        return;
-    //    }
-    //    if (this.currentScene.scene.isActive('AccusationScene')) {
-    //        console.log('Guide scene is already active, not launching again.');
-    //        return;
-    //    }
-
-    //    const gameState = GameState.getInstance();
-    //    const suspectsData = gameState.suspectsData;
-    //    const clueManager = gameState.clueManager;
-    //    const suspectsSprites = gameState.npcIdleFrames;
-
-    //    console.log("About to showAccusation", suspectsData, clueManager, suspectsData);
-    //    //flyt logiken her ?
-    //    this.currentScene.scene.pause();
-    //    this.currentScene.scene.launch('AccusationScene', { suspectsData, clueManager, suspectsSprites, originScene: this.originScene });
-    //    this.currentScene.scene.bringToTop('AccusationScene');
-    //}
-
-
-
-
 }

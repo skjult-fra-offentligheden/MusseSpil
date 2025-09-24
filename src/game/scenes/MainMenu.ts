@@ -14,6 +14,13 @@ export class MainMenu extends Scene {
 
     create(): void {
         const { width, height } = this.scale;
+
+        // Ensure any journal overlays are fully closed when entering main menu
+        const stopIf = (k: string) => {
+            if (this.scene.isActive(k) || this.scene.isSleeping(k)) this.scene.stop(k);
+        };
+        ['ClueJournal', 'ClueDisplayJournalScene', 'PeopleDisplayJournalScene', 'AccusationScene', 'DragAbleClueScene', 'UIGameScene', 'DevHUDScene', 'InventoryScene', 'Guide']
+            .forEach(stopIf);
         
         //THIS IS IMPORTANT SET LOGO. DO NOT FUCK WITH THE SCALING
         this.logo = this.add.image(width/2, height/2, 'logo').setDepth(0);
@@ -60,6 +67,9 @@ export class MainMenu extends Scene {
 
     goToGame(): void {
         console.log("Started game");
+        // Defensive: make sure journal overlays are not lingering when starting gameplay
+        ['ClueJournal', 'ClueDisplayJournalScene', 'PeopleDisplayJournalScene', 'AccusationScene', 'DragAbleClueScene', 'UIGameScene', 'DevHUDScene', 'InventoryScene', 'Guide']
+            .forEach(k => { if (this.scene.isActive(k) || this.scene.isSleeping(k)) this.scene.stop(k); });
         this.scene.start("ToturialScene");
        // this.scene.start("Game");
         //this.scene.launch('UIGameScene');

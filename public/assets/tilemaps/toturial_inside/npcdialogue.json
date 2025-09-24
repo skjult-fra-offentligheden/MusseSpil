@@ -369,7 +369,21 @@
             "text": "I want a lawyer",
             "options": [
             ]
+        },
+        {
+            "id": "angry_about_cheese",
+            "condition": "PLAYER_ATE_CHEESE_ONCE",
+            "speaker": "Albino Mouse",
+            "text": "I want a lawyer",
+            "options": [
+                {
+                    "speaker": "Detective",
+                    "id": "sorry",
+                    "text": "I'm sorry, it looked delicious."
+                }
+            ]
         }
+
     ],
     "pinkDressGirlMouse": [
         {

@@ -6,7 +6,7 @@ import { DialogueManager } from '../dialogues/dialogueManager';
 import { Interactable } from '../managers/interactables';
 import { Player } from '../classes/player';
 import { InventoryManager } from '../managers/itemMananger';
-import { NPCReactions } from '../scenes/ToturialScene/npcReactions';
+import { NPCReactionsMap } from '../scenes/ToturialScene/npcReactions';
 import { Item } from "../classes/itemDatastruct";
 import { GlobalEvents } from '../../factories/globalEventEmitter';
 import { npcMemory } from "../../data/npcMemory";
@@ -51,6 +51,11 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     private myDialogueNodes: DialogueNode[];
     //sensory range
     private sensoryRange: number;
+
+    //Portrait
+    public portraitTextureKey?: string;
+    public portraitFrame?: string | number;
+    public portraitScale?: number;
     constructor(scene: Phaser.Scene, x: number, y: number, config: RichNPCConfig, dialogueNodesForThisNPC: DialogueNode[], dialogueManager: DialogueManager) {
         if (!scene.textures.exists(config.textureKey)) {
             console.error(`[NPC Constructor - ${config.npcId}] Texture key "${config.textureKey}" NOT FOUND in cache. Preload it! Using fallback.`);
@@ -64,6 +69,12 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         this.dialogues = config.dialogues;
         this.dialogueManager = dialogueManager;
         this.myDialogueNodes = dialogueNodesForThisNPC;
+        //Portrait
+        if (config.portrait) {
+            this.portraitTextureKey = config.portrait.textureKey;
+            this.portraitFrame = config.portrait.frame;
+            this.portraitScale = config.portrait.scale;
+        }
 
         this.npcId = config.npcId;
         this.dialogueState = 'greeting';
@@ -86,7 +97,12 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
         this.targetPointIndex = 0;
         this.moveArea = config.moveArea ? new Phaser.Geom.Rectangle(config.moveArea.x, config.moveArea.y, config.moveArea.width, config.moveArea.height) : new Phaser.Geom.Rectangle(x - 100, y - 100, 200, 200);
         this.sensoryRange = config.sensoryRange || 150;
-
+        scene.add.existing(this); // Add to scene
+        scene.physics.add.existing(this); // Add to physics world
+        this.setCollideWorldBounds(true);
+        this.setImmovable(true); // NPCs are typically not pushed by player
+        this.setOrigin(0.5, 1); // Origin at bottom center for easier positioning on ground
+        this.setDepth(y); // Simple depth sorting by y-position
 
         this.previousPosition = new Phaser.Math.Vector2(this.x, this.y);
         this.isReactingToItem = false;
@@ -120,7 +136,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
             this.scene.events.on(`dialogueEnded_${this.npcId}`, this.onDialogueEnded, this);
         }
 
-        this.reactionsData = config.simpleReactions || NPCReactions[this.npcId] || {};
+        this.reactionsData = NPCReactionsMap[this.npcId] || {}; //config.simpleReactions || 
         this.setupListeners();
 
         // Call onSpawn from config if it exists

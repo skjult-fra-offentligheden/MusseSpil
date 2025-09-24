@@ -5,11 +5,12 @@ import { phone } from "../items/toturialScene/phone"
 import { coke } from "./toturialScene/coke"
 // import { otherItem } from '../items/otherItem';
 
-export const AllItemConfigs: Record<string, ItemConfig> = {
+const ALL_ITEMS = {
     clueGlue: glue,
     blueCheese: blueCheese,
     cluePhone: phone,
-    coke: coke
-    // otherItemId: otherItem,
-    // ... more items
-};
+    coke: coke,
+} satisfies Record<string, ItemConfig>;
+
+export type ItemId = keyof typeof ALL_ITEMS;
+export const AllItemConfigs: Record<ItemId, ItemConfig> = ALL_ITEMS;

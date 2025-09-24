@@ -11,7 +11,6 @@ import { ClueManager } from "../clueScripts/clueManager";
 import { InventoryManager } from '../managers/itemMananger';
 import { Interactable } from '../managers/interactables';
 import { GuideScene } from '../guideScripts/guide';
-import { ClueDisplayScene } from './clueDisplay';
 import { Clue } from '../classes/clue';
 import { getNPCPositions } from '../../factories/npcPositionsPreProcessing';
 import { GameState } from '../managers/GameState';
@@ -84,9 +83,31 @@ export class Game extends Phaser.Scene {
         //sæt ui elementer.
         const uiManager = UIManager.getInstance();
         uiManager.setScene(this, "Game");
-        
-        
-        const gameState = GameState.getInstance();
+
+        // Ensure journal/inventory work like in ToturialScene
+        const state = GameState.getInstance(this);
+        try {
+            const firstActive = Object.entries(tutorialCases.cases).find(([id, c]: any) => c && (c as any).active);
+            if (firstActive && (firstActive[1] as any).culpritNpcId) {
+                const npcId = (firstActive[1] as any).culpritNpcId as string;
+                state.culpritId = npcId;
+                const cfg: any = (AllNPCsConfigs as any)[npcId];
+                state.culpritDetails = cfg?.culpritDetails ?? state.culpritDetails;
+            } else {
+                state.determineCulprit(AllNPCsConfigs);
+            }
+        } catch {}
+
+        // Initialize ClueManager and overlay
+        this.clueData = this.cache.json.get('toturial_clues') || {};
+        this.clueManager = new ClueManager(this.clueData, state, this);
+        this.registry.set('clueManager', this.clueManager);
+        uiManager.setClueManager(this.clueManager);
+        if (!this.scene.isActive('UIGameScene')) {
+            this.scene.launch('UIGameScene');
+        }
+
+        const gameState = state;
 
 
         this.dialoguesData = this.cache.json.get("npc_dialogues");
@@ -213,18 +234,12 @@ export class Game extends Phaser.Scene {
         // Launch UI Scene
         this.scene.launch('UIGameScene');
         this.scene.bringToTop('UIGameScene');
-        if (!this.scene.get('ClueDisplayScene')) {
-            this.scene.add('ClueDisplayScene', ClueDisplayScene, false);
-        }
-
 
         gameState.suspectsData = this.suspectsData;
         gameState.clueManager = this.clueManager;
         gameState.npcIdleFrames = this.npcIdleFrames;
 
         EventBus.emit('current-scene-ready', this);
-        this.events.on('clueDisplayClosed', this.onClueDisplayClosed, this);
-
     }
 
     private onClueDisplayClosed() {

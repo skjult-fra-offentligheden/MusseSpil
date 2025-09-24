@@ -1,7 +1,7 @@
 // src/handlers/CallbackHandler.ts
 
 import { ClueManager } from '../clueScripts/clueManager'; // Adjust path
-import { InventoryManager } from '../managers/InventoryManager'; // Adjust path
+import { InventoryManager } from '../managers/itemMananger'; // Adjust path
 import { GameState } from '../managers/GameState'; // Adjust path
 import { UIManager } from '../managers/UIManager'; // Adjust path for your UI messages
 
@@ -12,9 +12,14 @@ import { Item as InventoryItem } from '../classes/itemDatastruct'; // Adjust pat
 
 import Phaser from 'phaser';
 
-/**
- * Provides context to ItemConfig methods, allowing them to interact with game systems.
- */
+export type CallbackFn = (args: {
+    scene: Phaser.Scene;
+    gs: GameState;
+    ui: UIManager;
+    inventory?: InventoryManager;
+    clueManager?: ClueManager;
+    data?: unknown;
+}) => void;
 export interface ItemGameContext {
     scene: Phaser.Scene;
     inventoryManager: InventoryManager;
@@ -36,6 +41,7 @@ export class CallbackHandler {
     private uiManager: UIManager; // For showing messages
     // Stores the GameObject from the scene that was the target of the current interaction
     private currentInteractedObject?: Phaser.GameObjects.GameObject & { itemId?: string };
+    private handlers: Record<string, CallbackFn> = {};
 
     constructor(
         scene: Phaser.Scene,
@@ -52,10 +58,16 @@ export class CallbackHandler {
         this.addInventoryManagerHelpers(); // Add helper methods to InventoryManager if they don't exist
     }
 
-    /**
-     * Helper to ensure InventoryManager has the necessary methods.
-     * You might place these methods directly in InventoryManager.ts instead.
-     */
+    public registerHandlers(prefix: string, map: Record<string, CallbackFn>) {
+        for (const [key, fn] of Object.entries(map)) {
+            const id = `${prefix}/${key}`;
+            if (this.handlers[id]) console.warn('[CallbackHandler] Overwriting handler:', id);
+            this.handlers[id] = fn;
+        }
+
+
+    }
+
     private addInventoryManagerHelpers(): void {
         const invManager = this.inventoryManager as any; // Type assertion for dynamic addition
 
@@ -120,23 +132,43 @@ export class CallbackHandler {
         console.log(`[CallbackHandler setContext] Context set. Item ID: ${itemId || 'N/A'}`, gameObject);
     }
 
-    /**
-     * Main entry point for handling callbacks from dialogue or direct interactions.
-     */
-    public handleCallback(callbackId: string): void {
+    public handleCallback(callbackId: string, data?: unknown): void {
         console.log(`[CallbackHandler handleCallback] Received callback: ${callbackId}`);
 
-        // Try to get itemId from currentInteractedObject's data or direct property
-        const itemId = this.currentInteractedObject?.getData('itemId') as string || this.currentInteractedObject?.itemId;
+        // --- 1) Global/dialogue callbacks (no item context required) ---
+        const global = this.handlers[callbackId];
+        if (global) {
+            const ctx = {
+                scene: this.scene,
+                gs: GameState.getInstance(this.scene),
+                ui: this.uiManager,
+                inventory: this.inventoryManager,
+                clueManager: this.clueManager,
+                data
+            };
+            try {
+                global(ctx);
+            } catch (e) {
+                console.error('[CallbackHandler] Error in global callback', callbackId, e);
+            }
+            return; // IMPORTANT: do not fall through to item path
+        }
+
+        // --- 2) Item-specific callbacks (your existing logic) ---
+        // needs currentInteractedObject with an itemId
+        const itemId =
+            this.currentInteractedObject?.getData('itemId') as string ||
+            this.currentInteractedObject?.itemId;
 
         if (!itemId) {
-            console.warn(`[CallbackHandler handleCallback] No itemId found on currentInteractedObject. Cannot process callback "${callbackId}".`);
+            console.warn(
+                `[CallbackHandler handleCallback] No handler for "${callbackId}" and no itemId in context.`
+            );
             this.clearContext();
             return;
         }
 
         const itemConfig = AllItemConfigs[itemId];
-
         if (!itemConfig) {
             console.warn(`[CallbackHandler handleCallback] No ItemConfig found for itemId: "${itemId}"`);
             this.clearContext();
@@ -147,56 +179,51 @@ export class CallbackHandler {
             scene: this.scene,
             inventoryManager: this.inventoryManager,
             clueManager: this.clueManager,
-            gameState: GameState.getInstance(),
+            gameState: GameState.getInstance(this.scene),
             ui: {
                 showPlayerMessage: (message: string) => {
-                    this.uiManager.showNotification(message); // Use your UIManager
-                    console.log("PLAYER_MESSAGE:", message);
+                    this.uiManager.showNotification(message);
+                    console.log('PLAYER_MESSAGE:', message);
                 }
             },
             world: {
-                removeItemSprite: (gameObjectToDestroy: Phaser.GameObjects.GameObject) => {
-                    if (gameObjectToDestroy && typeof gameObjectToDestroy.destroy === 'function') {
+                removeItemSprite: (go: Phaser.GameObjects.GameObject) => {
+                    if (go && typeof (go as any).destroy === 'function') {
                         console.log(`[CallbackHandler/World] Destroying world sprite.`);
-                        gameObjectToDestroy.destroy();
+                        (go as any).destroy();
                     }
                 }
             },
             interactedObject: this.currentInteractedObject
         };
 
-        // --- Prioritize Item's Own handleCallback ---
         if (itemConfig.handleCallback) {
-            console.log(`[CallbackHandler handleCallback] Delegating callback "${callbackId}" to ItemConfig for "${itemId}".`);
+            console.log(
+                `[CallbackHandler handleCallback] Delegating "${callbackId}" to ItemConfig for "${itemId}".`
+            );
             itemConfig.handleCallback.call(itemConfig, callbackId, gameContext);
         } else {
-            // --- Fallback to Generic Callback Handling ---
-            console.log(`[CallbackHandler handleCallback] ItemConfig for "${itemId}" does not have a handleCallback method. Using generic handler for "${callbackId}".`);
+            // your existing generic fallback (pickup etc.)
             switch (callbackId) {
-                case 'ACTION_PICKUP': // A generic pickup action name
+                case 'ACTION_PICKUP':
                     if (itemConfig.collectible) {
                         this.executeGenericPickup(itemConfig, gameContext);
                     } else {
                         gameContext.ui.showPlayerMessage(`You can't pick up the ${itemConfig.description || itemConfig.id}.`);
                     }
                     break;
-                // Add other *truly generic* callbacks here if needed.
-                // Most item-specific actions should be handled by itemConfig.handleCallback.
                 default:
-                    console.warn(`⚠️ Unhandled callback ID: "${callbackId}" for item "${itemId}" (no item-specific handler and no generic handler).`);
+                    console.warn(
+                        `⚠️ Unhandled callback ID: "${callbackId}" for item "${itemId}" (no item handler & no generic handler).`
+                    );
                     break;
             }
         }
 
-        this.clearContext(); // Clear context after handling
+        this.clearContext();
     }
 
-    /**
-     * Executes a generic pickup sequence for an item.
-     * This is called if a generic 'ACTION_PICKUP' callback is used and the item
-     * doesn't have its own handleCallback for it, or if an item's handleCallback
-     * explicitly calls this for some reason.
-     */
+    
     private executeGenericPickup(itemConfig: ItemConfig, gameContext: ItemGameContext): void {
         console.log(`[CallbackHandler executeGenericPickup] Processing generic pickup for item: ${itemConfig.id}`);
 
@@ -235,9 +262,6 @@ export class CallbackHandler {
         }
     }
 
-    /**
-     * Adds a new clue or discovers an existing one based on ItemConfig.
-     */
     private addOrDiscoverClueForItem(itemConfig: ItemConfig, gameContext: ItemGameContext): void {
         if (!itemConfig.clueId && !itemConfig.collectible) { // Only process if it's a clue or generally significant
             return;

@@ -3,6 +3,7 @@ import { Actor } from './actor'; // Assuming Actor is your base class for player
 export class Player extends Actor {
     public name: string; // <<< ADD THIS PROPERTY
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+    private knockbackUntil = 0;
     // player!: Phaser.GameObjects.Sprite; // This line is redundant if Player extends Actor (which extends Sprite)
 
     constructor(scene: Phaser.Scene, x: number, y: number, playerName: string = "Hero") { // <<< ADD playerName PARAMETER
@@ -60,6 +61,11 @@ export class Player extends Actor {
 
         if (!body) return; // Guard if body is not ready
 
+        // During knockback, skip input updates so tweens/impulses can move the player
+        if (this.knockbackUntil > this.scene.time.now) {
+            return;
+        }
+
         body.setVelocity(0);
 
         if (!this.cursors) return; // Guard if cursors are not initialized
@@ -91,5 +97,10 @@ export class Player extends Actor {
         if (!isMoving) {
             this.anims.play('idle', true);
         }
+    }
+
+    // Allow external systems to apply a brief knockback stun window
+    public applyKnockbackStun(ms: number) {
+        this.knockbackUntil = Math.max(this.knockbackUntil, this.scene.time.now + ms);
     }
 }

@@ -8,16 +8,19 @@ import { Preloader } from './scenes/Preloader';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
 import { ClueJournal } from "./clueScripts/clueScene";
 import { DragAbleClueScene } from "./clueScripts/dragAbleClueScene";
-import { AccusationScene } from "./Accusation_scripts/AccusationScene";
+import { AccusationScene } from "./clueScripts/Accusation_scripts/AccusationScene";
+import { ClueDisplayJournalScene } from "./clueScripts/clueDisplay";
+import { PeopleDisplayJournalScene } from "./clueScripts/peopleDisplay";
 import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene";
+import { DevHUD } from './scenes/DevHUD';
 import { GameOver } from "./scenes/GameScriptScenes/GameOver";
 import { HouseScene } from "./scenes/HouseScene";
 import { ToturialScene } from "./scenes/ToturialScene";
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 
-const LOGICAL_WIDTH = 1024; // Example: choose your desired base width
-const LOGICAL_HEIGHT = 768; // Example: choose your desired base height
+const LOGICAL_WIDTH = 1920; // Example: choose your desired base width
+const LOGICAL_HEIGHT = 1080; // Example: choose your desired base height
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -57,7 +60,10 @@ const config: Phaser.Types.Core.GameConfig = {
         GameOver,
         HouseScene,
         ToturialScene,
-        DragAbleClueScene
+        DragAbleClueScene,
+        ClueDisplayJournalScene,
+        PeopleDisplayJournalScene,
+        DevHUD
     ]
 };
 

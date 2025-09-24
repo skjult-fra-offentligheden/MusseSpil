@@ -1,13 +1,18 @@
 import { Clue } from "../classes/clue";
+import { GameState } from "../managers/GameState";
 
 export type ClueCategory = "evidence" | "people" | "places" | "timeline";
 export class ClueManager {
     private clues: Map<string, Clue>;
-
-    constructor(allClueData: Record<string, any>) {
+    private gameState: GameState;
+    private game: Phaser.Game;
+    constructor(allClueData: Record<string, any>, gameState: GameState, scene: Phaser.Scene) {
         this.clues = new Map<string, Clue>();
-        console.log("Initializing Scene-Specific ClueManager with data:", allClueData);
 
+        //console.log("Initializing Scene-Specific ClueManager with data:", allClueData);
+        this.gameState = gameState;
+
+        this.game = scene.game;
         for (const clueId in allClueData) {
             if (Object.prototype.hasOwnProperty.call(allClueData, clueId)) {
                 const rawClue = allClueData[clueId];
@@ -21,7 +26,7 @@ export class ClueManager {
                     category: rawClue.category as ClueCategory, // Cast if sure it's valid
                     imageKey: rawClue.imageKey || undefined,
                     foundAt: rawClue.foundAt || undefined, relatedNPCs: rawClue.relatedNPCs || [],
-                    discovered: !!rawClue.discovered
+                    discovered: this.gameState.isClueDiscovered(rawClue.id)
                 };
                 this.clues.set(clue.id, clue);
             }
@@ -57,6 +62,30 @@ export class ClueManager {
             return this.getClue(clueToAdd.id);
         }
         return undefined;
+    }
+
+    public updateClueDetails(clueId: string, newDetails: { title?: string, description?: string, imageKey?: string }): boolean {
+        const clue = this.clues.get(clueId);
+
+        if (!clue) {
+            console.error(`[ClueManager] Attempted to update non-existent clue ID: ${clueId}`);
+            return false;
+        }
+
+        // Update the properties that have been provided
+        if (newDetails.title !== undefined) {
+            clue.title = newDetails.title;
+        }
+        if (newDetails.description !== undefined) {
+            clue.description = newDetails.description;
+        }
+        if (newDetails.imageKey !== undefined) {
+            clue.imageKey = newDetails.imageKey;
+        }
+        this.game.events.emit('clueUpdated', clue);
+        console.log(`[ClueManager] Details for clue '${clueId}' have been updated.`);
+
+        return true;
     }
 
     public addPeopleClue(data: Omit<Clue, 'category' | 'discovered'> & { discovered?: boolean }): Clue | undefined {
@@ -101,6 +130,7 @@ export class ClueManager {
         if (clue) {
             if (!clue.discovered) {
                 clue.discovered = true;
+                this.gameState.markClueAsDiscovered(clueId);
                 console.log(`[ClueManager] Clue discovered: ${clueId} - "${clue.title}"`);
                 // Optional: Emit an event if needed elsewhere
                 // this.scene.events.emit('clueDiscovered', clue); // Need scene ref if emitting here

@@ -12,10 +12,14 @@ export class DialogueUI {
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
     private spaceKey: Phaser.Input.Keyboard.Key;
     private enterKey: Phaser.Input.Keyboard.Key;
+    //portrait mode
+    private portraitImage: Phaser.GameObjects.Image;
+    private portraitSize: number = 0;
+
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        this.dialogueBox = this.generateDialogueBackground();
+        this.dialogueBox = this.generateDialogueUI();
         this.cursors = this.scene.input.keyboard!.createCursorKeys();
         this.spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
@@ -27,27 +31,61 @@ export class DialogueUI {
         this.reset();
     }
 
-    private generateDialogueBackground(): Phaser.GameObjects.Container {
+    private generateDialogueUI(): Phaser.GameObjects.Container {
         const width = this.scene.cameras.main.width;
-        const height = 200;
-        const container = this.scene.add.container(0, this.scene.cameras.main.height - height).setDepth(1000);
-        container.setVisible(false);
+        const boxHeight = 180; // Slightly taller to better fit portrait
+        const padding = 20;
 
-        this.dialogueBackground = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.8);
-        this.dialogueBackground.setOrigin(0, 0);
-        this.dialogueBackground.setScrollFactor(0);
+        const container = this.scene.add.container(0, this.scene.cameras.main.height - boxHeight)
+            .setDepth(1000)
+            .setVisible(false)
+            .setScrollFactor(0);
+
+        this.dialogueBackground = this.scene.add.rectangle(0, 0, width, boxHeight, 0x000000, 0.8)
+            .setOrigin(0, 0);
         container.add(this.dialogueBackground);
 
-        this.dialogueText = this.scene.add.text(40, 40, '', {
+        // --- NEW: PORTRAIT AND LAYOUT LOGIC ---
+        this.portraitSize = boxHeight - (padding * 3); // e.g., 140x140
+        const portraitX = padding + (this.portraitSize / 2);
+        console.log(`[DialogueUI] Portrait X position: ${portraitX}, Size: ${this.portraitSize}`);
+
+        // Create the portrait image, but keep it hidden initially
+        this.portraitImage = this.scene.add.image(portraitX, boxHeight / 2, 'portrait_unknown')
+            .setDisplaySize(this.portraitSize, this.portraitSize)
+            .setOrigin(0.5)
+            .setVisible(false);
+        container.add(this.portraitImage);
+
+        // --- ADJUSTED: Text and Option Positions ---
+        const textStartX = portraitX + (this.portraitSize / 2) + padding;
+        const textWidth = width - textStartX - padding;
+
+        this.dialogueText = this.scene.add.text(textStartX, padding, '', {
             fontSize: '20px',
             color: '#ffffff',
-            wordWrap: { width: width - 80 },
-            padding: {x:5 , y:5}
+            wordWrap: { width: textWidth },
         });
-        this.dialogueText.setScrollFactor(0);
         container.add(this.dialogueText);
 
+        // We will add options dynamically in showDialogue, so no need to create a container here
+
         return container;
+    }
+
+    public setPortrait(textureKey: string) {
+        if (this.scene.textures.exists(textureKey)) {
+            this.portraitImage.setTexture(textureKey).setVisible(true);
+        } else {
+            // Fallback to a default or hide it if texture is missing
+            this.portraitImage.setTexture('portrait_unknown').setVisible(true);
+            console.warn(`Portrait texture not found: ${textureKey}`);
+        }
+    }
+
+    // --- ADD THIS NEW METHOD to hide the portrait ---
+    public hidePortrait() {
+        this.portraitImage.setVisible(false);
     }
 
     public showDialogue(
@@ -59,12 +97,14 @@ export class DialogueUI {
         this.dialogueText.setText(dialogue.speaker ? `${dialogue.speaker}: ${dialogue.text}` : dialogue.text);
         this.clearOptions();
         this.selectedOptionIndex = 0;
-        console.log("[DialogueUI] showDialogue called for node:", dialogue.id);
+        //console.log("[DialogueUI] showDialogue called for node:", dialogue.id);
         // Render options
-        const optionsStartY = 100; // Give more space below main text
-        const optionsSpacingY = 40; // Increase space between options
+        const textBounds = this.dialogueText.getBounds();
+        const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
+        const optionsStartX = this.dialogueText.x;
+        const optionsSpacingY = 30;
         dialogue.options.forEach((option, index) => {
-            const buttonText = this.scene.add.text(40, optionsStartY + index * optionsSpacingY, option.speaker ? `${option.speaker}: ${option.text}` : option.text, {
+            const buttonText = this.scene.add.text(optionsStartX, optionsStartY + index * optionsSpacingY, option.speaker ? `${option.speaker}: ${option.text}` : option.text, {
                 fontSize: '16px',
                 color: '#00ff00',
                 backgroundColor: '#000000',
@@ -110,23 +150,40 @@ export class DialogueUI {
 
     public hideDialogue() {
         this.dialogueBox.setVisible(false);
-        this.dialogueText.setText('');
+        this.hidePortrait(); // Also hide the portrait when the box is hidden
         this.clearOptions();
     }
 
     public reset() {
         if (this.dialogueBox) this.dialogueBox.destroy();
-        this.dialogueBox = this.generateDialogueBackground();
+        this.dialogueBox = this.generateDialogueUI();
     }
+
 
     private onResize(gameSize: Phaser.Structs.Size) {
         const { width, height } = gameSize;
-        this.dialogueBackground.setSize(width, 200);
-        this.dialogueBox.setPosition(0, height - 200);
-        this.dialogueText.setWordWrapWidth(width - 40);
+        const boxHeight = this.dialogueBackground.height;
+        this.dialogueBackground.setSize(width, boxHeight);
+        this.dialogueBox.setPosition(0, height - boxHeight);
+
+        const padding = 20;
+        this.portraitSize = boxHeight - (padding * 2);
+
+        const portraitX = padding + (this.portraitSize / 2);
+        this.portraitImage.setPosition(portraitX, boxHeight / 2);
+        this.resizeAndPositionPortrait();
+
+        const textStartX = portraitX + (this.portraitSize / 2) + padding;
+        const textWidth = width - textStartX - padding;
+        this.dialogueText.setPosition(textStartX, padding);
+        this.dialogueText.setWordWrapWidth(textWidth);
+
+        const textBounds = this.dialogueText.getBounds();
+        const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
+        const optionsSpacingY = 30;
         this.optionButtons.forEach((button, index) => {
-            button.setPosition(20, 60 + index * 30);
-            button.setWordWrapWidth(width - 40);
+            button.setPosition(textStartX, optionsStartY + index * optionsSpacingY);
+            button.setWordWrapWidth(textWidth);
         });
     }
     public getSelectedOptionIndex(): number {
@@ -146,5 +203,32 @@ export class DialogueUI {
             this.selectedOptionIndex = Math.min(this.optionButtons.length - 1, this.selectedOptionIndex + 1);
             this.updateOptionHighlight();
         }
+    }
+
+    private resizeAndPositionPortrait() {
+        if (!this.portraitImage.texture || !this.portraitImage.visible) {
+            return; // Nothing to resize
+        }
+
+        const texture = this.portraitImage.texture;
+        const imageWidth = texture.getSourceImage().width;
+        const imageHeight = texture.getSourceImage().height;
+
+        let newWidth, newHeight;
+        const ratio = imageWidth / imageHeight;
+
+        // Determine if the image is wider than it is tall (landscape) or taller (portrait)
+        if (imageWidth > imageHeight) {
+            // Wider image: its width should match the box size
+            newWidth = this.portraitSize;
+            newHeight = this.portraitSize / ratio;
+        } else {
+            // Taller image: its height should match the box size
+            newHeight = this.portraitSize;
+            newWidth = this.portraitSize * ratio;
+        }
+
+        // Apply the calculated, non-distorted size
+        this.portraitImage.setDisplaySize(newWidth, newHeight);
     }
 }

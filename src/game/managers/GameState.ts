@@ -8,15 +8,10 @@ export interface ClueRuntimeState {
     usesLeft?: number;          // if you need exact counts
 }
 
-export interface ClueRuntimeState {
-    phase: EvidencePhase | 'fixed'; // EvidencePhase is 'full' | 'half' | 'empty'
-    usesLeft?: number;
-}
-
 export class GameState {
     private static instance: GameState;
     private scene: Phaser.Scene | null = null; // Store scene reference to access registry
-
+    public discoveredClues: Set<string> = new Set();
     // --- Your existing GameState properties ---
     public globalFlags: { [key: string]: boolean } = {};
     public collectedItems: Set<string> = new Set();
@@ -25,7 +20,8 @@ export class GameState {
     public clueState: Record<string, ClueRuntimeState> = {};
     private eventsAddressed: Set<string> = new Set();
 
-
+    public culpritId: string | null = null;
+    public culpritDetails: any | null = null;
     // Make constructor private for Singleton
     // Remove the direct ClueManager instantiation
     private constructor(scene: Phaser.Scene) { // Accept scene on creation
@@ -34,6 +30,9 @@ export class GameState {
         console.log("GameState Singleton instance created.");
         // --- REMOVED THIS LINE ---
         // this.clueManager = ClueManager.getInstance();
+
+        // Attempt to load previous state
+        this.load();
     }
 
     // Method to get the singleton instance, passing the scene the FIRST time
@@ -51,53 +50,6 @@ export class GameState {
         }
         
         return GameState.instance;
-    }
-
-    private degradePhasedItem(itemId: string, sizeToUpdate: 'small' | 'large'): boolean {
-        const gameState = GameState.getInstance(); // Assuming scene is already set for GameState
-        const itemConfig = AllItemConfigs[itemId];
-
-        if (!itemConfig || !itemConfig.art || typeof itemConfig.art[sizeToUpdate] === 'string') {
-            console.warn(`[InventoryManager] Item ${itemId} is not phased or has no art config for degradation.`);
-            return false;
-        }
-
-        // Get the current state (this also initializes it if it doesn't exist)
-        const clueRuntimeState = gameState.getOrInitClueState(itemId);
-        const oldPhase = clueRuntimeState.phase;
-
-        // Use your existing GameState.degradeClue() method
-        const newPhase = gameState.degradeClue(itemId); // This method handles the 'full' -> 'half' -> 'empty' logic
-
-        if (newPhase === oldPhase) {
-            // Degradation didn't happen (e.g., item was already 'empty' or 'fixed')
-            if (oldPhase === 'empty') {
-                console.log(`[InventoryManager] Item ${itemId} is already empty.`);
-            } else if (oldPhase === 'fixed') {
-                console.log(`[InventoryManager] Item ${itemId} is 'fixed', cannot degrade.`);
-            }
-            return false; // No change occurred
-        }
-
-        console.log(`[InventoryManager] Item ${itemId} phase updated from ${oldPhase} to ${newPhase}.`);
-
-        // Update the iconKey of the Item object stored in this.items
-        const inventoryItemInstance = this.items.get(itemId);
-        if (inventoryItemInstance && itemConfig.art) {
-            // We know artForSize is PhaseArt because of the earlier check
-            const artSet = itemConfig.art[sizeToUpdate] as PhaseArt;
-            // newPhase is 'full' | 'half' | 'empty' | 'fixed'. PhaseArt keys are 'full', 'half', 'empty'.
-            // If newPhase is 'fixed', we should probably use 'full' art.
-            const phaseKeyForArt = (newPhase === 'fixed' ? 'full' : newPhase) as keyof PhaseArt;
-
-            if (artSet && artSet[phaseKeyForArt]) {
-                inventoryItemInstance.iconKey = artSet[phaseKeyForArt];
-                console.log(`[InventoryManager] Updated inventory item instance iconKey for ${itemId} to: ${inventoryItemInstance.iconKey}`);
-            } else {
-                console.warn(`[InventoryManager] Could not find art for phase ${phaseKeyForArt} for item ${itemId}.`);
-            }
-        }
-        return true; // Degradation occurred
     }
 
     // --- Method to GET the ClueManager WHEN NEEDED ---
@@ -134,6 +86,7 @@ export class GameState {
     // --- Add other methods to manage game state ---
     public setFlag(key: string, value: boolean) {
         this.globalFlags[key] = value;
+        this.save();
     }
 
     public getFlag(key: string): boolean {
@@ -143,13 +96,13 @@ export class GameState {
     public addItem(itemId: string) {
         this.collectedItems.add(itemId);
         console.log(`GameState: Item added - ${itemId}. Collection:`, this.collectedItems);
+        this.save();
     }
 
     public hasItem(itemId: string): boolean {
         return this.collectedItems.has(itemId);
     }
 
-    // Optional: Reset method if needed for starting a new game
     public static resetInstance(scene: Phaser.Scene) {
         console.log("Resetting GameState instance.");
         GameState.instance = new GameState(scene);
@@ -169,6 +122,7 @@ export class GameState {
 
         // This is the core logic:
         s.phase = s.phase === 'full' ? 'half' : 'empty'; // If 'full' -> 'half', else (must be 'half') -> 'empty'
+        this.save();
         return s.phase;
     }
 
@@ -186,5 +140,80 @@ export class GameState {
     public resetEventsAddressed(): void { // Useful if you need to reset for a new game or scene
         this.eventsAddressed.clear();
         console.log("[GameState] eventsAddressed has been reset.");
+    }
+
+    public markClueAsDiscovered(clueId: string): void {
+        this.discoveredClues.add(clueId);
+        console.log(`[GameState] Clue discovered and persisted: ${clueId}`);
+        this.save();
+    }
+
+    public isClueDiscovered(clueId: string): boolean {
+        return this.discoveredClues.has(clueId);
+    }
+
+    public determineCulprit(allNpcConfigs: { [key: string]: NPCConfig }): void {
+        const configs = Object.values(allNpcConfigs);
+        for (const config of configs) {
+            if (config.culpritDetails) {
+                this.culpritId = config.npcId;
+                this.culpritDetails = config.culpritDetails;
+                console.log(`[GameState] The culprit has been determined: ${this.culpritId}`);
+                return; // Stop after finding the first one
+            }
+        }
+        console.warn("[GameState] No culprit was defined in any NPC configuration!");
+    }
+
+    public counters: Record<string, number> = {};
+
+    public getCounter(id: string): number {
+        return this.counters[id] ?? 0;
+    }
+
+    public incrementCounter(id: string, by: number = 1): number {
+        const v = (this.counters[id] ?? 0) + by;
+        this.counters[id] = v;
+        this.save();
+        return v;
+    }
+
+    // ---- Persistence ----
+    private storageKey = 'GameStateV1';
+
+    public save() {
+        try {
+            if (typeof window === 'undefined' || !window.localStorage) return;
+            const payload = {
+                globalFlags: this.globalFlags,
+                collectedItems: Array.from(this.collectedItems),
+                discoveredClues: Array.from(this.discoveredClues),
+                clueState: this.clueState,
+                counters: this.counters,
+                culpritId: this.culpritId,
+                culpritDetails: this.culpritDetails,
+            };
+            window.localStorage.setItem(this.storageKey, JSON.stringify(payload));
+        } catch (e) {
+            console.warn('[GameState] save failed:', e);
+        }
+    }
+
+    public load() {
+        try {
+            if (typeof window === 'undefined' || !window.localStorage) return;
+            const raw = window.localStorage.getItem(this.storageKey);
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (data.globalFlags) this.globalFlags = data.globalFlags;
+            if (Array.isArray(data.collectedItems)) this.collectedItems = new Set<string>(data.collectedItems);
+            if (Array.isArray(data.discoveredClues)) this.discoveredClues = new Set<string>(data.discoveredClues);
+            if (data.clueState) this.clueState = data.clueState;
+            if (data.counters) this.counters = data.counters;
+            this.culpritId = data.culpritId ?? this.culpritId;
+            this.culpritDetails = data.culpritDetails ?? this.culpritDetails;
+        } catch (e) {
+            console.warn('[GameState] load failed:', e);
+        }
     }
 }

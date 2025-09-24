@@ -97,32 +97,50 @@ export class AccusationUI {
 
     public showConfirmation(suspect: Suspect, onConfirm: () => void, onCancel: () => void): void {
         // Create a simple confirmation dialog
-        const dialogBg = this.scene.add.rectangle(0, 280, screen.width, 100, 0x0000ff, 1).setOrigin(0, 0);
+        const { width, height } = this.scene.scale;
+
+        const confimationBoxContainer = this.scene.add.container(0, 0).setDepth(9999);
+        const backdrop = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.5).setOrigin(0).setInteractive();
+        confimationBoxContainer.add(backdrop);
+
+        const panelW = 420;
+        const panelH = 200;
+        const panel = this.scene.add.rectangle(width / 2, height / 2, panelW, panelH, 0x0000ff, 0.9).setStrokeStyle(2, 0xffffff);
+
+        confimationBoxContainer.add(panel);
+
         const confirmText = this.scene.add.text(
-            400,
-            300,
+            width / 2,
+            height-30,
             `Are you sure you want to accuse ${suspect.name}?`,
-            { fontSize: '18px', fill: '#fff' }
+            { fontSize: '18px', color: '#ffffff' }
         );
 
-        const yesButton = this.scene.add.text(400, 350, 'Yes', { fontSize: '18px' })
-            .setInteractive()
-            .on('pointerdown', () => {
-                dialogBg.destroy();
-                confirmText.destroy();
-                yesButton.destroy();
-                noButton.destroy();
-                onConfirm();
-            });
+        confimationBoxContainer.add(confirmText);
 
-        const noButton = this.scene.add.text(500, 350, 'No', { fontSize: '18px' })
-            .setInteractive()
-            .on('pointerdown', () => {
-                dialogBg.destroy();
-                confirmText.destroy();
-                yesButton.destroy();
-                noButton.destroy();
-                onCancel();
-            });
+        const makeBtn = (
+            label: string,
+            x: number,
+            cb: () => void
+        ): Phaser.GameObjects.Text => {
+            return this.scene.add
+                .text(x, height / 2 + 35, label, {
+                    fontFamily: 'Arial Black',
+                    fontSize: '20px',
+                    color: '#ffffff',
+                    backgroundColor: '#0034aa',
+                    padding: { x: 14, y: 6 }
+                })
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => {
+                    confimationBoxContainer.destroy();          // one-liner cleanup
+                    cb();
+                });
+        };
+
+        const yesBtn = makeBtn('YES', width / 2 - 80, onConfirm);
+        const noBtn = makeBtn('NO', width / 2 + 80, onCancel);
+        confimationBoxContainer.add([yesBtn, noBtn]);
     }
 }

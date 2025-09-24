@@ -19,7 +19,6 @@ export class UIGameOverlay extends Phaser.Scene {
     };
     private activeItem: Item | null = null;
     private activeItemIcon: Phaser.GameObjects.Sprite | null = null;
-    private itemActionHandler: ItemActionHandler;
     private inventoryManager: InventoryManager;
 
     constructor() {
@@ -35,7 +34,6 @@ export class UIGameOverlay extends Phaser.Scene {
 
     create(): void {
         console.log("I am in the UI overlay. It actually ran");
-
         const uiManager = UIManager.getInstance();
         this.createLimitedSlots();
 
@@ -91,12 +89,42 @@ export class UIGameOverlay extends Phaser.Scene {
             });
 
             if (btnConfig.keybind) {
-                this.input.keyboard.on(`keydown-${btnConfig.keybind}`, btnConfig.callback);
+                this.input.keyboard.on(`keydown-${btnConfig.keybind}`, () => {
+                    const ui = UIManager.getInstance();
+                    const sm = this.scene;
+                    const anyJournalOpenOrSleeping =
+                        sm.isActive('ClueJournal') || sm.isSleeping('ClueJournal') ||
+                        sm.isActive('ClueDisplayJournalScene') || sm.isSleeping('ClueDisplayJournalScene') ||
+                        sm.isActive('PeopleDisplayJournalScene') || sm.isSleeping('PeopleDisplayJournalScene') ||
+                        sm.isActive('AccusationScene') || sm.isSleeping('AccusationScene') ||
+                        sm.isActive('DragAbleClueScene') || sm.isSleeping('DragAbleClueScene');
+                    if (anyJournalOpenOrSleeping) return; // Journal stack will handle J
+                    if (ui.isJournalHotkeyEnabled()) btnConfig.callback();
+                });
             }
         });
 
         this.inventoryManager = InventoryManager.getInstance();
-        this.itemActionHandler = new ItemActionHandler(this);
+
+        // Dev HUD toggle (F2)
+        this.input.keyboard?.on('keydown-F2', () => {
+            const sm = this.scene;
+            if (sm.isActive('DevHUDScene')) sm.stop('DevHUDScene');
+            else sm.launch('DevHUDScene');
+        });
+
+        // Reset Save (F3): clear persisted GameState and hard-reload
+        this.input.keyboard?.on('keydown-F3', () => {
+            try {
+                window.localStorage?.removeItem('GameStateV1');
+            } catch {}
+            // Quick visual cue
+            const t = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY,
+                'Save cleared — reloading...', { fontSize: '16px', color: '#ffffff', backgroundColor: '#000000' })
+                .setOrigin(0.5).setScrollFactor(0).setDepth(99999);
+            this.time.delayedCall(200, () => window.location.reload());
+        });
+
         this.updateSlotContents(); // Initial update
         const mainScene = this.scene.get('ToturialScene') as import('../scenes/ToturialScene').ToturialScene;;
         if (mainScene) {
@@ -297,9 +325,14 @@ export class UIGameOverlay extends Phaser.Scene {
     private useActiveItem() {
         if (!this.activeItem) return; // Guard clause
 
-        const itemToUse = this.activeItem; // Store ref in case it changes mid-logic
+        // 1. Get the main gameplay scene
+        const mainScene = this.scene.get('ToturialScene') as import('../scenes/ToturialScene').ToturialScene;
 
-        this.itemActionHandler.useItem(itemToUse);
-
+        if (mainScene && mainScene.itemActionHandler) {
+            // 2. Use the ItemActionHandler instance from the main scene
+            mainScene.itemActionHandler.useItem(this.activeItem);
+        } else {
+            console.error("Could not find ItemActionHandler on ToturialScene!");
+        }
     }
 }
