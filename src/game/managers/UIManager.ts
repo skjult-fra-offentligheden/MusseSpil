@@ -73,12 +73,10 @@ export class UIManager {
     }
 
     public showJournal() {
+        // --- Keep all these initial checks ---
         if (!this.journalHotkeyEnabled) {
             return;
         }
-        //const gameState = GameState.getInstance();
-        //const clueManager = gameState.getClueManager();
-
         if (!this.currentScene) {
             console.error('No current scene set in UIManager.');
             return;
@@ -87,23 +85,27 @@ export class UIManager {
             console.error('ClueManager is not available.');
             return;
         }
-        if (this.currentScene.scene.isActive('CaseSelectionScene')) {
-            console.log('Guide scene is already active, not launching again.');
+        // Prevent opening if it's already open
+        if (this.currentScene.scene.isActive('CaseSelectionScene') || this.currentScene.scene.isActive('CaseDetailsScene')) {
             return;
         }
-        console.log('Launching ClueJournal with ClueManager:', this.clueManager);
-        // Put overlay to sleep while in journal to avoid clicks
-        try {
-            if (this.currentScene.scene.isActive('UIGameScene')) {
-                this.currentScene.scene.sleep('UIGameScene');
-            }
-        } catch {}
-        this.currentScene.scene.pause();
+
+        console.log('UIManager: Launching CaseSelectionScene...');
+
+        // --- This is the core logic ---
+
+        // 1. Pause the main game scene (e.g., ToturialScene)
+        this.currentScene.scene.pause(this.originScene);
+
+        // 2. If the UI overlay is active, put it to sleep
+        if (this.currentScene.scene.isActive('UIGameScene')) {
+            this.currentScene.scene.sleep('UIGameScene');
+        }
+        
+        // 3. Launch the new case selection menu
         this.currentScene.scene.launch('CaseSelectionScene', { 
-            clueManager: this.clueManager, 
             originScene: this.originScene 
-        });        
-        this.currentScene.scene.bringToTop('ClueJournal');
+        });
     }
 
     // QoL: allow scenes to temporarily disable J hotkey relaunch
