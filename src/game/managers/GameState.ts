@@ -3,10 +3,14 @@ import { ClueManager } from "../clueScripts/clueManager"; // Adjust path if nece
 import { Suspect } from "../Accusation_scripts/suspect"; //
 import { EvidencePhase } from "../scenes/ToturialScene/evidenceArt"
 import { AllItemConfigs } from "../../data/items/AllItemConfig"
+
 export interface ClueRuntimeState {
     phase: EvidencePhase | 'fixed';
     usesLeft?: number;          // if you need exact counts
 }
+
+export type BoardNodePosition = { x: number; y: number };
+export type BoardConnectionData = { fromId: string; toId: string };
 
 export class GameState {
     private static instance: GameState;
@@ -19,6 +23,9 @@ export class GameState {
     public npcIdleFrames: any[] = []; // Initialize if needed
     public clueState: Record<string, ClueRuntimeState> = {};
     private eventsAddressed: Set<string> = new Set();
+
+    public boardNodePositions: { [nodeId: string]: BoardNodePosition } = {};
+    public boardConnections: BoardConnectionData[] = [];
 
     public culpritId: string | null = null;
     public culpritDetails: any | null = null;
@@ -183,7 +190,6 @@ export class GameState {
 
     public save() {
         try {
-            if (typeof window === 'undefined' || !window.localStorage) return;
             const payload = {
                 globalFlags: this.globalFlags,
                 collectedItems: Array.from(this.collectedItems),
@@ -192,6 +198,9 @@ export class GameState {
                 counters: this.counters,
                 culpritId: this.culpritId,
                 culpritDetails: this.culpritDetails,
+                // --- ADD THESE TO THE PAYLOAD ---
+                boardNodePositions: this.boardNodePositions,
+                boardConnections: this.boardConnections
             };
             window.localStorage.setItem(this.storageKey, JSON.stringify(payload));
         } catch (e) {
@@ -201,7 +210,6 @@ export class GameState {
 
     public load() {
         try {
-            if (typeof window === 'undefined' || !window.localStorage) return;
             const raw = window.localStorage.getItem(this.storageKey);
             if (!raw) return;
             const data = JSON.parse(raw);
@@ -210,8 +218,13 @@ export class GameState {
             if (Array.isArray(data.discoveredClues)) this.discoveredClues = new Set<string>(data.discoveredClues);
             if (data.clueState) this.clueState = data.clueState;
             if (data.counters) this.counters = data.counters;
-            this.culpritId = data.culpritId ?? this.culpritId;
-            this.culpritDetails = data.culpritDetails ?? this.culpritDetails;
+            this.culpritId = data.culpritId ?? null;
+            this.culpritDetails = data.culpritDetails ?? null;
+            
+            // --- ADD THESE TO LOAD THE DATA ---
+            if (data.boardNodePositions) this.boardNodePositions = data.boardNodePositions;
+            if (Array.isArray(data.boardConnections)) this.boardConnections = data.boardConnections;
+
         } catch (e) {
             console.warn('[GameState] load failed:', e);
         }

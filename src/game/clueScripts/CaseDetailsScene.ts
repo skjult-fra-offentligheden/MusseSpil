@@ -6,6 +6,7 @@ import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs';
 import { UIManager } from '../managers/UIManager';
 import { TutorialCase } from '../../cases/TutorialCase';
 import { Clue } from '../classes/clue';
+import { GameState } from '../managers/GameState';
 
 type JournalTab = 'Mice' | 'Clues' | 'Board' | 'Accuse';
 // A new type to help manage draggable items on the board
@@ -17,7 +18,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private activeCaseId!: string;
     private activeCaseData!: any;
     private activeTab: JournalTab = 'Mice';
-
+    private gameState!: GameState;
     // --- All existing UI elements ---
     private journalContainer!: Phaser.GameObjects.Container;
     private tabs: { [key in JournalTab]?: Phaser.GameObjects.Text } = {};
@@ -56,6 +57,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.originScene = data.originScene;
         this.clueManager = data.clueManager;
         this.activeCaseData = (tutorialCases.cases as any)[this.activeCaseId];
+        this.gameState = GameState.getInstance();
     }
 
     create() {
@@ -377,45 +379,52 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private createBoardContent(width: number, height: number): Phaser.GameObjects.Container {
         const contentY = -height / 2 + 330;
         const contentWidth = width * 0.85;
-        const contentHeight = height - 370; // Available height for the board area
+        const contentHeight = height - 370;
         const container = this.add.container(0, contentY);
 
-        // Title and instructions
         container.add(this.add.text(-contentWidth / 2, 0, '📌 Evidence Board', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#543d25' }));
         container.add(this.add.text(-contentWidth / 2, 35, 'How to use: Drag items to move. Click "+ Connect", then click another item to link them.', { fontSize: '12px', color: '#8B4513', wordWrap: { width: contentWidth } }));
 
-        // Corkboard area - make it interactive to catch clicks to cancel connection
         const boardY = 70;
         const boardArea = this.add.graphics().fillStyle(0xfde68a, 1).fillRoundedRect(-contentWidth / 2, boardY, contentWidth, contentHeight - boardY, 10);
         container.add(boardArea);
         boardArea.setInteractive(new Phaser.Geom.Rectangle(-contentWidth / 2, boardY, contentWidth, contentHeight - boardY), Phaser.Geom.Rectangle.Contains)
-                 .on('pointerdown', () => {
-                     if(this.isConnecting) {
-                         this.isConnecting = false;
-                         this.connectionStartNode = null;
-                     }
-                 });
+                 .on('pointerdown', () => { if(this.isConnecting) { this.isConnecting = false; this.connectionStartNode = null; } });
         
-        // This graphics object is for drawing the red connection lines
         this.connectionLine = this.add.graphics();
         container.add(this.connectionLine);
 
-        // Create draggable person nodes
+        // Clear previous nodes before creating new ones
+        this.boardNodes = [];
+
         const suspectIds = (TutorialCase as any).suspects;
         suspectIds.forEach((id: string, index: number) => {
             const node = this.createBoardNode(id, 'person');
-            node.setPosition(-contentWidth / 2 + 100, boardY + 70 + index * 120);
+            // --- UPDATED: Load position from GameState ---
+            const savedPos = this.gameState.boardNodePositions[id];
+            node.setPosition(savedPos?.x ?? -contentWidth / 2 + 100, savedPos?.y ?? boardY + 70 + index * 120);
             container.add(node);
             this.boardNodes.push({ id, type: 'person', gameObject: node });
         });
         
-        // Create draggable clue nodes
         const allClues = this.clueManager.getAllClues().filter(c => c.discovered);
         allClues.forEach((clue, index) => {
             const node = this.createBoardNode(clue.id, 'clue');
-            node.setPosition(contentWidth / 2 - 100, boardY + 70 + index * 120);
+            // --- UPDATED: Load position from GameState ---
+            const savedPos = this.gameState.boardNodePositions[clue.id];
+            node.setPosition(savedPos?.x ?? contentWidth / 2 - 100, savedPos?.y ?? boardY + 70 + index * 120);
             container.add(node);
             this.boardNodes.push({ id: clue.id, type: 'clue', gameObject: node });
+        });
+
+        // --- NEW: Restore saved connections ---
+        this.connections = [];
+        this.gameState.boardConnections.forEach(connData => {
+            const fromNode = this.boardNodes.find(n => n.id === connData.fromId);
+            const toNode = this.boardNodes.find(n => n.id === connData.toId);
+            if (fromNode && toNode) {
+                this.connections.push({ from: fromNode, to: toNode });
+            }
         });
         
         return container;
@@ -424,11 +433,9 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private createBoardNode(id: string, type: 'person' | 'clue'): Phaser.GameObjects.Container {
         const width = 180;
         const height = 100;
-        // The node itself is a container that we make draggable
         const nodeContainer = this.add.container(0,0).setSize(width, height).setInteractive();
         this.input.setDraggable(nodeContainer);
 
-        // Visuals for the node
         const bg = this.add.graphics().fillStyle(0xffffff, 1).fillRoundedRect(-width/2, -height/2, width, height, 8);
         const labelText = type === 'person' ? (AllNPCsConfigs as any)[id]?.displayName : this.clueManager.getClue(id)?.title;
         const label = this.add.text(0, -10, labelText, { fontSize: '14px', color: '#000', align: 'center', wordWrap: { width: width - 20 } }).setOrigin(0.5);
@@ -436,22 +443,44 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         
         nodeContainer.add([bg, label, connectButton]);
 
-        // --- Event Handlers for Drag and Connect ---
-        nodeContainer.on('drag', (p: any, dragX: any, dragY: any) => nodeContainer.setPosition(dragX, dragY));
+        // --- UPDATED: Save position on drag ---
+        nodeContainer.on('drag', (p: any, dragX: number, dragY: number) => {
+            nodeContainer.setPosition(dragX, dragY);
+            this.gameState.boardNodePositions[id] = { x: dragX, y: dragY };
+            this.gameState.save(); // <-- Save the change!
+        });
         
         connectButton.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
-            event.stopPropagation(); // Correctly call stopPropagation on the event object
+            event.stopPropagation();
             this.handleConnectionStart(id, type);
         });
 
-        // The main body of the node listens for the *end* of a connection
         nodeContainer.on('pointerdown', () => {
-            if (this.isConnecting) {
-                this.handleConnectionEnd(id, type);
-            }
+            if (this.isConnecting) this.handleConnectionEnd(id, type);
         });
 
         return nodeContainer;
+    }
+
+    private handleConnectionEnd(id: string, type: 'person' | 'clue') {
+        const endNode = this.boardNodes.find(n => n.id === id) || null;
+        if (this.connectionStartNode && endNode && this.connectionStartNode.id !== endNode.id) {
+            
+            const alreadyExists = this.gameState.boardConnections.some(
+                c => (c.fromId === this.connectionStartNode!.id && c.toId === endNode.id) ||
+                     (c.fromId === endNode.id && c.toId === this.connectionStartNode!.id)
+            );
+
+            if (!alreadyExists) {
+                // --- UPDATED: Save connection to GameState ---
+                const connData = { fromId: this.connectionStartNode.id, toId: endNode.id };
+                this.gameState.boardConnections.push(connData);
+                this.gameState.save(); // <-- Save the change!
+                this.connections.push({ from: this.connectionStartNode, to: endNode });
+            }
+        }
+        this.isConnecting = false;
+        this.connectionStartNode = null;
     }
 
     private handleConnectionStart(id: string, type: 'person' | 'clue') {
@@ -459,15 +488,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.connectionStartNode = this.boardNodes.find(n => n.id === id) || null;
     }
 
-    private handleConnectionEnd(id: string, type: 'person' | 'clue') {
-        const endNode = this.boardNodes.find(n => n.id === id) || null;
-        if (this.connectionStartNode && endNode && this.connectionStartNode.id !== endNode.id) {
-            this.connections.push({ from: this.connectionStartNode, to: endNode });
-        }
-        // Reset connection state
-        this.isConnecting = false;
-        this.connectionStartNode = null;
-    }
 
     private drawConnections() {
         this.connectionLine.clear().lineStyle(3, 0xef4444, 0.7); // Red string style
