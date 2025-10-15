@@ -23,7 +23,7 @@ export interface ICategorySwitcher {
 
 // --- Scene contract for any scene that owns its own tab sprites ---
 export interface ITabbedJournalScene extends Phaser.Scene {
-    tabs: Record<ClueCat, Phaser.GameObjects.Image>;
+    tabs: Record<ClueCat, Phaser.GameObjects.Container>;
     activeCat: ClueCat;
     switchCat: (cat: ClueCat, force?: boolean) => void;
     textures: Phaser.Textures.TextureManager;
@@ -100,7 +100,7 @@ export function createJournalTabs(
     const skipIfMissing = !!options?.skipIfMissingTexture;
 
     // Ensure tabs map exists on the owning scene
-    scene.tabs = scene.tabs ?? ({} as Record<ClueCat, Phaser.GameObjects.Image>);
+    scene.tabs = scene.tabs ?? ({} as Record<ClueCat, Phaser.GameObjects.Container>);
     console.info('[createJournalTabs] tabs:', options?.positions);
     const texKeyFor = (cat: ClueCat, state: 'active' | 'idle') => {
         const base = texMap[cat] ?? cat;
@@ -155,23 +155,32 @@ export function createJournalTabs(
         const btnX = pos.x + pos.w / 2;
         const btnY = pos.y + pos.h / 2;
 
-        const btn = scene.add
-            .image(btnX, btnY, initialKey)
-            .setOrigin(0.5)
-            .setDepth(9999);
+        const tabContainer = scene.add.container(btnX, btnY);
+        parentContainer.add(tabContainer);
+
+        const bg = scene.add.image(0, 0, initialKey).setOrigin(0.5);
+        tabContainer.add(bg);
+
+        const text = scene.add.text(10, 0, cat, {
+            fontSize: '22px',
+            color: '#4a4a4a',
+            fontFamily: 'Georgia, serif',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+        tabContainer.add(text);
 
         // Make the clickable area match the TMJ rect
-        btn.setInteractive(
-            new Phaser.Geom.Rectangle(-pos.w / 2, -pos.h / 2, pos.w, pos.h),
+        tabContainer.setSize(pos.w, pos.h);
+        tabContainer.setInteractive(
+            new Phaser.Geom.Rectangle(0, 0, pos.w, pos.h),
             Phaser.Geom.Rectangle.Contains
         );
-        if (btn.input) btn.input.cursor = 'pointer';
+        if (tabContainer.input) tabContainer.input.cursor = 'pointer';
 
-        parentContainer.add(btn);
-        scene.tabs[cat] = btn;
+        scene.tabs[cat] = tabContainer;
 
         // Click handler
-        btn.on(Phaser.Input.Events.POINTER_DOWN, () => {
+        tabContainer.on(Phaser.Input.Events.POINTER_DOWN, () => {
             const currentActive =
                 controller.getActiveCat?.() ?? (scene as unknown as ITabbedJournalScene).activeCat;
             if (currentActive === cat) return;
@@ -204,21 +213,27 @@ export function updateTabVisuals(scene: ITabbedJournalScene): void {
     const active = (scene as ITabbedJournalScene).activeCat;
 
     // Try both the scene’s own activeCat and (optionally) a controller basis
-    Object.entries(scene.tabs).forEach(([cat, img]) => {
+    Object.entries(scene.tabs).forEach(([cat, container]) => {
         const c = cat as ClueCat;
+        const bg = container.getAt(0) as Phaser.GameObjects.Image;
+        const text = container.getAt(1) as Phaser.GameObjects.Text;
+        const isActive = c === active;
+
         // If the exact key doesn’t exist, try the 'idle' to avoid crashes, then keep current texture
-        const desiredKey = `${(DEFAULT_TEXTURE_KEYS[c] ?? c)}_tab-${c === active ? 'active' : 'idle'}`;
+        const desiredKey = `${(DEFAULT_TEXTURE_KEYS[c] ?? c)}_tab-${isActive ? 'active' : 'idle'}`;
         if (scene.textures.exists(desiredKey)) {
-            img.setTexture(desiredKey);
+            bg.setTexture(desiredKey);
         } else {
             // Fallback: try idle
             const idleKey = `${(DEFAULT_TEXTURE_KEYS[c] ?? c)}_tab-idle`;
             if (scene.textures.exists(idleKey)) {
-                img.setTexture(idleKey);
+                bg.setTexture(idleKey);
             } else {
                 // Last resort: leave as-is
                 // (Console noise avoided here to prevent spamming every frame.)
             }
         }
+
+        text.setColor(isActive ? '#000000' : '#4a4a4a');
     });
 }
