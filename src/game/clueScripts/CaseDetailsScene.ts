@@ -439,8 +439,8 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         // --- Event Handlers for Drag and Connect ---
         nodeContainer.on('drag', (p: any, dragX: any, dragY: any) => nodeContainer.setPosition(dragX, dragY));
         
-        connectButton.on('pointerdown', (p: any) => {
-            p.stopPropagation(); // Prevents the drag from starting when clicking the button
+        connectButton.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+            event.stopPropagation(); // Correctly call stopPropagation on the event object
             this.handleConnectionStart(id, type);
         });
 
@@ -472,28 +472,39 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private drawConnections() {
         this.connectionLine.clear().lineStyle(3, 0xef4444, 0.7); // Red string style
 
-        // Get the absolute world position of the content pane
         const contentPane = this.contentPanes.Board;
         if (!contentPane) return;
-        const worldPos = new Phaser.Math.Vector2();
-        contentPane.getWorldTransformMatrix().transformPoint(0, 0, worldPos);
 
-        // Draw existing connections
+        // Draw existing connections using the nodes' local positions within the pane
         this.connections.forEach(conn => {
             const startNode = conn.from.gameObject;
             const endNode = conn.to.gameObject;
-            this.connectionLine.lineBetween(
-                worldPos.x + startNode.x, worldPos.y + startNode.y,
-                worldPos.x + endNode.x, worldPos.y + endNode.y
-            );
+            this.connectionLine.lineBetween(startNode.x, startNode.y, endNode.x, endNode.y);
         });
 
-        // Draw the temporary line from the start node to the mouse cursor
+        // --- THIS IS THE CORRECTED PART FOR THE PREVIEW LINE ---
         if (this.isConnecting && this.connectionStartNode) {
             const startNode = this.connectionStartNode.gameObject;
+
+            // Create a temporary point to hold the mouse's world coordinates
+            const pointerPosition = new Phaser.Math.Vector2(this.input.activePointer.x, this.input.activePointer.y);
+            
+            // Get the transformation matrix of the board's content pane
+            const matrix = contentPane.getWorldTransformMatrix();
+            
+            // Invert it to create a transform from world space -> local space
+            matrix.invert();
+            
+            // Apply the transformation to our pointer's position
+            matrix.transformPoint(pointerPosition.x, pointerPosition.y, pointerPosition);
+
+            // Now, pointerPosition contains the mouse's coordinates *relative to the board pane*
+            // This will make the line draw correctly.
             this.connectionLine.lineBetween(
-                worldPos.x + startNode.x, worldPos.y + startNode.y,
-                this.input.activePointer.x, this.input.activePointer.y
+                startNode.x, 
+                startNode.y,
+                pointerPosition.x,
+                pointerPosition.y
             );
         }
     }
