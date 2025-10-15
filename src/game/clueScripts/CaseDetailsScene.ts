@@ -40,6 +40,8 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private connectionStartNode: BoardNode | null = null;
     private isBoardFullscreen: boolean = false; // <-- NEW: For fullscreen state
     private boardDragBounds!: Phaser.Geom.Rectangle;
+    private initialJournalScale: number = 1;
+
     constructor() {
         super({ key: 'CaseDetailsScene' });
     }
@@ -73,7 +75,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     
     update() {
         // This is new: it redraws the connection lines on the board every frame
-        if (this.activeTab === 'Board') {
+        if (this.activeTab === 'Board' && !this.isBoardFullscreen) {
             this.drawConnections();
         }
     }
@@ -82,15 +84,14 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private buildJournalUI() {
         const { width, height } = this.scale;
         this.journalContainer = this.add.container(width / 2, height / 2);
-        this.journalContainer.setDepth(2000); // <-- FIX #1: Set depth to render on top of everything
 
         const bg = this.add.image(0, 0, 'journal_details_bg');
-        const scale = Math.min((width * 0.9) / bg.width, (height * 0.9) / bg.height);
-        bg.setScale(scale);
+        this.initialJournalScale = Math.min((width * 0.9) / bg.width, (height * 0.9) / bg.height);
+        this.journalContainer.setScale(this.initialJournalScale); // Set the initial scale
         this.journalContainer.add(bg);
 
-        const containerWidth = bg.displayWidth;
-        const containerHeight = bg.displayHeight;
+        const containerWidth = bg.width;
+        const containerHeight = bg.height;
 
         // Create containers for UI sections to make them easy to hide
         this.headerContainer = this.add.container(0, 0);
@@ -115,7 +116,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     
     private createHeader(width: number, height: number) {
         // This function is complete and correct from your provided code
-const headerY = -height / 2 + 80;
+        const headerY = -height / 2 + 80;
         const backButton = this.add.text(-width / 2 + 80, headerY - 30, '◀ All Cases', { fontSize: '18px', color: '#8B4513', fontStyle: 'bold' }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         backButton.on('pointerdown', () => this.scene.start('CaseSelectionScene', { originScene: this.originScene }));
         const infoBoxWidth = width * 0.85;
@@ -187,20 +188,115 @@ const headerY = -height / 2 + 80;
     
     // --- CONTENT PANE CREATORS (Mice, Clues, Accuse) ---
 
-    private createMiceContent(width: number, height: number): Phaser.GameObjects.Container {
-        const contentY = -height / 2 + 330;
-        const container = this.add.container(0, contentY);
-        const suspectIds = (TutorialCase as any).suspects;
-        const suspects = suspectIds.map((id: string) => (AllNPCsConfigs as any)[id]);
-        let yPos = 0;
-        suspects.forEach((suspect: any) => {
-            if (!suspect) return;
-            const card = this.createPersonCard(suspect);
-            card.setPosition(0, yPos);
-            container.add(card);
-            yPos += card.height + 15;
+    private createMiceContent(): void {
+        const contentContainer = this.add.container(this.layout.content.x, this.layout.content.y);
+        const suspects = this.case.suspects;
+        const cardWidth = this.layout.content.width - 40; // Card width with some padding
+        const cardHeight = 150;
+        const spacing = 20; // Space between cards
+        let currentY = 0;
+
+        suspects.forEach(suspectId => {
+            const suspectConfig = AllNPCsConfigs[suspectId];
+            if (!suspectConfig) return;
+
+            // --- Create the Card Container ---
+            const card = this.add.container(20, currentY);
+            contentContainer.add(card);
+
+            // --- Card Background ---
+            const cardBackground = this.add.graphics();
+            cardBackground.fillStyle(0xf5e5c8, 1); // A parchment-like color
+            cardBackground.fillRoundedRect(0, 0, cardWidth, cardHeight, 15);
+            card.add(cardBackground);
+
+            // --- Suspect Portrait (with circular mask) ---
+            const portraitX = 80;
+            const portraitY = cardHeight / 2;
+            const portrait = this.add.image(portraitX, portraitY, suspectConfig.portrait.textureKey)
+                .setScale(0.5); // Adjust scale as needed
+                
+            const maskShape = this.make.graphics();
+            maskShape.fillStyle(0xffffff);
+            maskShape.fillCircle(portrait.x, portrait.y, 50); // The radius determines the circle size
+            const mask = maskShape.createGeometryMask();
+            portrait.setMask(mask);
+            card.add(portrait);
+
+            // --- Text Content ---
+            const textStartX = 160;
+            const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = { 
+                fontFamily: 'ReplaceTheSun', 
+                fontSize: '22px', 
+                color: '#543d25',
+                fontStyle: 'bold'
+            };
+            const bodyStyle: Phaser.Types.GameObjects.Text.TextStyle = { 
+                fontFamily: 'Arial', 
+                fontSize: '16px', 
+                color: '#543d25', 
+                wordWrap: { width: cardWidth - textStartX - 20 }
+            };
+
+            const nameText = this.add.text(textStartX, 15, suspectConfig.displayName, titleStyle);
+            card.add(nameText);
+
+            const alibiTitle = this.add.text(textStartX, 50, 'Alibi:', { ...bodyStyle, fontStyle: 'bold' });
+            const alibiText = this.add.text(textStartX, 70, suspectConfig.alibi, bodyStyle);
+            card.add(alibiTitle);
+            card.add(alibiText);
+            
+            // Add motive if it exists
+            if (suspectConfig.culpritDetails?.motive) {
+                 const motiveTitle = this.add.text(textStartX, 100, 'Motive:', { ...bodyStyle, fontStyle: 'bold' });
+                 const motiveText = this.add.text(textStartX, 120, suspectConfig.culpritDetails.motive, bodyStyle);
+                 card.add(motiveTitle);
+                 card.add(motiveText);
+            }
+
+
+            // --- Make Card Interactive ---
+            cardBackground.setInteractive(new Phaser.Geom.Rectangle(0,0, cardWidth, cardHeight), Phaser.Geom.Rectangle.Contains)
+                .on('pointerover', () => { this.input.setDefaultCursor('pointer'); cardBackground.clear().fillStyle(0xe0d0b8, 1).fillRoundedRect(0, 0, cardWidth, cardHeight, 15); })
+                .on('pointerout', () => { this.input.setDefaultCursor('default'); cardBackground.clear().fillStyle(0xf5e5c8, 1).fillRoundedRect(0, 0, cardWidth, cardHeight, 15); });
+
+
+            currentY += cardHeight + spacing;
         });
-        return container;
+
+        // --- Make the Content Scrollable ---
+        const scrollableHeight = currentY;
+        const visibleHeight = this.layout.content.height;
+        if (scrollableHeight > visibleHeight) {
+            const mask = this.make.graphics();
+            mask.fillStyle(0xffffff);
+            mask.beginPath();
+            mask.fillRect(this.layout.content.x, this.layout.content.y, this.layout.content.width, this.layout.content.height);
+            contentContainer.setMask(mask.createGeometryMask());
+
+            let isDragging = false;
+            let startY = 0;
+
+            this.input.on('pointerdown', (pointer) => {
+                if (Phaser.Geom.Rectangle.Contains(this.layout.content, pointer.x, pointer.y)) {
+                    isDragging = true;
+                    startY = pointer.y - contentContainer.y;
+                }
+            });
+
+            this.input.on('pointerup', () => {
+                isDragging = false;
+            });
+
+            this.input.on('pointermove', (pointer) => {
+                if (isDragging) {
+                    let newY = pointer.y - startY;
+                    // Clamp the Y position to prevent scrolling too far
+                    newY = Phaser.Math.Clamp(newY, this.layout.content.y - scrollableHeight + visibleHeight, this.layout.content.y);
+                    contentContainer.y = newY;
+                }
+            });
+        }
     }
 
     private createPersonCard(suspect: any): Phaser.GameObjects.Container {
@@ -463,33 +559,47 @@ const headerY = -height / 2 + 80;
 
         const { width, height } = this.scale;
         
-        // Hide/show other UI elements
+        // Hide/show other journal elements
         this.headerContainer.setVisible(!this.isBoardFullscreen);
         this.tabsContainer.setVisible(!this.isBoardFullscreen);
+        (this.journalContainer.getAt(0) as Phaser.GameObjects.Image).setVisible(!this.isBoardFullscreen);
 
         button.setText(this.isBoardFullscreen ? '[⤡]' : '[⤢]');
 
-        // --- FIX #2: Correct animation logic ---
-        // We are tweening the Board's PARENT container, which is the main journal container
-        const targetScale = this.isBoardFullscreen ? width / (boardPane.getBounds().width / this.journalContainer.scale) : this.journalContainer.scale;
-        const targetX = width / 2; // Always center
-        const targetY = height / 2; // Always center
+        // --- REWRITTEN & CORRECTED ANIMATION LOGIC ---
 
+        let targetScale: number;
+        let targetY: number;
+        
+        if (this.isBoardFullscreen) {
+            // --- GOING FULLSCREEN ---
+            // 1. Calculate the scale needed to make the board fill 90% of the screen's height.
+            const boardHeight = this.boardDragBounds.height;
+            targetScale = (height * 0.9) / (boardHeight * this.initialJournalScale);
+
+            // 2. Calculate the Y position needed to center the board on the screen.
+            // This counteracts the board's natural offset within the journal.
+            const boardCenterYinPane = this.boardDragBounds.centerY;
+            const paneY = boardPane.y;
+            const totalOffsetY = (paneY + boardCenterYinPane) * this.initialJournalScale;
+            
+            targetY = (height / 2) - (totalOffsetY * (targetScale / this.initialJournalScale));
+
+        } else {
+            // --- RETURNING TO NORMAL ---
+            // Simply return to the original scale and centered position.
+            targetScale = this.initialJournalScale;
+            targetY = height / 2;
+        }
+        
+        // Animate the main journal container to the new scale and position.
         this.tweens.add({
             targets: this.journalContainer,
             scale: targetScale,
-            x: targetX,
-            y: targetY,
+            x: width / 2, // Always keep horizontally centered
+            y: targetY,   // Animate to the new calculated Y position
             duration: 400,
-            ease: 'Cubic.easeInOut',
-            onComplete: () => {
-                // Update drag bounds after animation
-                const newBounds = boardPane.getByName('boardArea')?.getBounds(); // Add a name to your board graphics
-                if (newBounds) {
-                    this.boardDragBounds.setPosition(newBounds.x, newBounds.y);
-                    this.boardDragBounds.setSize(newBounds.width, newBounds.height);
-                }
-            }
+            ease: 'Cubic.easeInOut'
         });
     }
 
