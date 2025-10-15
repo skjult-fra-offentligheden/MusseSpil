@@ -73,16 +73,11 @@ export class UIManager {
     }
 
     public showJournal() {
-        // --- Keep all these initial checks ---
         if (!this.journalHotkeyEnabled) {
             return;
         }
         if (!this.currentScene) {
             console.error('No current scene set in UIManager.');
-            return;
-        }
-        if (!this.clueManager) {
-            console.error('ClueManager is not available.');
             return;
         }
         // Prevent opening if it's already open
@@ -92,17 +87,17 @@ export class UIManager {
 
         console.log('UIManager: Launching CaseSelectionScene...');
 
-        // --- This is the core logic ---
+        // --- THIS IS THE CORRECT ORDER ---
 
-        // 1. Pause the main game scene (e.g., ToturialScene)
-        this.currentScene.scene.pause(this.originScene);
-
-        // 2. If the UI overlay is active, put it to sleep
+        // 1. First, put the UI Overlay to sleep so it disappears.
         if (this.currentScene.scene.isActive('UIGameScene')) {
             this.currentScene.scene.sleep('UIGameScene');
         }
         
-        // 3. Launch the new case selection menu
+        // 2. Second, pause the main game scene (e.g., ToturialScene).
+        this.currentScene.scene.pause(this.originScene);
+        
+        // 3. Finally, launch the new journal scene on top of everything.
         this.currentScene.scene.launch('CaseSelectionScene', { 
             originScene: this.originScene 
         });

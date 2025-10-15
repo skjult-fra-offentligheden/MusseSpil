@@ -13,8 +13,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private activeCaseData!: any;
 
     private journalContainer!: Phaser.GameObjects.Container;
-    private titleText!: Phaser.GameObjects.Text;
-    private taskBodyText!: Phaser.GameObjects.Text;
     public activeCat: ClueCat = 'caseMainpage';
 
     constructor() {
@@ -22,7 +20,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     }
 
     preload() {
-        // Preload assets for this scene's tabs
         this.load.image('Clues_tab-idle', 'assets/journal_assets/clues_tab_idle.png');
         this.load.image('People_tab-idle', 'assets/journal_assets/people_tab_idle.png');
         this.load.image('Clueboard_tab-idle', 'assets/journal_assets/clueboard_tab_idle.png');
@@ -32,7 +29,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.activeCaseId = data.caseId;
         this.originScene = data.originScene;
         this.clueManager = data.clueManager;
-
         this.casesData = tutorialCases;
         this.activeCaseData = this.casesData.cases[this.activeCaseId];
     }
@@ -40,7 +36,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     create() {
         const { width, height } = this.scale;
         this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
-
         this.buildJournalUI();
         this.addCloseButton();
     }
@@ -50,7 +45,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.journalContainer = this.add.container(width / 2, height / 2);
 
         const bg = this.add.graphics();
-        bg.fillStyle(0xf5e6d3, 1); // Light cream color
+        bg.fillStyle(0xf5e6d3, 1);
         const bgWidth = 800;
         const bgHeight = 550;
         bg.fillRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 16);
@@ -64,17 +59,14 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
             descriptionWidth: bgWidth * 0.85
         };
 
-        this.titleText = this.add.text(0, layout.titleY, this.activeCaseData.case_title, {
-            fontSize: '36px', fontStyle: 'bold', color: '#333333',
-            align: 'center', wordWrap: { width: layout.titleWidth }
+        this.add.text(0, layout.titleY, this.activeCaseData.case_title, {
+            fontSize: '36px', fontStyle: 'bold', color: '#333333', align: 'center', wordWrap: { width: layout.titleWidth }
         }).setOrigin(0.5, 0);
 
-        this.taskBodyText = this.add.text(0, layout.descriptionY, this.activeCaseData.case_description_task, {
-            fontSize: '18px', color: '#555555', lineSpacing: 6,
-            align: 'left', wordWrap: { width: layout.descriptionWidth }
+        this.add.text(0, layout.descriptionY, this.activeCaseData.case_description_task, {
+            fontSize: '18px', color: '#555555', lineSpacing: 6, align: 'left', wordWrap: { width: layout.descriptionWidth }
         }).setOrigin(0.5, 0);
 
-        this.journalContainer.add([this.titleText, this.taskBodyText]);
         this.createTabs();
     }
 
@@ -88,6 +80,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         });
         this.journalContainer.add(backButton);
 
+        // --- THIS IS THE FIXED PART ---
         createJournalTabs(this, this.journalContainer, undefined, ['Clues', 'People', 'Clueboard'], {
             controller: this,
             sceneMap: {
@@ -113,22 +106,33 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     }
 
     private addCloseButton() {
-        const closeButton = this.add.text(this.scale.width - 30, 30, 'X', {
+        const closeButtonX = this.journalContainer.x + this.journalContainer.width / 2 - 20;
+        const closeButtonY = this.journalContainer.y - this.journalContainer.height / 2 + 20;
+        const closeButton = this.add.text(closeButtonX, closeButtonY, 'X', {
             fontSize: '24px', color: '#FFFFFF', backgroundColor: '#8B0000', padding: { x: 8, y: 4 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        closeButton.on('pointerdown', () => {
-            UIManager.getInstance().setJournalHotkeyEnabled(false);
-            this.scene.stop();
+        closeButton.on('pointerdown', () => this.closeJournal());
+        this.input.keyboard?.on('keydown-J', this.closeJournal, this);
+    }
+    
+    private closeJournal() {
+        UIManager.getInstance().setJournalHotkeyEnabled(false);
+        const origin = this.scene.get(this.originScene);
+        this.scene.stop();
+
+        if (origin) {
             this.scene.resume(this.originScene);
-            this.time.delayedCall(150, () => UIManager.getInstance().setJournalHotkeyEnabled(true));
-        });
+            if (this.scene.isSleeping('UIGameScene')) {
+                this.scene.wake('UIGameScene');
+            }
+            origin.time.delayedCall(200, () => {
+                UIManager.getInstance().setJournalHotkeyEnabled(true);
+            });
+        }
     }
 
-    public switchCat(category: ClueCat): void {
-        this.activeCat = category;
-        updateTabVisuals(this as any);
-    }
+    public switchCat(category: ClueCat): void { this.activeCat = category; updateTabVisuals(this as any); }
     public getActiveCat(): ClueCat { return this.activeCat; }
     public updateTabVisuals(): void { updateTabVisuals(this as any); }
 }

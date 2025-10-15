@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-// Make sure to import your case data. The path might need adjustment.
 import { tutorialCases } from '../../data/cases/tutorialCases';
 import { UIManager } from '../managers/UIManager';
 
@@ -11,40 +10,44 @@ export class CaseSelectionScene extends Phaser.Scene {
         super({ key: 'CaseSelectionScene' });
     }
 
-    preload() {
-        // We only need the document icon for the cards
-    }
-
     init(data: { originScene: string }) {
         this.originScene = data.originScene;
     }
 
     create() {
+        console.log('[CaseSelectionScene] 1. Starting create()');
+
         const { width, height } = this.scale;
 
-        // Dark overlay
+        console.log('[CaseSelectionScene] 2. Adding overlay rectangle');
         this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
 
-        // Main journal background (drawn with code to match Figma)
+        console.log('[CaseSelectionScene] 3. Drawing main background');
         const mainBg = this.add.graphics();
-        mainBg.fillStyle(0x4a2e1a, 1); // Dark brown color
+        mainBg.fillStyle(0x4a2e1a, 1);
         mainBg.fillRoundedRect(width / 2 - 450, height / 2 - 300, 900, 600, 20);
 
-        // --- Main Title ---
+        console.log('[CaseSelectionScene] 4. Adding title text');
         const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-            fontFamily: 'Georgia, serif',
-            fontSize: '42px',
-            color: '#f5e6d3', // Light cream color
-            fontStyle: 'bold',
+            fontFamily: 'Georgia, serif', fontSize: '42px', color: '#f5e6d3', fontStyle: 'bold',
         };
         this.add.text(width / 2, height / 2 - 230, 'CASE JOURNAL', titleStyle).setOrigin(0.5);
 
-        // --- Case List ---
+        console.log('[CaseSelectionScene] 5. Preparing to load case data');
         const listContainer = this.add.container(width / 2, height / 2 - 120);
 
         this.casesData = tutorialCases;
-        const activeCases = Object.entries(this.casesData.cases).filter(([, caseData]: [string, any]) => caseData.active);
+        console.log('[CaseSelectionScene] 6. Case data loaded:', this.casesData);
 
+        let activeCases = Object.entries(this.casesData.cases).filter(([, caseData]: [string, any]) => caseData.active);
+        console.log(`[CaseSelectionScene] 7. Found ${activeCases.length} active cases.`);
+
+        if (activeCases.length === 0) {
+            console.log('[CaseSelectionScene] 7a. No active cases, using all cases as fallback.');
+            activeCases = Object.entries(this.casesData.cases);
+        }
+
+        console.log('[CaseSelectionScene] 8. Starting to create case cards...');
         let yPos = 0;
         const cardHeight = 110;
         const cardSpacing = 20;
@@ -55,22 +58,23 @@ export class CaseSelectionScene extends Phaser.Scene {
             listContainer.add(card);
             yPos += cardHeight + cardSpacing;
         }
+        console.log('[CaseSelectionScene] 9. Finished creating case cards.');
 
         this.addCloseButton();
+        console.log('[CaseSelectionScene] 10. create() method finished successfully.');
     }
 
-private createCaseCard(x: number, y: number, width: number, height: number, caseId: string, caseData: any): Phaser.GameObjects.Container {
+    private createCaseCard(x: number, y: number, width: number, height: number, caseId: string, caseData: any): Phaser.GameObjects.Container {
         const card = this.add.container(x, y);
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0xf5e6d3, 1); // Light cream card color
+        cardBg.fillStyle(0xf5e6d3, 1);
         cardBg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
         card.add(cardBg);
 
         const title = this.add.text(-width / 2 + 40, -height / 2 + 20, caseData.case_title, {
             fontSize: '20px', color: '#333333', fontStyle: 'bold'
         });
-
         const description = this.add.text(-width / 2 + 40, -height / 2 + 48, caseData.case_description_task, {
             fontSize: '14px', color: '#555555', wordWrap: { width: width - 200 }
         });
@@ -78,11 +82,9 @@ private createCaseCard(x: number, y: number, width: number, height: number, case
 
         const status = caseData.status || 'open';
         const statusColorHex = status === 'cold' ? 0x90b4d4 : 0xfbc47a;
-
         const statusBg = this.add.graphics();
         statusBg.fillStyle(statusColorHex, 1);
         statusBg.fillRoundedRect(width / 2 - 95, -15, 70, 30, 15);
-
         const statusText = this.add.text(width / 2 - 60, 0, status.toUpperCase(), {
             fontSize: '12px', color: '#333333', fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -99,20 +101,33 @@ private createCaseCard(x: number, y: number, width: number, height: number, case
 
         card.on('pointerover', () => cardBg.setAlpha(0.8));
         card.on('pointerout', () => cardBg.setAlpha(1.0));
-
         return card;
     }
 
     private addCloseButton() {
-        const closeButton = this.add.text(this.scale.width - 30, 30, 'X', {
+        const closeButtonX = this.scale.width / 2 + 450 - 20;
+        const closeButtonY = this.scale.height / 2 - 300 + 20;
+        const closeButton = this.add.text(closeButtonX, closeButtonY, 'X', {
             fontSize: '24px', color: '#FFFFFF', backgroundColor: '#8B0000', padding: { x: 8, y: 4 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        
+        closeButton.on('pointerdown', () => this.closeJournal());
+        this.input.keyboard?.on('keydown-J', this.closeJournal, this);
+    }
+    
+    private closeJournal() {
+        UIManager.getInstance().setJournalHotkeyEnabled(false);
+        const origin = this.scene.get(this.originScene);
+        this.scene.stop();
 
-        closeButton.on('pointerdown', () => {
-            UIManager.getInstance().setJournalHotkeyEnabled(false);
-            this.scene.stop();
+        if (origin) {
             this.scene.resume(this.originScene);
-            this.time.delayedCall(150, () => UIManager.getInstance().setJournalHotkeyEnabled(true));
-        });
+            if (this.scene.isSleeping('UIGameScene')) {
+                this.scene.wake('UIGameScene');
+            }
+            origin.time.delayedCall(200, () => {
+                UIManager.getInstance().setJournalHotkeyEnabled(true);
+            });
+        }
     }
 }

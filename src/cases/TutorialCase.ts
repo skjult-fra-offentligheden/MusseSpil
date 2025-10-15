@@ -55,7 +55,7 @@ export const TutorialCase: CaseSceneConfig = {
             id: 'violence',
             label: 'Assault',
             suspectId: 'cop2',
-            unlockWhen: { kind: 'counterAtLeast', id: 'whiskersCheeseCount', count: 2 } // 3× in front of Whiskers
+            unlockWhen: { kind: 'counterAtLeast', id: 'whiskersCheeseCount', count: 2 } // 2× in front of Whiskers
         }
     ],
 
