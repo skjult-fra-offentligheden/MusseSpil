@@ -6,7 +6,8 @@ import { GuideScene } from '../game/guideScripts/guide';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
-import { ClueJournal } from "./clueScripts/clueScene";
+import { CaseSelectionScene } from './clueScripts/CaseSelectionScene'; // Add this
+import { CaseDetailsScene } from './clueScripts/caseDetailScene';
 import { DragAbleClueScene } from "./clueScripts/dragAbleClueScene";
 import { AccusationScene } from "./clueScripts/Accusation_scripts/AccusationScene";
 import { ClueDisplayJournalScene } from "./clueScripts/clueDisplay";
@@ -54,7 +55,8 @@ const config: Phaser.Types.Core.GameConfig = {
         UIGameOverlay,
         InventoryScene,
         GuideScene,
-        ClueJournal,
+        CaseSelectionScene,
+        CaseDetailsScene, 
         AccusationScene,
         VictoryScene,
         GameOver,

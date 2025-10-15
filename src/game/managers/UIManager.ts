@@ -87,7 +87,7 @@ export class UIManager {
             console.error('ClueManager is not available.');
             return;
         }
-        if (this.currentScene.scene.isActive('ClueJournal')) {
+        if (this.currentScene.scene.isActive('CaseSelectionScene')) {
             console.log('Guide scene is already active, not launching again.');
             return;
         }
@@ -99,7 +99,10 @@ export class UIManager {
             }
         } catch {}
         this.currentScene.scene.pause();
-        this.currentScene.scene.launch('ClueJournal', { clueManager: this.clueManager, originScene: this.originScene });
+        this.currentScene.scene.launch('CaseSelectionScene', { 
+            clueManager: this.clueManager, 
+            originScene: this.originScene 
+        });        
         this.currentScene.scene.bringToTop('ClueJournal');
     }
 

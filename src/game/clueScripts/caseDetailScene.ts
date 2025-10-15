@@ -3,6 +3,7 @@ import { ClueManager } from './clueManager';
 import { ICategorySwitcher, ClueCat, createJournalTabs, updateTabVisuals } from "./journalTabs";
 import { tutorialCases } from '../../data/cases/tutorialCases';
 import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs';
+import { UIManager } from '../managers/UIManager';
 
 export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher {
     private originScene!: string;
@@ -14,7 +15,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private journalContainer!: Phaser.GameObjects.Container;
     private titleText!: Phaser.GameObjects.Text;
     private taskBodyText!: Phaser.GameObjects.Text;
-    private activeCat: ClueCat = 'caseMainpage';
+    public activeCat: ClueCat = 'caseMainpage';
 
     constructor() {
         super({ key: 'CaseDetailsScene' });
@@ -48,7 +49,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const { width, height } = this.scale;
         this.journalContainer = this.add.container(width / 2, height / 2);
 
-        // Draw background with code
         const bg = this.add.graphics();
         bg.fillStyle(0xf5e6d3, 1); // Light cream color
         const bgWidth = 800;
@@ -56,7 +56,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         bg.fillRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 16);
         this.journalContainer.add(bg);
         this.journalContainer.setSize(bgWidth, bgHeight);
-        
+
         const layout = {
             titleY: -bgHeight / 2 + 60,
             titleWidth: bgWidth * 0.8,
@@ -86,7 +86,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         backButton.on('pointerdown', () => {
             this.scene.start('CaseSelectionScene', { originScene: this.originScene });
         });
-
         this.journalContainer.add(backButton);
 
         createJournalTabs(this, this.journalContainer, undefined, ['Clues', 'People', 'Clueboard'], {
@@ -115,15 +114,14 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
 
     private addCloseButton() {
         const closeButton = this.add.text(this.scale.width - 30, 30, 'X', {
-            fontSize: '24px',
-            color: '#FFFFFF',
-            backgroundColor: '#8B0000',
-            padding: { x: 8, y: 4 }
+            fontSize: '24px', color: '#FFFFFF', backgroundColor: '#8B0000', padding: { x: 8, y: 4 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         closeButton.on('pointerdown', () => {
+            UIManager.getInstance().setJournalHotkeyEnabled(false);
             this.scene.stop();
             this.scene.resume(this.originScene);
+            this.time.delayedCall(150, () => UIManager.getInstance().setJournalHotkeyEnabled(true));
         });
     }
 

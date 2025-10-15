@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 // Make sure to import your case data. The path might need adjustment.
 import { tutorialCases } from '../../data/cases/tutorialCases';
+import { UIManager } from '../managers/UIManager';
 
 export class CaseSelectionScene extends Phaser.Scene {
     private originScene!: string;
@@ -11,7 +12,7 @@ export class CaseSelectionScene extends Phaser.Scene {
     }
 
     preload() {
-        // You only need to load assets used on this screen
+        // We only need the document icon for the cards
         this.load.image('icon-document', 'assets/journal_assets/icon-document.png');
     }
 
@@ -22,14 +23,14 @@ export class CaseSelectionScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
-        // Semi-transparent background overlay
+        // Dark overlay
         this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
 
-        // Main journal background (drawn with code)
+        // Main journal background (drawn with code to match Figma)
         const mainBg = this.add.graphics();
-        mainBg.fillStyle(0x4a2e1a, 1); // Dark brown color from your Figma
+        mainBg.fillStyle(0x4a2e1a, 1); // Dark brown color
         mainBg.fillRoundedRect(width / 2 - 450, height / 2 - 300, 900, 600, 20);
-        
+
         // --- Main Title ---
         const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = {
             fontFamily: 'Georgia, serif',
@@ -39,10 +40,9 @@ export class CaseSelectionScene extends Phaser.Scene {
         };
         this.add.text(width / 2, height / 2 - 230, 'CASE JOURNAL', titleStyle).setOrigin(0.5);
 
-        // --- Case List Container ---
+        // --- Case List ---
         const listContainer = this.add.container(width / 2, height / 2 - 120);
 
-        // --- Load and Display Case Cards ---
         this.casesData = tutorialCases;
         const activeCases = Object.entries(this.casesData.cases).filter(([, caseData]: [string, any]) => caseData.active);
 
@@ -57,53 +57,38 @@ export class CaseSelectionScene extends Phaser.Scene {
             yPos += cardHeight + cardSpacing;
         }
 
-        // --- Close Button ---
         this.addCloseButton();
     }
 
     private createCaseCard(x: number, y: number, width: number, height: number, caseId: string, caseData: any): Phaser.GameObjects.Container {
         const card = this.add.container(x, y);
 
-        // --- 1. Draw the Card Background ---
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0xf5e6d3, 1); // Light cream color from your Figma
+        cardBg.fillStyle(0xf5e6d3, 1); // Light cream color
         cardBg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
         card.add(cardBg);
 
-        // --- 2. Add the UI Elements ---
         const icon = this.add.image(-width / 2 + 50, 0, 'icon-document');
-
         const title = this.add.text(-width / 2 + 100, -height / 2 + 20, caseData.case_title, {
-            fontSize: '18px',
-            color: '#333333',
-            fontStyle: 'bold'
+            fontSize: '18px', color: '#333333', fontStyle: 'bold'
         });
-
         const description = this.add.text(-width / 2 + 100, -height / 2 + 45, caseData.case_description_task, {
-            fontSize: '14px',
-            color: '#555555',
-            wordWrap: { width: width - 220 }
+            fontSize: '14px', color: '#555555', wordWrap: { width: width - 220 }
         });
-
         card.add([icon, title, description]);
 
-        // --- 3. Draw the Status Tag ---
         const status = caseData.status || 'open';
-        const statusColorHex = status === 'cold' ? 0x90b4d4 : 0xfbc47a; // Blue and Orange from Figma
+        const statusColorHex = status === 'cold' ? 0x90b4d4 : 0xfbc47a; // Blue and Orange
 
         const statusBg = this.add.graphics();
         statusBg.fillStyle(statusColorHex, 1);
         statusBg.fillRoundedRect(width / 2 - 95, -15, 70, 30, 15);
-        
-        const statusText = this.add.text(width / 2 - 60, 0, status.toUpperCase(), {
-            fontSize: '12px',
-            color: '#333333',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
 
+        const statusText = this.add.text(width / 2 - 60, 0, status.toUpperCase(), {
+            fontSize: '12px', color: '#333333', fontStyle: 'bold'
+        }).setOrigin(0.5);
         card.add([statusBg, statusText]);
 
-        // --- 4. Interaction ---
         card.setSize(width, height).setInteractive({ useHandCursor: true });
 
         card.on('pointerdown', () => {
@@ -122,15 +107,14 @@ export class CaseSelectionScene extends Phaser.Scene {
 
     private addCloseButton() {
         const closeButton = this.add.text(this.scale.width - 30, 30, 'X', {
-            fontSize: '24px',
-            color: '#FFFFFF',
-            backgroundColor: '#8B0000',
-            padding: { x: 8, y: 4 }
+            fontSize: '24px', color: '#FFFFFF', backgroundColor: '#8B0000', padding: { x: 8, y: 4 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         closeButton.on('pointerdown', () => {
+            UIManager.getInstance().setJournalHotkeyEnabled(false);
             this.scene.stop();
             this.scene.resume(this.originScene);
+            this.time.delayedCall(150, () => UIManager.getInstance().setJournalHotkeyEnabled(true));
         });
     }
 }
