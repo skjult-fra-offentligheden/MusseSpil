@@ -187,133 +187,148 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     }
     
     // --- CONTENT PANE CREATORS (Mice, Clues, Accuse) ---
+private createMiceContent(width: number, height: number): Phaser.GameObjects.Container {
+    const contentY = -height / 2 + 330;
+    const container = this.add.container(0, contentY);
 
-    private createMiceContent(): void {
-        const contentContainer = this.add.container(this.layout.content.x, this.layout.content.y);
-        const suspects = this.case.suspects;
-        const cardWidth = this.layout.content.width - 40; // Card width with some padding
-        const cardHeight = 150;
-        const spacing = 20; // Space between cards
-        let currentY = 0;
+    const suspectIds = (TutorialCase as any).suspects;
+    const suspects = suspectIds.map((id: string) => (AllNPCsConfigs as any)[id]);
+    
+    // --- Layout Logic ---
+    const columns = 2;
+    const cardSpacing = 20;
+    const tempCard = this.createPersonCard(suspects[0] || {});
+    const cardWidth = tempCard.width;
+    const cardHeight = tempCard.height;
+    tempCard.destroy(); 
+    
+    const totalGridWidth = (columns * cardWidth) + ((columns - 1) * cardSpacing);
+    const startX = -totalGridWidth / 2;
 
-        suspects.forEach(suspectId => {
-            const suspectConfig = AllNPCsConfigs[suspectId];
-            if (!suspectConfig) return;
+    const scrollableContainer = this.add.container(0, 0);
+    container.add(scrollableContainer);
 
-            // --- Create the Card Container ---
-            const card = this.add.container(20, currentY);
-            contentContainer.add(card);
+    suspects.forEach((suspect: any, index: number) => {
+        if (!suspect) return;
+        
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        
+        const xPos = startX + col * (cardWidth + cardSpacing);
+        const yPos = row * (cardHeight + cardSpacing);
 
-            // --- Card Background ---
-            const cardBackground = this.add.graphics();
-            cardBackground.fillStyle(0xf5e5c8, 1); // A parchment-like color
-            cardBackground.fillRoundedRect(0, 0, cardWidth, cardHeight, 15);
-            card.add(cardBackground);
+        const card = this.createPersonCard(suspect);
+        card.setPosition(xPos, yPos);
+        scrollableContainer.add(card);
+    });
+    
+    // --- SCROLLBAR LOGIC ---
+    const visibleHeight = 480; 
+    const totalContentHeight = Math.ceil(suspects.length / columns) * (cardHeight + cardSpacing) - cardSpacing; // Remove last spacing
 
-            // --- Suspect Portrait (with circular mask) ---
-            const portraitX = 80;
-            const portraitY = cardHeight / 2;
-            const portrait = this.add.image(portraitX, portraitY, suspectConfig.portrait.textureKey)
-                .setScale(0.5); // Adjust scale as needed
-                
-            const maskShape = this.make.graphics();
-            maskShape.fillStyle(0xffffff);
-            maskShape.fillCircle(portrait.x, portrait.y, 50); // The radius determines the circle size
-            const mask = maskShape.createGeometryMask();
-            portrait.setMask(mask);
-            card.add(portrait);
+    if (totalContentHeight > visibleHeight) {
+        // 1. Create a mask to hide the overflowing content
+        const mask = this.make.graphics();
+        mask.fillStyle(0xffffff);
+        // Position the mask correctly relative to the main container's new position
+        mask.fillRect(container.x + startX, container.y, totalGridWidth, visibleHeight);
+        scrollableContainer.setMask(mask.createGeometryMask());
 
-            // --- Text Content ---
-            const textStartX = 160;
-            const titleStyle: Phaser.Types.GameObjects.Text.TextStyle = { 
-                fontFamily: 'ReplaceTheSun', 
-                fontSize: '22px', 
-                color: '#543d25',
-                fontStyle: 'bold'
-            };
-            const bodyStyle: Phaser.Types.GameObjects.Text.TextStyle = { 
-                fontFamily: 'Arial', 
-                fontSize: '16px', 
-                color: '#543d25', 
-                wordWrap: { width: cardWidth - textStartX - 20 }
-            };
+        // 2. Create the scrollbar track and handle
+        const scrollbarWidth = 10;
+        const scrollbarX = startX + totalGridWidth + 15; // Position to the right of the grid
 
-            const nameText = this.add.text(textStartX, 15, suspectConfig.displayName, titleStyle);
-            card.add(nameText);
+        const track = this.add.graphics();
+        track.fillStyle(0x5D4037, 0.5); // Brownish, semi-transparent track
+        track.fillRoundedRect(scrollbarX, 0, scrollbarWidth, visibleHeight, 5);
+        container.add(track);
 
-            const alibiTitle = this.add.text(textStartX, 50, 'Alibi:', { ...bodyStyle, fontStyle: 'bold' });
-            const alibiText = this.add.text(textStartX, 70, suspectConfig.alibi, bodyStyle);
-            card.add(alibiTitle);
-            card.add(alibiText);
-            
-            // Add motive if it exists
-            if (suspectConfig.culpritDetails?.motive) {
-                 const motiveTitle = this.add.text(textStartX, 100, 'Motive:', { ...bodyStyle, fontStyle: 'bold' });
-                 const motiveText = this.add.text(textStartX, 120, suspectConfig.culpritDetails.motive, bodyStyle);
-                 card.add(motiveTitle);
-                 card.add(motiveText);
-            }
-
-
-            // --- Make Card Interactive ---
-            cardBackground.setInteractive(new Phaser.Geom.Rectangle(0,0, cardWidth, cardHeight), Phaser.Geom.Rectangle.Contains)
-                .on('pointerover', () => { this.input.setDefaultCursor('pointer'); cardBackground.clear().fillStyle(0xe0d0b8, 1).fillRoundedRect(0, 0, cardWidth, cardHeight, 15); })
-                .on('pointerout', () => { this.input.setDefaultCursor('default'); cardBackground.clear().fillStyle(0xf5e5c8, 1).fillRoundedRect(0, 0, cardWidth, cardHeight, 15); });
-
-
-            currentY += cardHeight + spacing;
+        const handleHeight = Math.max(20, visibleHeight * (visibleHeight / totalContentHeight));
+        const handle = this.add.graphics();
+        handle.fillStyle(0xD2B48C, 1); // Parchment-colored handle
+        handle.fillRoundedRect(0, 0, scrollbarWidth, handleHeight, 5);
+        const handleContainer = this.add.container(scrollbarX, 0, handle).setInteractive({ draggable: true });
+        container.add(handleContainer);
+        this.input.setDraggable(handleContainer);
+        
+        // --- Scrolling functions ---
+        const updateScroll = () => {
+            const scrollPercentage = -scrollableContainer.y / (totalContentHeight - visibleHeight);
+            handleContainer.y = scrollPercentage * (visibleHeight - handleHeight);
+        };
+        
+        // 3. Handle Mouse Wheel Scrolling
+        const zone = this.add.zone(0, 0, totalGridWidth, visibleHeight).setOrigin(0.5, 0).setInteractive();
+        container.add(zone); // Add zone to the main container for correct positioning
+        
+        zone.on('wheel', (pointer: Phaser.Input.Pointer, dx: number, dy: number) => {
+            scrollableContainer.y -= dy * 0.5;
+            scrollableContainer.y = Phaser.Math.Clamp(scrollableContainer.y, visibleHeight - totalContentHeight, 0);
+            updateScroll(); // Update handle position
         });
 
-        // --- Make the Content Scrollable ---
-        const scrollableHeight = currentY;
-        const visibleHeight = this.layout.content.height;
-        if (scrollableHeight > visibleHeight) {
-            const mask = this.make.graphics();
-            mask.fillStyle(0xffffff);
-            mask.beginPath();
-            mask.fillRect(this.layout.content.x, this.layout.content.y, this.layout.content.width, this.layout.content.height);
-            contentContainer.setMask(mask.createGeometryMask());
-
-            let isDragging = false;
-            let startY = 0;
-
-            this.input.on('pointerdown', (pointer) => {
-                if (Phaser.Geom.Rectangle.Contains(this.layout.content, pointer.x, pointer.y)) {
-                    isDragging = true;
-                    startY = pointer.y - contentContainer.y;
-                }
-            });
-
-            this.input.on('pointerup', () => {
-                isDragging = false;
-            });
-
-            this.input.on('pointermove', (pointer) => {
-                if (isDragging) {
-                    let newY = pointer.y - startY;
-                    // Clamp the Y position to prevent scrolling too far
-                    newY = Phaser.Math.Clamp(newY, this.layout.content.y - scrollableHeight + visibleHeight, this.layout.content.y);
-                    contentContainer.y = newY;
-                }
-            });
-        }
+        // 4. Handle Dragging the Scrollbar Handle
+        handleContainer.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+            handleContainer.y = Phaser.Math.Clamp(dragY, 0, visibleHeight - handleHeight);
+            const scrollPercentage = handleContainer.y / (visibleHeight - handleHeight);
+            scrollableContainer.y = -scrollPercentage * (totalContentHeight - visibleHeight);
+        });
     }
+    
+    return container;
+}
 
-    private createPersonCard(suspect: any): Phaser.GameObjects.Container {
-        const cardWidth = this.journalContainer.width * 0.85;
-        const cardHeight = 100;
-        const card = this.add.container(0,0);
-        const bg = this.add.graphics();
-        bg.fillStyle(0xfdf6e3, 0.7);
-        bg.lineStyle(1, 0xd2b48c, 1);
-        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 8);
-        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 8);
-        const name = this.add.text(-cardWidth/2 + 30, 20, suspect.displayName, { fontSize: '20px', color: '#543d25', fontStyle: 'bold' });
-        const alibi = this.add.text(-cardWidth/2 + 30, 50, `Alibi: ${suspect.alibi || 'None provided.'}`, { fontSize: '14px', color: '#8B4513', wordWrap: { width: cardWidth - 50 } });
-        card.add([bg, name, alibi]);
-        card.setSize(cardWidth, cardHeight);
-        return card;
-    }
+private createPersonCard(suspect: any): Phaser.GameObjects.Container {
+    // --- STYLING LOGIC ---
+    const cardWidth = 360; 
+    const cardHeight = 220;
+    const card = this.add.container(0, 0);
+
+    // --- Card Background ---
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfdf6e3, 1); // Parchment background color
+    bg.lineStyle(2, 0xd2b48c, 1); // Light brown border
+    bg.fillRoundedRect(0, 0, cardWidth, cardHeight, 16);
+    bg.strokeRoundedRect(0, 0, cardWidth, cardHeight, 16);
+    
+    // --- Circular Portrait ---
+    const portraitX = 70;
+    const portraitY = 70;
+    const portraitKey = suspect.portrait?.textureKey || 'portrait_unknown';
+    const portrait = this.add.image(portraitX, portraitY, portraitKey).setScale(0.3); // Adjust scale if needed
+
+    const maskShape = this.make.graphics();
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillCircle(portraitX, portraitY, 50); // 50px radius for the circle
+    const mask = maskShape.createGeometryMask();
+    portrait.setMask(mask);
+
+    // --- Text Content ---
+    const name = this.add.text(140, 30, suspect.displayName || 'Unknown', { 
+        fontSize: '24px', color: '#543d25', fontStyle: 'bold', fontFamily: 'ReplaceTheSun'
+    });
+    
+    const description = this.add.text(140, 60, `"${suspect.description || ''}"`, { 
+        fontSize: '14px', color: '#8B4513', fontStyle: 'italic', wordWrap: { width: cardWidth - 150 } 
+    });
+
+    const alibiIcon = this.add.text(30, 120, '💡', { fontSize: '20px' });
+    const alibiTitle = this.add.text(60, 122, 'Alibi:', { fontSize: '16px', color: '#543d25', fontStyle: 'bold' });
+    const alibiText = this.add.text(60, 142, suspect.alibi || 'None provided.', { 
+        fontSize: '14px', color: '#3c5d98', wordWrap: { width: cardWidth - 80 } 
+    });
+
+    const motiveIcon = this.add.text(30, 170, '❓', { fontSize: '20px' });
+    const motiveTitle = this.add.text(60, 172, 'Possible Motive:', { fontSize: '16px', color: '#543d25', fontStyle: 'bold' });
+    const motiveText = this.add.text(60, 192, suspect.culpritDetails?.motive || 'None apparent.', { 
+        fontSize: '14px', color: '#c74c3c', wordWrap: { width: cardWidth - 80 } 
+    });
+
+    card.add([bg, portrait, name, description, alibiIcon, alibiTitle, alibiText, motiveIcon, motiveTitle, motiveText]);
+    card.setSize(cardWidth, cardHeight);
+    
+    return card;
+}
 
     private createCluesContent(width: number, height: number): Phaser.GameObjects.Container {
         const contentY = -height / 2 + 330;
