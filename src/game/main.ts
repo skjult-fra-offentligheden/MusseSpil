@@ -1,24 +1,21 @@
 import { Boot } from './scenes/Boot';
-import { Game as MainGame } from './scenes/Game';
-import { MainMenu } from './scenes/MainMenu';
-import { UIGameOverlay } from './scenes/UiGameOverlay';
-import { GuideScene } from '../game/guideScripts/guide';
-import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
+import { MainMenu } from './scenes/MainMenu';
+import { ToturialScene } from './scenes/ToturialScene';
+import { UIGameOverlay } from './scenes/UiGameOverlay';
 import { InventoryScene } from './scenes/GameScriptScenes/InventoryScene';
-import { CaseSelectionScene } from './clueScripts/CaseSelectionScene'; // Add this
-import { CaseDetailsScene } from './clueScripts/caseDetailScene';
-import { DragAbleClueScene } from "./clueScripts/dragAbleClueScene";
-import { AccusationScene } from "./clueScripts/Accusation_scripts/AccusationScene";
-import { ClueDisplayJournalScene } from "./clueScripts/clueDisplay";
-import { PeopleDisplayJournalScene } from "./clueScripts/peopleDisplay";
-import { VictoryScene } from "./scenes/GameScriptScenes/victoryScene";
+import { GameOver } from './scenes/GameScriptScenes/GameOver';
+import { VictoryScene } from './scenes/GameScriptScenes/victoryScene';
+import { GuideScene } from './guideScripts/guide';
+import { ClueDisplayJournalScene } from './clueScripts/clueDisplay';
+import { PeopleDisplayJournalScene } from './clueScripts/peopleDisplay';
+import { AccusationScene } from './clueScripts/Accusation_scripts/AccusationScene';
 import { DevHUD } from './scenes/DevHUD';
-import { GameOver } from "./scenes/GameScriptScenes/GameOver";
-import { HouseScene } from "./scenes/HouseScene";
-import { ToturialScene } from "./scenes/ToturialScene";
-//  Find out more information about the Game Config at:
-//  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
+import { DragAbleClueScene } from './clueScripts/dragAbleClueScene';
+
+// --- THESE ARE THE NEW, CORRECT IMPORTS ---
+import { CaseSelectionScene } from './clueScripts/CaseSelectionScene';
+import { CaseDetailsScene } from './clueScripts/CaseDetailsScene';
 
 const LOGICAL_WIDTH = 1920; // Example: choose your desired base width
 const LOGICAL_HEIGHT = 1080; // Example: choose your desired base height
@@ -51,28 +48,24 @@ const config: Phaser.Types.Core.GameConfig = {
         Boot,
         Preloader,
         MainMenu,
-        MainGame,
+        ToturialScene,
         UIGameOverlay,
         InventoryScene,
+        GameOver,
+        VictoryScene,
         GuideScene,
         CaseSelectionScene,
-        CaseDetailsScene, 
-        AccusationScene,
-        VictoryScene,
-        GameOver,
-        HouseScene,
-        ToturialScene,
-        DragAbleClueScene,
+        CaseDetailsScene,
         ClueDisplayJournalScene,
         PeopleDisplayJournalScene,
+        AccusationScene,
+        DragAbleClueScene,
         DevHUD
-    ]
+    ],
 };
 
-const StartGame = (parent: string) => {
-
-    return new Game({ ...config, parent });
-
+export const StartGame = (parent: string) => {
+    return new Phaser.Game({ ...config, parent });
 }
 
 export default StartGame;

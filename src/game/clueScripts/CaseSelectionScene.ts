@@ -17,6 +17,21 @@ export class CaseSelectionScene extends Phaser.Scene {
     create() {
         console.log('[CaseSelectionScene] 1. Starting create()');
 
+        // --- NEW: MODAL INPUT BLOCKER & DEBUG ---
+        // This creates a fullscreen, transparent, interactive rectangle.
+        // Its job is to "steal" all input, preventing clicks from passing to the paused scene below.
+        // It also helps ensure this scene's camera is active and on top.
+        const blocker = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.0)
+            .setOrigin(0)
+            .setInteractive();
+
+        // Let's add a log to see if it even registers a click.
+        blocker.on('pointerdown', () => {
+            console.log('[CaseSelectionScene] Modal blocker was clicked! The scene IS receiving input.');
+        });
+        console.log(`[CaseSelectionScene] 1a. Input blocker created. Camera is at (${this.cameras.main.scrollX}, ${this.cameras.main.scrollY})`);
+        // --- END NEW PART ---
+
         const { width, height } = this.scale;
 
         console.log('[CaseSelectionScene] 2. Adding overlay rectangle');
