@@ -204,9 +204,7 @@ export class PeopleDisplayJournalScene extends Phaser.Scene {
       console.warn('[PeopleDisplay] Failed to init Return-to-Case area:', e);
     }
 
-    // Build the list (and auto-select first)
-    this.refreshList();
-
+    this.createSuspectCards();
     // Visual close button (top-right)
     const addClose = () => {
       const xBtnSize = 28, xBtnPad = 16;
@@ -250,126 +248,184 @@ export class PeopleDisplayJournalScene extends Phaser.Scene {
     });
   }
 
-  // ---------- List / Preview ----------
-  private refreshList() {
-    this.list.removeAll(true);
-    this.selectedClueId = null;
-
-    // Build list from all NPC configs (People view)
-    const people = Object.values(AllNPCsConfigs);
-    if (!people.length) {
-      this.list.add(this.add.text(0, 8, 'No known people yet.', { fontSize: '16px', color: '#666' }));
-      return;
-    }
-
-    // Adapt NPC entries to the Clue-like UI structure
-    const items: Clue[] = people.map((npc) => ({
-      id: npc.npcId,
-      title: npc.displayName,
-      description: npc.description ?? npc.alibi ?? '',
-      imageKey: npc.portrait?.textureKey ?? npc.textureKey,
-      category: 'people' as any,
-      discovered: true,
-    }));
-
-    items.forEach((entry, i) => this.list.add(this.buildClueRow(entry, i)));
-
-    this.showClueDetail(items[0]);
-    this.showClueDescription(items[0]);
-  }
-
-  private buildClueRow(clue: Clue, index: number): Phaser.GameObjects.Container {
-    const listW = this.rowObj.width;
-    const y = index * (this.ROW_H + this.ROW_GAP);
-
-    const row = this.add.container(0, y).setSize(listW, this.ROW_H);
-    row.setData('id', clue.id);
-
-    const hit = this.add.zone(0, 0, listW, this.ROW_H).setOrigin(0, 0)
-      .setInteractive({ useHandCursor: true });
-
-    const icoKey = (clue.imageKey && this.textures.exists(clue.imageKey)) ? clue.imageKey : 'blank-ico';
-    const icoSize = Math.floor(this.ROW_H * 0.7);
-    const ico = this.add.image(this.ROW_PAD_X, Math.floor(this.ROW_H / 2), icoKey)
-      .setOrigin(0, 0.5)
-      .setDisplaySize(icoSize, icoSize);
-
-    const title = this.add.text(ico.x + ico.displayWidth + 10, Math.floor(this.ROW_H / 2),
-      clue.title ?? 'Unknown', { fontSize: '16px', color: '#111' })
-      .setOrigin(0, 0.5)
-      .setAlpha(clue.discovered ? 1 : 0.4);
-
-    row.add([hit, ico, title]);
-
-    hit.on('pointerdown', () => {
-      if (!clue.discovered) return;
-      this.selectedClueId = clue.id;
-      this.highlightSelected(clue.id);
-      this.showClueDetail(clue);
-      this.showClueDescription(clue);
-    });
-
-    return row;
-  }
-
-  private showClueDetail(clue: Clue) {
-    if (this.currentArt && !this.currentArt.destroyed) this.currentArt.destroy();
-
-    const artKey = (clue.imageKey && this.textures.exists(clue.imageKey)) ? clue.imageKey : 'placeholder-clue-art';
-    const r = this.imgObj; // {x,y,width,height}
-    const cx = r.x + r.width / 2;
-    const cy = r.y + r.height / 2;
-    this.currentArt = this.add.image(cx, cy, artKey).setOrigin(0.5);
-    // Scale to fit within the preview rect while preserving aspect
-    const fw = this.currentArt.width || 1;
-    const fh = this.currentArt.height || 1;
-    const s = Math.min((r.width * 0.95) / fw, (r.height * 0.95) / fh);
-    this.currentArt.setScale(s);
-    this.page.add(this.currentArt);
-  }
-
-  private showClueDescription(clue: Clue) {
-    const r = this.descObj;
-    const pad = 12;
-
-    if (!this.descText || this.descText.destroyed) {
-      this.descText = this.add.text(r.x + pad, r.y + pad, '', {
-        fontSize: '16px',
-        color: '#1a1a1a',
-        wordWrap: { width: r.width - pad * 2, useAdvancedWrap: true },
-        align: 'left',
-        lineSpacing: 2
-      });
-      this.page.add(this.descText);
-      // if (this.descMask) this.descText.setMask(this.descMask);
-    }
-
-    const text = (clue.description && clue.description.trim().length > 0) ? clue.description : 'No description yet.';
-    this.descText.setText(text);
-    this.descText.setY(r.y + pad);
-  }
-
-  private highlightSelected(id: string) {
-    this.list.iterate((child: any) => {
-      if (!(child instanceof Phaser.GameObjects.Container)) return;
-      const title = child.getAt(2) as Phaser.GameObjects.Text | undefined;
-      const ico = child.getAt(1) as Phaser.GameObjects.Image | undefined;
-      const sel = child.getData('id') === id;
-      if (title) title.setStyle({ fontStyle: sel ? 'bold' : 'normal' });
-      if (ico) {
-        // Preserve the display size scaling: compute base scale from current display size
-        const baseScaleX = ico.displayWidth / (ico.width || 1);
-        const baseScaleY = ico.displayHeight / (ico.height || 1);
-        const bump = sel ? 1.06 : 1.0;
-        ico.setScale(baseScaleX * bump, baseScaleY * bump);
-      }
-    });
-  }
 
   private activeCatToClueCategory(cat: 'Clues' | 'People' | 'Places' | 'Evidence'): TabToClueCategory {
     if (cat === 'People') return 'people';
     if (cat === 'Places') return 'places';
     return 'evidence';
+  }
+
+  private showClueDetail(npc: any) {
+    if (this.currentArt && !this.currentArt.destroyed) this.currentArt.destroy();
+
+    const detailContainer = this.add.container(this.cameras.main.centerX, this.cameras.main.centerY);
+    this.frame.add(detailContainer);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.8);
+    bg.fillRect(-this.cameras.main.width / 2, -this.cameras.main.height / 2, this.cameras.main.width, this.cameras.main.height);
+    detailContainer.add(bg);
+
+    const detailBg = this.add.graphics();
+    detailBg.fillStyle(0xfffbf0, 1);
+    detailBg.fillRoundedRect(-250, -200, 500, 400, 10);
+    detailContainer.add(detailBg);
+
+    const name = this.add.text(-230, -180, npc.displayName, {
+      fontSize: '28px',
+      color: '#4a4a4a',
+      fontFamily: 'Georgia, serif',
+      fontStyle: 'bold'
+    });
+    detailContainer.add(name);
+
+    if (npc.portrait?.textureKey) {
+      const avatar = this.add.image(-180, -100, npc.portrait.textureKey);
+      avatar.setScale(0.3);
+      detailContainer.add(avatar);
+    }
+
+    if (npc.description) {
+      const quote = this.add.text(-100, -120, `"${npc.description}"`, {
+        fontSize: '18px',
+        color: '#6e6e6e',
+        fontFamily: 'Georgia, serif',
+        fontStyle: 'italic',
+        wordWrap: { width: 300 }
+      });
+      detailContainer.add(quote);
+    }
+
+    if (npc.alibi) {
+      const alibiText = this.add.text(-230, 0, `Alibi: ${npc.alibi}`, {
+        fontSize: '16px',
+        color: '#333333',
+        fontFamily: 'Arial, sans-serif',
+        wordWrap: { width: 460 }
+      });
+      detailContainer.add(alibiText);
+    }
+
+    if (npc.culpritDetails?.motive) {
+      const motiveText = this.add.text(-230, 100, `Motive: ${npc.culpritDetails.motive}`, {
+        fontSize: '16px',
+        color: '#333333',
+        fontFamily: 'Arial, sans-serif',
+        wordWrap: { width: 460 }
+      });
+      detailContainer.add(motiveText);
+    }
+
+    const closeButton = this.add.text(230, -180, 'X', {
+      fontSize: '24px',
+      color: '#ff0000',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive();
+    detailContainer.add(closeButton);
+
+    closeButton.on('pointerdown', () => {
+      detailContainer.destroy();
+    });
+
+    this.currentArt = detailContainer;
+  }
+
+  private createSuspectCards() {
+    const people = Object.values(AllNPCsConfigs);
+    const cardWidth = 400;
+    const cardHeight = 200;
+    const padding = 20;
+    const columns = 2;
+
+    const scrollableContainer = this.add.container(0, 0);
+    this.page.add(scrollableContainer);
+
+    people.forEach((npc, index) => {
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      const x = col * (cardWidth + padding);
+      const y = row * (cardHeight + padding);
+
+      const card = this.add.container(x, y).setInteractive(new Phaser.Geom.Rectangle(0, 0, cardWidth, cardHeight), Phaser.Geom.Rectangle.Contains);
+      scrollableContainer.add(card);
+
+      card.on('pointerdown', () => {
+        this.selectedClueId = npc.npcId;
+        this.showClueDetail(npc);
+      });
+
+      const bg = this.add.graphics();
+      bg.fillStyle(0xfffbf0, 1);
+      bg.lineStyle(2, 0xebebeb, 1);
+      bg.strokeRoundedRect(0, 0, cardWidth, cardHeight, 10);
+      bg.fillRoundedRect(0, 0, cardWidth, cardHeight, 10);
+      card.add(bg);
+
+      const name = this.add.text(140, 20, npc.displayName, {
+        fontSize: '28px',
+        color: '#4a4a4a',
+        fontFamily: 'Georgia, serif',
+        fontStyle: 'bold'
+      });
+      card.add(name);
+
+      if (npc.description) {
+        const quote = this.add.text(140, 60, `"${npc.description}"`, {
+          fontSize: '18px',
+          color: '#6e6e6e',
+          fontFamily: 'Georgia, serif',
+          fontStyle: 'italic',
+          wordWrap: { width: cardWidth - 160 }
+        });
+        card.add(quote);
+      }
+
+      if (npc.alibi) {
+        const alibiBg = this.add.graphics();
+        alibiBg.fillStyle(0xe6f7ff, 1);
+        alibiBg.fillRoundedRect(20, 110, cardWidth - 40, 40, 5);
+        card.add(alibiBg);
+
+        const alibiIcon = this.add.text(30, 120, '💡', { fontSize: '20px' });
+        card.add(alibiIcon);
+        const alibiText = this.add.text(60, 120, `Alibi: ${npc.alibi}`, {
+          fontSize: '16px',
+          color: '#333333',
+          fontFamily: 'Arial, sans-serif',
+          wordWrap: { width: cardWidth - 90 }
+        });
+        card.add(alibiText);
+      }
+
+      if (npc.culpritDetails?.motive) {
+        const motiveBg = this.add.graphics();
+        motiveBg.fillStyle(0xfff0f0, 1);
+        motiveBg.fillRoundedRect(20, 160, cardWidth - 40, 40, 5);
+        card.add(motiveBg);
+
+        const motiveIcon = this.add.text(30, 170, '❓', { fontSize: '20px' });
+        card.add(motiveIcon);
+        const motiveText = this.add.text(60, 170, `Motive: ${npc.culpritDetails.motive}`, {
+          fontSize: '16px',
+          color: '#333333',
+          fontFamily: 'Arial, sans-serif',
+          wordWrap: { width: cardWidth - 90 }
+        });
+        card.add(motiveText);
+      }
+
+      if (npc.portrait?.textureKey) {
+        const avatar = this.add.image(70, 70, npc.portrait.textureKey);
+        avatar.setScale(0.2);
+        card.add(avatar);
+
+        const mask = this.make.graphics({});
+        mask.fillStyle(0xffffff);
+        mask.fillCircle(70, 70, 50);
+        const geometryMask = mask.createGeometryMask();
+        avatar.setMask(geometryMask);
+      }
+    });
   }
 
   private findObj(layer: Phaser.Types.Tilemaps.TiledObjectLayer, name: string) {
