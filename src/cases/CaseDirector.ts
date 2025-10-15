@@ -197,6 +197,8 @@ export class CaseDirector {
         if (this.gs.incrementCounter('whiskersCheeseCount', 2)) {
             console.warn('[CaseDirector] Whiskers cheese count incremented to 2+');
             if (this.gs.getFlag('illegalCheeseEatenTwiceInFrontOfWhiskers')) {
+                
+                // move the notification to above officer whiskers. 
                 this.ui.showNotification('🚨 Officer Whiskers is furious about the illegal cheese!');
                 // Add any other effect logic here
             }

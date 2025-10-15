@@ -1,4 +1,4 @@
-import Phaser, { Scene } from 'phaser';
+﻿import Phaser, { Scene } from 'phaser';
 import { ClueManager } from './clueManager'; // Adjust path if needed
 import { Clue } from '../classes/clue';    // Adjust path if needed
 import { GameState } from '../managers/GameState'; // Adjust path if needed
@@ -7,6 +7,11 @@ import { ClueCat, ICategorySwitcher } from "./journalTabs";
 import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'
 import { createJournalTabs, updateTabVisuals } from './journalTabs';
 import { tutorialCases } from '../../data/cases/tutorialCases';
+import { JOURNAL_LAYOUTS, computeJournalLayout, JournalLayoutResult } from './journalLayoutConfig';
+
+// Sorg for a J kan lukke perfect altid. 
+// og sorge for at hver case inde i mappen har en memory
+
 const TAB_SCENES: Record<ClueCat, string | null> = {
     caseMainpage: null,             
     Clues: 'CluesScene',       
@@ -14,6 +19,7 @@ const TAB_SCENES: Record<ClueCat, string | null> = {
     Clueboard: 'DragAbleClueScene',
     Accuse: 'AccusationScene',
 };
+
 export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
     private clueManager!: ClueManager;
     private originScene!: string;
@@ -30,20 +36,61 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
     private selectedSuspect: Suspect | null = null;
     private selectedClueId: number | string | null = null;
 
-    /* ---------- constants ---------- */
-    private readonly PANEL_W = 1200;
-    private readonly PANEL_H = 660;
-    private readonly MainPAGE_W = 600;
-    private readonly MainPAGE_H = 700;
-    private readonly ROW_H = 48;
-    private readonly PAGE_X = 80;
-    private readonly PAGE_Y = 150;
-    private readonly PAGE_W = 885; // Total width of the inner content area
-    private readonly PAGE_H = 425; // Total height of the inner content area
-    private readonly GAP = (445 /2);      // Increased GAP slightly
-    private readonly LIST_W = 445;  // Width of the left list panel
-    // Calculated width for the right preview panel
-    private get PREVIEW_W() { return this.PAGE_W - this.LIST_W - this.GAP; }
+    /* ---------- layout configuration ---------- */
+
+    private readonly layoutConfig = JOURNAL_LAYOUTS.main;
+    private pageDesignSize = { width: JOURNAL_LAYOUTS.main.designWidth, height: JOURNAL_LAYOUTS.main.designHeight };
+    private layoutResult!: JournalLayoutResult;
+    private overlay!: Phaser.GameObjects.Rectangle;
+    private journalContainer!: Phaser.GameObjects.Container;
+    private journalPage!: Phaser.GameObjects.Container;
+    private closeButtonContainer?: Phaser.GameObjects.Container;
+
+    private get PREVIEW_W() {
+        const inner = this.layoutConfig.innerPage;
+        if (!inner) return 0;
+        const designWidth = this.layoutResult?.runtime.designWidth ?? inner.width;
+        const widthRatio = inner.width === 0 ? 1 : designWidth / inner.width;
+        return (inner.width - inner.listWidth - inner.gap) * widthRatio;
+    }
+
+    private computePageLayout(designWidth = this.pageDesignSize.width, designHeight = this.pageDesignSize.height) {
+        this.pageDesignSize = { width: designWidth, height: designHeight };
+        this.layoutResult = computeJournalLayout(this, 'main', { designWidth, designHeight });
+        return this.layoutResult.runtime;
+    }
+
+    private positionOverlayAndContainer(width = this.scale.width, height = this.scale.height) {
+        if (this.overlay) {
+            this.overlay.setPosition(width / 2, height / 2);
+            this.overlay.setSize(width, height);
+        }
+
+        if (this.journalContainer) {
+            this.journalContainer.setPosition(width / 2, height / 2);
+            if (this.layoutResult) {
+                this.journalContainer.setScale(this.layoutResult.runtime.scale);
+            }
+        }
+
+        if (this.closeButtonContainer) {
+            const closeButton = this.layoutConfig.closeButton;
+            if (closeButton) {
+                this.closeButtonContainer.setPosition(
+                    width - closeButton.padding - closeButton.size,
+                    closeButton.padding
+                );
+            }
+        }
+    }
+
+    private handleResize(gameSize: Phaser.Structs.Size) {
+        const { width, height } = gameSize;
+        this.cameras.main.setSize(width, height);
+
+        this.computePageLayout();
+        this.positionOverlayAndContainer(width, height);
+    }
 
     private casesData!: {
         cases: Record<string, {
@@ -94,8 +141,6 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
         fontSize: '16px', color: '#888888', align: 'center', wordWrap: { width: this.PREVIEW_W - 20 } // Gray prompt
     };
 
-    private frontContainer!: Phaser.GameObjects.Container;
-    private frontNS!: any;
     constructor() { super({ key: 'ClueJournal' }); }
 
     preload() {
@@ -105,13 +150,6 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
         //this.load.image('journal-frame', 'assets/journal_assets/journal_1000_625.png');
         this.load.image('Clues_tab-idle', 'assets/journal_assets/clues_tab_idle.png');
         this.load.image('Clues_tab-active', 'assets/journal_assets/clues_tab_idle.png');
-        // Ensure common placeholder textures exist to avoid warnings when sub-scenes reference them later
-        if (!this.textures.exists('blank-ico')) {
-            this.load.image('blank-ico', 'assets/journal_assets/blank_icon.png');
-        }
-        if (!this.textures.exists('placeholder-clue-art')) {
-            this.load.image('placeholder-clue-art', 'assets/journal_assets/placeholder_clue_art.png');
-        }
         this.load.image('People_tab-active', 'assets/journal_assets/people_tab_idle.png');
         this.load.image('People_tab-idle', 'assets/journal_assets/people_tab_idle.png');
         this.load.image('places_tab-idle', 'assets/journal_assets/Places_idle_tab.png');
@@ -122,9 +160,6 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
         this.load.image('Accuse_tab-active', 'assets/journal_assets/accuse_tab_idle.png');
         this.load.image('caseMainpage_tab-idle', 'assets/journal_assets/case_return_to_main_mock.png');
         this.load.image("caseMainpage_tab-active", "assets/journal_assets/case_return_to_main_mock.png");
-        this.load.image('blank-ico', 'assets/journal_assets/blank_icon.png'); // Example path for default icon
-        // --- ADD Placeholder for Clue Preview ---
-        this.load.image('placeholder-clue-art', 'assets/journal_assets/placeholder_clue_art.png'); // Create a simple placeholder image asset
     }
 
     init(data: { clueManager: ClueManager; originScene: string }) {
@@ -137,7 +172,7 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
     }
 
     create() {
-        this.add.rectangle(
+        this.overlay = this.add.rectangle(
             this.scale.width / 2, this.scale.height / 2,
             this.scale.width, this.scale.height,
             0x000000, 0.6
@@ -148,13 +183,13 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
 
         // Load cases for the Tutorial scene from shared data
         this.casesData = tutorialCases;
-        try {
-            console.log('[ClueJournal] Loaded cases data:', Object.keys(this.casesData.cases));
-            Object.entries(this.casesData.cases).forEach(([id, c]) => {
-                // @ts-ignore
-                console.log(`  - ${id}: active=${(c as any).active}`);
-            });
-        } catch {}
+        // try {
+        //     console.log('[ClueJournal] Loaded cases data:', Object.keys(this.casesData.cases));
+        //     Object.entries(this.casesData.cases).forEach(([id, c]) => {
+        //         // @ts-ignore
+        //         console.log(`  - ${id}: active=${(c as any).active}`);
+        //     });
+        // } catch {}
         // If assault case was flagged active during gameplay, reflect it here
         try {
             const gs = GameState.getInstance();
@@ -172,10 +207,15 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
         }
         this.currentCaseIdx = 0;
 
-        // get placements for tabs
-        const { container, page } = this.generateMainScreenCasePage(tutorialCases, cy, cx)
-
         const map = this.make.tilemap({ key: 'caseFrontPage' });
+        const bgFrame = this.textures.getFrame('caseJournalFrontPage');
+        const designWidth = bgFrame?.width ?? map.widthInPixels ?? this.layoutConfig.designWidth;
+        const designHeight = bgFrame?.height ?? map.heightInPixels ?? this.layoutConfig.designHeight;
+        this.computePageLayout(designWidth, designHeight);
+
+        const { page } = this.generateMainScreenCasePage(map, cx, cy);
+
+        // get placements for tabs
         const layer =
             map.getObjectLayer('Object Layer 1') ||
             map.getObjectLayer('tabs') ||
@@ -211,7 +251,7 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
             if (!tabPositions[k]) tabPositions[k] = { x: 0, y: 0, w: 0, h: 0 };
         });
 
-        console.log('[tabs] positions:', tabPositions);
+        //console.log('[tabs] positions:', tabPositions);
         createJournalTabs(
             this,                      // ITabbedJournalScene
             page,       // wherever you place the tabs
@@ -239,24 +279,28 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
 
         // Visual close button (top-right) to exit the journal
         const addClose = () => {
-            const xBtnSize = 28, xBtnPad = 16;
-            const x = this.cameras.main.width - xBtnPad - xBtnSize;
-            const y = xBtnPad;
+            const closeButton = this.layoutConfig.closeButton;
+            const x = this.cameras.main.width - closeButton.padding - closeButton.size;
+            const y = closeButton.padding;
             const cont = this.add.container(x, y).setDepth(99999).setScrollFactor(0);
-            const bg = this.add.rectangle(0, 0, xBtnSize, xBtnSize, 0xcc0000, 1)
+            const bg = this.add.rectangle(0, 0, closeButton.size, closeButton.size, 0xcc0000, 1)
                 .setOrigin(0, 0)
                 .setStrokeStyle(2, 0xffffff, 0.95);
-            const tx = this.add.text(xBtnSize / 2, xBtnSize / 2, 'X', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
+            const tx = this.add.text(closeButton.size / 2, closeButton.size / 2, 'X', { fontSize: '18px', color: '#ffffff', fontStyle: 'bold' })
                 .setOrigin(0.5);
-            cont.add([bg, tx]).setSize(xBtnSize, xBtnSize).setInteractive({ useHandCursor: true });
+            cont.add([bg, tx]).setSize(closeButton.size, closeButton.size).setInteractive({ useHandCursor: true });
             cont.on('pointerdown', () => this.close());
             cont.on('pointerover', () => bg.setAlpha(0.85));
             cont.on('pointerout', () => bg.setAlpha(1));
+
+            this.closeButtonContainer = cont;
         };
         addClose();
+        this.positionOverlayAndContainer();
+        this.scale.on('resize', this.handleResize, this);
 
         this.events.on('shutdown', () => {
-            // Make sure to remove the listener from the same emitter you added it to.
+            this.scale.off('resize', this.handleResize, this);
         });
 
     }
@@ -278,12 +322,9 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
     private changeCase(delta: number) {
         const n = this.activeCaseIds.length;
         if (n <= 1) return;
-        this.currentCaseIdx = (this.currentCaseIdx + delta + n) % n;
 
-        // recompute width quickly from current title’s world (safe enough),
-        // or cache imgWidth from generateMainScreenCasePage if you prefer.
-        const maxWidthGuess = this.cameras.main.width / 2.5 * 0.835;
-        this.renderCaseAtIndex(this.currentCaseIdx, maxWidthGuess);
+        this.currentCaseIdx = (this.currentCaseIdx + delta + n) % n;
+        this.renderCaseAtIndex(this.currentCaseIdx, this.casetitle.width);
     }
 
     private fitTitleToWidth(textObj: Phaser.GameObjects.Text, maxWidth: number, maxPx = 36, minPx = 14) {
@@ -309,31 +350,26 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
         else textObj.setScale(1, 1);
     }
 
-    private generateMainScreenCasePage(cases: JSON, cy: number, cx: number) {
-        // use your loaded map key (no renames)
-        const map = this.make.tilemap({ key: 'caseFrontPage' }); // <-- CHANGED
 
-        const pageW = 500;
-        const pageH = 800;
-        if (this.scale.width < 800 || this.scale.height < 600) {
-            const pageW = map.widthInPixels || this.scale.width;
-            const pageH = map.heightInPixels || this.scale.height;
-        }
+
+    private generateMainScreenCasePage(map: Phaser.Tilemaps.Tilemap, cy: number, cx: number) {
+        const runtime = this.layoutResult?.runtime ?? this.computePageLayout();
+        const { designWidth, designHeight, scale } = runtime;
 
         const container = this.add.container(cx, cy);
-        const page = this.add.container(-pageW / 2, -pageH / 2);
+        const page = this.add.container(-designWidth / 2, -designHeight / 2);
         container.add(page);
+        container.setScale(scale);
 
-        // use your loaded image key (no renames)
-        const bg = this.add.image(0, 0, 'caseJournalFrontPage') // <-- CHANGED
-            .setOrigin(0, 0);
+        this.journalContainer = container;
+        this.journalPage = page;
 
-        // ensure PNG matches the TMJ size so object coords line up
-        bg.setDisplaySize(pageW, pageH); // <-- ADD
+        const bg = this.add.image(0, 0, 'caseJournalFrontPage')
+            .setOrigin(0, 0)
+            .setDisplaySize(designWidth, designHeight);
 
         page.addAt(bg, 0);
 
-        console.log("[ClueScene] pageW, pageH:", pageW, pageH);
         const objLayer =
             map.getObjectLayer('Object Layer 1') ||
             map.getObjectLayer('objects') ||       // fallback if you rename later
@@ -341,13 +377,11 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
             (map as any).objects?.[0];
         if (!objLayer) {
             console.warn('TMJ missing "objects" layer');
-            return;
+            return { container, page };
         }
 
-        // Use the helper to normalize numbers
         this.casetitle = this.findObj(objLayer, 'Case Title');
         this.casedescription = this.findObj(objLayer, 'Case Description');
-        console.log("[ClueScene] objLayer:", objLayer);
 
         const SHOW_DEBUG = false;
         if (SHOW_DEBUG) {
@@ -403,10 +437,7 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
                 },
             }
         ).setOrigin(0.5, 0);
-        //this.taskBodyText.setMask(descMaskGfx.createGeometryMask());
         page.add(this.taskBodyText);
-        console.info("[ClueScene] taskBodyText:", this.taskBodyText.x, this.taskBodyText.y);
-        console.info("[ClueScene] titleText:", this.titleText.x, this.titleText.y);
 
         const _id = this.activeCaseIds[this.currentCaseIdx];
         const c = this.casesData.cases[_id];
@@ -416,7 +447,6 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
             this.taskBodyText.setText(c.case_description_task || '');
         }
 
-        //// ----- Case switcher (keep functionality) -----
         if (this.activeCaseIds?.length > 1) {
             // index label above the title (e.g. "1/2")
             this.caseIndexLabel = this.add.text(
@@ -431,14 +461,14 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
             const yMid = this.casetitle.y + 18;
 
             this.navPrevBtn = this.add.text(
-                Math.max(8, this.casetitle.x - 18), yMid, '◀',
+                Math.max(8, this.casetitle.x - 18), yMid, '<',
                 { fontSize: '22px', color: '#333333', backgroundColor: '#e6e6e6', padding: { x: 8, y: 4 } }
             ).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
             this.navPrevBtn.on('pointerdown', () => this.changeCase(-1));
             page.add(this.navPrevBtn);
 
             this.navNextBtn = this.add.text(
-                this.casetitle.x + this.casetitle.width + 18, yMid, '▶',
+                this.casetitle.x + this.casetitle.width + 18, yMid, '>',
                 { fontSize: '22px', color: '#333333', backgroundColor: '#e6e6e6', padding: { x: 8, y: 4 } }
             ).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
             this.navNextBtn.on('pointerdown', () => this.changeCase(+1));
@@ -454,10 +484,11 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
             if (typeof this.renderCaseAtIndex === 'function') {
                 this.renderCaseAtIndex(this.currentCaseIdx, this.casetitle.width);
             }
+        }
 
-
-        } return {container, page};
+        return { container, page };
     }
+
 
 
     private close() {
@@ -551,3 +582,5 @@ export class ClueJournal extends Phaser.Scene implements ICategorySwitcher {
 
 
 }
+
+

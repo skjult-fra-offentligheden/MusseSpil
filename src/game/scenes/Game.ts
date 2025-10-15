@@ -1,4 +1,4 @@
-// src/scenes/Game.ts
+﻿// src/scenes/Game.ts
 
 import Phaser, { NONE } from 'phaser';
 import { EventBus } from '../EventBus';
@@ -13,6 +13,7 @@ import { Interactable } from '../managers/interactables';
 import { GuideScene } from '../guideScripts/guide';
 import { Clue } from '../classes/clue';
 import { getNPCPositions } from '../../factories/npcPositionsPreProcessing';
+import { createNPCInstance } from '../../factories/npcFactory';
 import { GameState } from '../managers/GameState';
 import { UIManager } from '../managers/UIManager';
 
@@ -77,10 +78,9 @@ export class Game extends Phaser.Scene {
             this.input.keyboard.removeAllListeners();
         });
 
-        this.clueManager = ClueManager.getInstance(); // crasher hvisden ikke tilføjes 
         this.inventoryManager = InventoryManager.getInstance();
         this.inventoryManager.setScene(this);
-        //sæt ui elementer.
+        // set ui elements.
         const uiManager = UIManager.getInstance();
         uiManager.setScene(this, "Game");
 
@@ -247,24 +247,20 @@ export class Game extends Phaser.Scene {
     }
 
     private createNPCs(collisionLayer: Phaser.Tilemaps.TilemapLayer, npcPositions: any): void {
-        const npcConfigs = [
-            {
-                scene: this, x: npcPositions['cop1']?.x || 0, y: npcPositions['cop1']?.y || 0, texture: 'cop1', frame: 'cop1Sprite.png', dialogues: this.dialoguesData['cop1'], dialogueManager: this.dialogueManager,
-                npcId: 'cop1', movementType: 'patrol', speed: 50, atlasKey: "cop1", isUnique: true, patrolPoints: [{ x: 400, y: 480 }, { x: 550, y: 500 }],
-                animationKeys: { walkLeft: 'cop1_walk_left', walkRight: 'cop1_walk_right', idle: 'cop1_idle' }, frames: { walkLeft: ["cop1Sprite2.png", "cop1Sprite3.png"], walkRight: ["cop1Sprite.png", "cop1Sprite1.png"], idle: ["cop1Sprite.png"] }
-
-            },
-            {
-                scene: this, x: npcPositions['cop2']?.x || 0, y: npcPositions['cop2']?.y || 0, texture: 'cop2', frame: 'cop2sprite.png', dialogues: this.dialoguesData['cop2'], dialogueManager: this.dialogueManager, npcId: 'cop2',
-                movementType: 'random', speed: 30, atlasKey: "cop2", isUnique: true, moveArea: new Phaser.Geom.Rectangle(600, 600, 100, 100), animationKeys: { walkLeft: 'cop2_walk_left', walkRight: 'cop2_walk_right', idle: 'cop2_idle' }, frames: { walkLeft: ["cop2sprite2.png", "cop2sprite3.png"], walkRight: ["cop2sprite1.png", "cop2sprite2.png"], idle: ["cop2sprite3.png"] }
-            },
-            {
-                scene: this, x: npcPositions['fancyMouse']?.x || 0, y: npcPositions['fancyMouse']?.y || 0,  texture: "fancyMouse", frame: "fancyMouse0.png", dialogues: this.dialoguesData['placeholderDialogue'], dialogueManager: this.dialogueManager, npcId: "fancyMouse",
-                movementType: "idle", speed: 0, atlasKey: "fancyMouse", isUnique: true, animationKeys: { walkLeft: "fancyMouse_walk_left", walkRight: "fancyMouse_walk_right", idle: "fancyMouse_idle" }, frames: { walkLeft: ["fancyMouse2.png", "fancyMouse3.png"], walkRight: ["fancyMouse0.png", "fancyMouse1.png"], idle: ["fancyMouse1.png"] }
-            }
-        ];
-
-        this.npcs = createNPCs(this, npcConfigs, collisionLayer);
+        const created: NPC[] = [];
+        if (npcPositions) {
+            Object.entries(npcPositions).forEach(([npcId, rawPos]) => {
+                const pos = (rawPos as { x?: number; y?: number }) || {};
+                const x = typeof pos.x === 'number' ? pos.x : 0;
+                const y = typeof pos.y === 'number' ? pos.y : 0;
+                const npc = createNPCInstance(this, x, y, npcId, this.dialogueManager, collisionLayer);
+                if (npc) {
+                    created.push(npc);
+                    this.physics.add.collider(this.player, npc);
+                }
+            });
+        }
+        this.npcs = created;
     }
 
     private createObjects(collisionLayer: Phaser.Tilemaps.TilemapLayer): void {
@@ -443,3 +439,4 @@ export class Game extends Phaser.Scene {
         });
     }
 }
+

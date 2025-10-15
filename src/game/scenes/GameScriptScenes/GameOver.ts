@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import { GameState } from '../../managers/GameState';
-import { Suspect } from '../../Accusation_scripts/suspect'; // Adjust path if needed
+import { Suspect } from "../../../game/clueScripts/Accusation_scripts/suspect"; 
 
 type GameOverData = {
     suspect?: Suspect | null;     // present for wrong-accusation flows

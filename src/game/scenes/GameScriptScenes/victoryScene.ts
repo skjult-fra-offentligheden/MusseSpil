@@ -1,25 +1,23 @@
-//
-// ─── START OF UPDATED FILE: victoryScene.ts ────────────────
-//
-import { Scene } from 'phaser';
-import { Suspect } from '../../Accusation_scripts/suspect'; // Adjust path if needed
-import { CulpritDetails } from '../../data/NPCs/npcTemplate'; // Import CulpritDetails
+﻿import { Scene } from 'phaser';
+import { Suspect } from "../../../game/clueScripts/Accusation_scripts/suspect"; 
 
 export class VictoryScene extends Scene {
     private correctlyAccused: Suspect;
-    private culpritDetails: CulpritDetails;
+    private culprintDetailsMotive: string;
+    private culprintDetailsCrime: string;
 
     constructor() {
         super({ key: 'VictoryScene' });
     }
 
-    // UPDATED: Accept culpritDetails in init
-    init(data: { suspect: Suspect, culpritDetails: CulpritDetails }): void {
+    init(data: { suspect: Suspect; culprintDetailsMotive: string; culprintDetailsCrime: string }): void {
         this.correctlyAccused = data.suspect;
-        this.culpritDetails = data.culpritDetails;
+        this.culprintDetailsMotive = data.culprintDetailsMotive;
+        this.culprintDetailsCrime = data.culprintDetailsCrime;
     }
 
     create(): void {
+        console.log('[VictoryScene] STARTED VICTORY');
         const { width, height } = this.scale;
 
         this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
@@ -41,14 +39,11 @@ export class VictoryScene extends Scene {
             wordWrap: { width: width * 0.7 }
         };
 
-        this.add.text(width / 2, height / 2 - 100, "Case Closed!", titleStyle)
-            .setOrigin(0.5);
+        this.add.text(width / 2, height / 2 - 100, 'Case Closed!', titleStyle).setOrigin(0.5);
 
-        // UPDATED: Display more details about the case
-        const victoryMessage = `You correctly identified ${this.correctlyAccused.name} as the culprit!\n\nCrime: ${this.culpritDetails?.crimeCommitted}\nMotive: "${this.culpritDetails?.motive}"`;
+        const victoryMessage = `You correctly identified ${this.correctlyAccused.name} as the culprit!\n\nCrime: ${this.culprintDetailsCrime}\nMotive: "${this.culprintDetailsMotive}"`;
 
-        this.add.text(width / 2, height / 2 + 20, victoryMessage, subtitleStyle)
-            .setOrigin(0.5);
+        this.add.text(width / 2, height / 2 + 20, victoryMessage, subtitleStyle).setOrigin(0.5);
 
         this.add.text(width / 2, height - 80, 'Click anywhere to Play Again', {
             fontFamily: 'Arial',

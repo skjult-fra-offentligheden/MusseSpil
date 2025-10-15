@@ -75,9 +75,7 @@ export class ClueJournal extends Phaser.Scene {
         this.load.image('timeline_tab-active', 'assets/journal_assets/Timeline_activity_tab.png');
         this.load.image('accuse_tab-idle', 'assets/journal_assets/accuse_idle_tab.png');
         this.load.image('accuse_tab-active', 'assets/journal_assets/accuse_active_tab.png');
-        this.load.image('blank-ico', 'assets/journal_assets/blank_icon.png'); // Example path for default icon
         // --- ADD Placeholder for Clue Preview ---
-        this.load.image('placeholder-clue-art', 'assets/journal_assets/placeholder_clue_art.png'); // Create a simple placeholder image asset
     }
 
     init(data: { clueManager: ClueManager; originScene: string }) {
@@ -235,7 +233,7 @@ export class ClueJournal extends Phaser.Scene {
             return {
                 id: npcConfig.npcId,           // Use the NPC's unique ID
                 name: npcConfig.displayName,   // Use the display name
-                imageKey: npcConfig.textureKey || 'blank-ico' // Use the texture atlas key as the image
+                imageKey: npcConfig.textureKey // Use the texture atlas key as the image
             };
         });
 
@@ -362,7 +360,7 @@ export class ClueJournal extends Phaser.Scene {
         const row = this.add.container(0, rowY).setData('itemKey', clue.id);
 
         const bg = this.add.rectangle(rowWidth / 2, this.ROW_H / 2, rowWidth, this.ROW_H, 0xffffff, 0);
-        const icoKey = clue.imageKey && this.textures.exists(clue.imageKey) ? clue.imageKey : 'blank-ico';
+        const icoKey = clue.imageKey && this.textures.exists(clue.imageKey) ? clue.imageKey : null;
         const ico = this.add.sprite(6, this.ROW_H / 2, icoKey)
             .setOrigin(0, 0.5)
             .setDisplaySize(this.ROW_H * 0.7, this.ROW_H * 0.7);
@@ -414,7 +412,7 @@ export class ClueJournal extends Phaser.Scene {
         // ideally from itemConfig.getArt('small').
         const textureKey = (clue.imageKey && this.textures.exists(clue.imageKey))
             ? clue.imageKey
-            : 'placeholder-clue-art'; // Fallback
+            : null;
 
         // Adjust position and scale for the preview panel
         // PREVIEW_W is the width of your preview area.
