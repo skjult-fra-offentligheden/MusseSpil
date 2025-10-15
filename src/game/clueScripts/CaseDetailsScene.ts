@@ -6,7 +6,7 @@ import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs';
 import { UIManager } from '../managers/UIManager';
 import { TutorialCase } from '../../cases/TutorialCase';
 import { Clue } from '../classes/clue';
-import { GameState } from '../managers/GameState';
+import { GameState, BoardNodePosition, BoardConnectionData } from '../managers/GameState';
 
 type JournalTab = 'Mice' | 'Clues' | 'Board' | 'Accuse';
 // A new type to help manage draggable items on the board
@@ -19,6 +19,8 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private activeCaseData!: any;
     private activeTab: JournalTab = 'Mice';
     private gameState!: GameState;
+     private headerContainer!: Phaser.GameObjects.Container; // NEW: To easily hide/show
+    private tabsContainer!: Phaser.GameObjects.Container;   // NEW: To easily hide/show
     // --- All existing UI elements ---
     private journalContainer!: Phaser.GameObjects.Container;
     private tabs: { [key in JournalTab]?: Phaser.GameObjects.Text } = {};
@@ -36,7 +38,8 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private connectionLine!: Phaser.GameObjects.Graphics;
     private isConnecting: boolean = false;
     private connectionStartNode: BoardNode | null = null;
-
+    private isBoardFullscreen: boolean = false; // <-- NEW: For fullscreen state
+    private boardDragBounds!: Phaser.Geom.Rectangle;
     constructor() {
         super({ key: 'CaseDetailsScene' });
     }
@@ -76,10 +79,10 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     }
 
     // --- UI BUILDING ---
-
     private buildJournalUI() {
         const { width, height } = this.scale;
         this.journalContainer = this.add.container(width / 2, height / 2);
+        this.journalContainer.setDepth(2000); // <-- FIX #1: Set depth to render on top of everything
 
         const bg = this.add.image(0, 0, 'journal_details_bg');
         const scale = Math.min((width * 0.9) / bg.width, (height * 0.9) / bg.height);
@@ -89,73 +92,64 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const containerWidth = bg.displayWidth;
         const containerHeight = bg.displayHeight;
 
-        this.createHeader(containerWidth, containerHeight);
+        // Create containers for UI sections to make them easy to hide
+        this.headerContainer = this.add.container(0, 0);
+        this.tabsContainer = this.add.container(0, 0);
+        this.journalContainer.add([this.headerContainer, this.tabsContainer]);
 
-        // Create all content panes
+        this.createHeader(containerWidth, containerHeight);
+        this.createTabs(containerWidth, containerHeight);
+
         this.contentPanes['Mice'] = this.createMiceContent(containerWidth, containerHeight);
         this.contentPanes['Clues'] = this.createCluesContent(containerWidth, containerHeight);
         this.contentPanes['Board'] = this.createBoardContent(containerWidth, containerHeight);
         this.contentPanes['Accuse'] = this.createAccuseContent(containerWidth, containerHeight);
         
-        // Add valid panes to the main container
         this.journalContainer.add(Object.values(this.contentPanes).filter(p => p));
+        this.switchTab('Mice', true);
 
-        // Create tabs last so they render on top of the content
-        this.createTabs(containerWidth, containerHeight); 
-        this.switchTab('Mice', true); // Set initial visible tab
-
-        const closeButton = this.add.text(containerWidth / 2 - 30, -containerHeight / 2 + 30, 'X', {
-            fontSize: '24px', color: '#8B4513', fontStyle: 'bold'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const closeButton = this.add.text(containerWidth / 2 - 30, -containerHeight / 2 + 30, 'X', { fontSize: '24px', color: '#8B4513', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         closeButton.on('pointerdown', () => this.closeJournal());
         this.journalContainer.add(closeButton);
     }
     
     private createHeader(width: number, height: number) {
         // This function is complete and correct from your provided code
-        const headerY = -height / 2 + 80;
+const headerY = -height / 2 + 80;
         const backButton = this.add.text(-width / 2 + 80, headerY - 30, '◀ All Cases', { fontSize: '18px', color: '#8B4513', fontStyle: 'bold' }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
         backButton.on('pointerdown', () => this.scene.start('CaseSelectionScene', { originScene: this.originScene }));
-        this.journalContainer.add(backButton);
         const infoBoxWidth = width * 0.85;
         const infoBox = this.add.graphics().fillStyle(0xfdf6e3, 0.8).lineStyle(2, 0xd2b48c, 1);
         infoBox.fillRoundedRect(-infoBoxWidth / 2, headerY, infoBoxWidth, 150, 10).strokeRoundedRect(-infoBoxWidth / 2, headerY, infoBoxWidth, 150, 10);
-        this.journalContainer.add(infoBox);
         const title = this.add.text(0, headerY + 25, this.activeCaseData.case_title, { fontFamily: 'Georgia, serif', fontSize: '32px', color: '#543d25' }).setOrigin(0.5, 0);
         const description = this.add.text(0, headerY + 70, this.activeCaseData.case_description_player_task, { fontSize: '16px', color: '#8B4513', wordWrap: { width: infoBoxWidth - 40 }, align: 'center' }).setOrigin(0.5, 0);
-        this.journalContainer.add([title, description]);
-        this.createTag(width * 0.25, headerY + 110, this.activeCaseData.status || 'OPEN', 0xfbc47a);
-        this.createTag(-width * 0.25, headerY + 110, `Oct 15, 2025`, 0xc5d8a4);
+        this.headerContainer.add([backButton, infoBox, title, description]); // Add to header container
+        this.createTag(width * 0.25, headerY + 110, this.activeCaseData.status || 'OPEN', 0xfbc47a, this.headerContainer);
+        this.createTag(-width * 0.25, headerY + 110, `Oct 15, 2025`, 0xc5d8a4, this.headerContainer);
     }
     
-    private createTag(x: number, y: number, text: string, color: number) {
-        // This function is complete and correct
+    private createTag(x: number, y: number, text: string, color: number, container: Phaser.GameObjects.Container) {
+        // ... (This function now takes a container to add to)
         const tagText = this.add.text(x, y, text.toUpperCase(), { fontSize: '14px', color: '#6b4f2c', fontStyle: 'bold' }).setOrigin(0.5);
         const textWidth = tagText.width + 20;
         const tagBg = this.add.graphics().fillStyle(color, 0.7).fillRoundedRect(x - textWidth / 2, y - 12, textWidth, 24, 12);
-        this.journalContainer.add([tagBg, tagText]);
+        container.add([tagBg, tagText]);
     }
-
     // --- TAB MANAGEMENT ---
     
     private createTabs(width: number, height: number) {
+        // ... (This function is the same, but adds elements to `this.tabsContainer`)
         const tabsY = -height / 2 + 270;
         const tabsWidth = width * 0.85;
         const tabNames: JournalTab[] = ['Mice', 'Clues', 'Board', 'Accuse'];
-
-        const tabsBg = this.add.graphics();
-        tabsBg.fillStyle(0xd2b48c, 0.5);
-        tabsBg.fillRoundedRect(-tabsWidth / 2, tabsY, tabsWidth, 40, 8);
-        this.journalContainer.add(tabsBg);
-
+        const tabsBg = this.add.graphics().fillStyle(0xd2b48c, 0.5).fillRoundedRect(-tabsWidth / 2, tabsY, tabsWidth, 40, 8);
+        this.tabsContainer.add(tabsBg);
         const tabWidth = tabsWidth / tabNames.length;
         tabNames.forEach((name, index) => {
             const tabX = -tabsWidth / 2 + (index * tabWidth) + (tabWidth / 2);
-            const tabText = this.add.text(tabX, tabsY + 20, name, {
-                fontSize: '18px', color: '#8B4513', fontStyle: 'bold'
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            const tabText = this.add.text(tabX, tabsY + 20, name, { fontSize: '18px', color: '#8B4513', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             tabText.on('pointerdown', () => this.switchTab(name));
-            this.journalContainer.add(tabText);
+            this.tabsContainer.add(tabText); // Add to tabs container
             this.tabs[name] = tabText;
         });
     }
@@ -381,26 +375,28 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const contentWidth = width * 0.85;
         const contentHeight = height - 370;
         const container = this.add.container(0, contentY);
-
         container.add(this.add.text(-contentWidth / 2, 0, '📌 Evidence Board', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#543d25' }));
-        container.add(this.add.text(-contentWidth / 2, 35, 'How to use: Drag items to move. Click "+ Connect", then click another item to link them.', { fontSize: '12px', color: '#8B4513', wordWrap: { width: contentWidth } }));
+        container.add(this.add.text(-contentWidth / 2, 35, 'How to use: Drag items to move. Click "+ Connect", then click another item to link them.', { fontSize: '12px', color: '#8B4513', wordWrap: { width: contentWidth - 80 } }));
+        
+        const fullscreenButton = this.add.text(contentWidth / 2, 10, '[⤢]', { fontSize: '24px', color: '#543d25'}).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+        fullscreenButton.on('pointerdown', () => this.toggleBoardFullscreen(fullscreenButton));
+        container.add(fullscreenButton);
 
         const boardY = 70;
         const boardArea = this.add.graphics().fillStyle(0xfde68a, 1).fillRoundedRect(-contentWidth / 2, boardY, contentWidth, contentHeight - boardY, 10);
         container.add(boardArea);
-        boardArea.setInteractive(new Phaser.Geom.Rectangle(-contentWidth / 2, boardY, contentWidth, contentHeight - boardY), Phaser.Geom.Rectangle.Contains)
+        
+        this.boardDragBounds = new Phaser.Geom.Rectangle(-contentWidth / 2, boardY, contentWidth, contentHeight - boardY);
+        boardArea.setInteractive(this.boardDragBounds, Phaser.Geom.Rectangle.Contains)
                  .on('pointerdown', () => { if(this.isConnecting) { this.isConnecting = false; this.connectionStartNode = null; } });
         
         this.connectionLine = this.add.graphics();
         container.add(this.connectionLine);
-
-        // Clear previous nodes before creating new ones
+        
         this.boardNodes = [];
-
         const suspectIds = (TutorialCase as any).suspects;
         suspectIds.forEach((id: string, index: number) => {
             const node = this.createBoardNode(id, 'person');
-            // --- UPDATED: Load position from GameState ---
             const savedPos = this.gameState.boardNodePositions[id];
             node.setPosition(savedPos?.x ?? -contentWidth / 2 + 100, savedPos?.y ?? boardY + 70 + index * 120);
             container.add(node);
@@ -410,21 +406,17 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const allClues = this.clueManager.getAllClues().filter(c => c.discovered);
         allClues.forEach((clue, index) => {
             const node = this.createBoardNode(clue.id, 'clue');
-            // --- UPDATED: Load position from GameState ---
             const savedPos = this.gameState.boardNodePositions[clue.id];
             node.setPosition(savedPos?.x ?? contentWidth / 2 - 100, savedPos?.y ?? boardY + 70 + index * 120);
             container.add(node);
             this.boardNodes.push({ id: clue.id, type: 'clue', gameObject: node });
         });
 
-        // --- NEW: Restore saved connections ---
         this.connections = [];
         this.gameState.boardConnections.forEach(connData => {
             const fromNode = this.boardNodes.find(n => n.id === connData.fromId);
             const toNode = this.boardNodes.find(n => n.id === connData.toId);
-            if (fromNode && toNode) {
-                this.connections.push({ from: fromNode, to: toNode });
-            }
+            if (fromNode && toNode) this.connections.push({ from: fromNode, to: toNode });
         });
         
         return container;
@@ -434,8 +426,19 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const width = 180;
         const height = 100;
         const nodeContainer = this.add.container(0,0).setSize(width, height).setInteractive();
-        this.input.setDraggable(nodeContainer);
+        
+        this.input.setDraggable(nodeContainer, true);
+        nodeContainer.on('drag', (p: any, dragX: number, dragY: number) => {
+            const halfW = nodeContainer.width / 2;
+            const halfH = nodeContainer.height / 2;
+            const constrainedX = Phaser.Math.Clamp(dragX, this.boardDragBounds.left + halfW, this.boardDragBounds.right - halfW);
+            const constrainedY = Phaser.Math.Clamp(dragY, this.boardDragBounds.top + halfH, this.boardDragBounds.bottom - halfH);
+            nodeContainer.setPosition(constrainedX, constrainedY);
 
+            this.gameState.boardNodePositions[id] = { x: constrainedX, y: constrainedY };
+            this.gameState.save();
+        });
+        
         const bg = this.add.graphics().fillStyle(0xffffff, 1).fillRoundedRect(-width/2, -height/2, width, height, 8);
         const labelText = type === 'person' ? (AllNPCsConfigs as any)[id]?.displayName : this.clueManager.getClue(id)?.title;
         const label = this.add.text(0, -10, labelText, { fontSize: '14px', color: '#000', align: 'center', wordWrap: { width: width - 20 } }).setOrigin(0.5);
@@ -443,24 +446,53 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         
         nodeContainer.add([bg, label, connectButton]);
 
-        // --- UPDATED: Save position on drag ---
-        nodeContainer.on('drag', (p: any, dragX: number, dragY: number) => {
-            nodeContainer.setPosition(dragX, dragY);
-            this.gameState.boardNodePositions[id] = { x: dragX, y: dragY };
-            this.gameState.save(); // <-- Save the change!
-        });
-        
         connectButton.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
             event.stopPropagation();
             this.handleConnectionStart(id, type);
         });
-
-        nodeContainer.on('pointerdown', () => {
-            if (this.isConnecting) this.handleConnectionEnd(id, type);
-        });
+        nodeContainer.on('pointerdown', () => { if (this.isConnecting) this.handleConnectionEnd(id, type); });
 
         return nodeContainer;
     }
+
+    private toggleBoardFullscreen(button: Phaser.GameObjects.Text) {
+        this.isBoardFullscreen = !this.isBoardFullscreen;
+        
+        const boardPane = this.contentPanes.Board;
+        if (!boardPane) return;
+
+        const { width, height } = this.scale;
+        
+        // Hide/show other UI elements
+        this.headerContainer.setVisible(!this.isBoardFullscreen);
+        this.tabsContainer.setVisible(!this.isBoardFullscreen);
+
+        button.setText(this.isBoardFullscreen ? '[⤡]' : '[⤢]');
+
+        // --- FIX #2: Correct animation logic ---
+        // We are tweening the Board's PARENT container, which is the main journal container
+        const targetScale = this.isBoardFullscreen ? width / (boardPane.getBounds().width / this.journalContainer.scale) : this.journalContainer.scale;
+        const targetX = width / 2; // Always center
+        const targetY = height / 2; // Always center
+
+        this.tweens.add({
+            targets: this.journalContainer,
+            scale: targetScale,
+            x: targetX,
+            y: targetY,
+            duration: 400,
+            ease: 'Cubic.easeInOut',
+            onComplete: () => {
+                // Update drag bounds after animation
+                const newBounds = boardPane.getByName('boardArea')?.getBounds(); // Add a name to your board graphics
+                if (newBounds) {
+                    this.boardDragBounds.setPosition(newBounds.x, newBounds.y);
+                    this.boardDragBounds.setSize(newBounds.width, newBounds.height);
+                }
+            }
+        });
+    }
+
 
     private handleConnectionEnd(id: string, type: 'person' | 'clue') {
         const endNode = this.boardNodes.find(n => n.id === id) || null;
