@@ -189,6 +189,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     // --- CONTENT PANE CREATORS (Mice, Clues, Accuse) ---
 private createMiceContent(width: number, height: number): Phaser.GameObjects.Container {
     const contentY = -height / 2 + 330;
+    // This is the main container that gets returned, centered on the screen
     const container = this.add.container(0, contentY);
 
     const suspectIds = (TutorialCase as any).suspects;
@@ -205,7 +206,8 @@ private createMiceContent(width: number, height: number): Phaser.GameObjects.Con
     const totalGridWidth = (columns * cardWidth) + ((columns - 1) * cardSpacing);
     const startX = -totalGridWidth / 2;
 
-    const scrollableContainer = this.add.container(0, 0);
+    // This container holds the cards and is the part that will move when scrolled
+    const scrollableContainer = this.add.container(startX, 0);
     container.add(scrollableContainer);
 
     suspects.forEach((suspect: any, index: number) => {
@@ -214,7 +216,8 @@ private createMiceContent(width: number, height: number): Phaser.GameObjects.Con
         const col = index % columns;
         const row = Math.floor(index / columns);
         
-        const xPos = startX + col * (cardWidth + cardSpacing);
+        // Position cards relative to the scrollableContainer's top-left
+        const xPos = col * (cardWidth + cardSpacing);
         const yPos = row * (cardHeight + cardSpacing);
 
         const card = this.createPersonCard(suspect);
@@ -224,54 +227,60 @@ private createMiceContent(width: number, height: number): Phaser.GameObjects.Con
     
     // --- SCROLLBAR LOGIC ---
     const visibleHeight = 480; 
-    const totalContentHeight = Math.ceil(suspects.length / columns) * (cardHeight + cardSpacing) - cardSpacing; // Remove last spacing
+    const totalContentHeight = Math.ceil(suspects.length / columns) * (cardHeight + cardSpacing) - cardSpacing;
 
     if (totalContentHeight > visibleHeight) {
         // 1. Create a mask to hide the overflowing content
         const mask = this.make.graphics();
         mask.fillStyle(0xffffff);
-        // Position the mask correctly relative to the main container's new position
-        mask.fillRect(container.x + startX, container.y, totalGridWidth, visibleHeight);
+        // The mask position is now relative to the main `container`
+        mask.fillRect(startX - container.x, 0, totalGridWidth, visibleHeight);
         scrollableContainer.setMask(mask.createGeometryMask());
 
         // 2. Create the scrollbar track and handle
         const scrollbarWidth = 10;
-        const scrollbarX = startX + totalGridWidth + 15; // Position to the right of the grid
+        const scrollbarX = startX + totalGridWidth + 15;
 
         const track = this.add.graphics();
-        track.fillStyle(0x5D4037, 0.5); // Brownish, semi-transparent track
+        track.fillStyle(0x5D4037, 0.5);
         track.fillRoundedRect(scrollbarX, 0, scrollbarWidth, visibleHeight, 5);
         container.add(track);
 
         const handleHeight = Math.max(20, visibleHeight * (visibleHeight / totalContentHeight));
         const handle = this.add.graphics();
-        handle.fillStyle(0xD2B48C, 1); // Parchment-colored handle
+        handle.fillStyle(0xD2B48C, 1);
         handle.fillRoundedRect(0, 0, scrollbarWidth, handleHeight, 5);
-        const handleContainer = this.add.container(scrollbarX, 0, handle).setInteractive({ draggable: true });
+        
+        const handleContainer = this.add.container(scrollbarX, 0, handle);
         container.add(handleContainer);
-        this.input.setDraggable(handleContainer);
+
+        // Make the handle draggable
+        this.input.setDraggable(handleContainer.setInteractive({
+             hitArea: new Phaser.Geom.Rectangle(0, 0, scrollbarWidth, handleHeight),
+             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+             draggable: true
+        }));
         
         // --- Scrolling functions ---
-        const updateScroll = () => {
-            const scrollPercentage = -scrollableContainer.y / (totalContentHeight - visibleHeight);
-            handleContainer.y = scrollPercentage * (visibleHeight - handleHeight);
+        const updateContentPosition = () => {
+            const scrollPercentage = handleContainer.y / (visibleHeight - handleHeight);
+            scrollableContainer.y = -scrollPercentage * (totalContentHeight - visibleHeight);
         };
         
         // 3. Handle Mouse Wheel Scrolling
-        const zone = this.add.zone(0, 0, totalGridWidth, visibleHeight).setOrigin(0.5, 0).setInteractive();
-        container.add(zone); // Add zone to the main container for correct positioning
+        const zone = this.add.zone(startX, 0, totalGridWidth, visibleHeight).setOrigin(0, 0).setInteractive();
+        container.add(zone);
         
-        zone.on('wheel', (pointer: Phaser.Input.Pointer, dx: number, dy: number) => {
-            scrollableContainer.y -= dy * 0.5;
-            scrollableContainer.y = Phaser.Math.Clamp(scrollableContainer.y, visibleHeight - totalContentHeight, 0);
-            updateScroll(); // Update handle position
+        zone.on('wheel', (pointer: Phaser.Input.Pointer) => {
+            let newY = handleContainer.y + pointer.deltaY * 0.2;
+            handleContainer.y = Phaser.Math.Clamp(newY, 0, visibleHeight - handleHeight);
+            updateContentPosition();
         });
 
         // 4. Handle Dragging the Scrollbar Handle
         handleContainer.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
             handleContainer.y = Phaser.Math.Clamp(dragY, 0, visibleHeight - handleHeight);
-            const scrollPercentage = handleContainer.y / (visibleHeight - handleHeight);
-            scrollableContainer.y = -scrollPercentage * (totalContentHeight - visibleHeight);
+            updateContentPosition();
         });
     }
     
