@@ -24,8 +24,10 @@ export class GameState {
     public clueState: Record<string, ClueRuntimeState> = {};
     private eventsAddressed: Set<string> = new Set();
 
-    public boardNodePositions: { [nodeId: string]: BoardNodePosition } = {};
-    public boardConnections: BoardConnectionData[] = [];
+    public boardNodePositions: { [caseId: string]: { [nodeId: string]: BoardNodePosition } } = {};
+
+    // Vi gemmer et array af connections per Case ID
+    public boardConnections: { [caseId: string]: BoardConnectionData[] } = {};
 
     public culpritId: string | null = null;
     public culpritDetails: any | null = null;

@@ -25,7 +25,6 @@ export class CaseSelectionScene extends Phaser.Scene {
             .setOrigin(0)
             .setInteractive();
 
-        // Let's add a log to see if it even registers a click.
         blocker.on('pointerdown', () => {
             console.log('[CaseSelectionScene] Modal blocker was clicked! The scene IS receiving input.');
         });
@@ -64,7 +63,7 @@ export class CaseSelectionScene extends Phaser.Scene {
 
         console.log('[CaseSelectionScene] 8. Starting to create case cards...');
         let yPos = 0;
-        const cardHeight = 110;
+        const cardHeight = 150;
         const cardSpacing = 20;
         const cardWidth = 750;
 
@@ -85,15 +84,62 @@ export class CaseSelectionScene extends Phaser.Scene {
         const cardBg = this.add.graphics();
         cardBg.fillStyle(0xf5e6d3, 1);
         cardBg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
-        card.add(cardBg);
 
         const title = this.add.text(-width / 2 + 40, -height / 2 + 20, caseData.case_title, {
             fontSize: '20px', color: '#333333', fontStyle: 'bold'
         });
-        const description = this.add.text(-width / 2 + 40, -height / 2 + 48, caseData.case_description_task, {
-            fontSize: '14px', color: '#555555', wordWrap: { width: width - 200 }
+
+        const descWidth = width - 200;
+        const descHeight = height - 80; // visible window for the description text
+        const descY = -height / 2 + 48;
+        const description = this.add.text(-width / 2 + 40, descY, caseData.case_description_task, {
+            fontSize: '14px', color: '#555555', wordWrap: { width: descWidth }
         });
-        card.add([title, description]);
+
+        // Use crop to clip text; only enable scroll when it actually overflows
+        description.setCrop(0, 0, descWidth, descHeight);
+
+        let scrollOffset = 0;
+        const maxScroll = Math.max(0, description.height - descHeight);
+        const scrollZone = this.add.zone(-width / 2 + 40, descY, descWidth, descHeight).setOrigin(0);
+
+        // Optional scrollbar visuals
+        let handleContainer: Phaser.GameObjects.Container | undefined;
+        if (maxScroll > 0) {
+            // Track
+            const barX = -width / 2 + 40 + descWidth + 6;
+            const track = this.add.graphics({ x: barX, y: descY });
+            const trackWidth = 10;
+            track.fillStyle(0x4a2e1a, 0.85);
+            track.fillRoundedRect(0, 0, trackWidth, descHeight, 4);
+
+            // Handle
+            const handleHeight = Math.max(20, descHeight * (descHeight / (description.height || descHeight)));
+            const handle = this.add.graphics();
+            handle.fillStyle(0xf4a460, 1);
+            handle.fillRoundedRect(0, 0, trackWidth, handleHeight, 4);
+            handleContainer = this.add.container(barX, descY, handle);
+            handleContainer
+                .setSize(trackWidth, handleHeight)
+                .setInteractive(new Phaser.Geom.Rectangle(0, 0, trackWidth, handleHeight), Phaser.Geom.Rectangle.Contains);
+
+            // Drag scrolling (requires interactive hit area)
+            this.input.setDraggable(handleContainer, true);
+            handleContainer.on('drag', (_p: any, _dx: number, dragY: number) => {
+                const clampedY = Phaser.Math.Clamp(dragY, descY, descY + descHeight - handleHeight);
+                handleContainer!.setY(clampedY);
+                const pct = (clampedY - descY) / (descHeight - handleHeight);
+                scrollOffset = pct * maxScroll;
+                description.setCrop(0, scrollOffset, descWidth, descHeight);
+            });
+
+            scrollZone.setInteractive(); // keep for pointer hover if needed; wheel intentionally disabled
+            card.add([track, handleContainer]);
+        } else {
+            // No overflow: remove crop so text renders normally and disable scroll interaction
+            description.setCrop();
+            scrollZone.disableInteractive();
+        }
 
         const status = caseData.status || 'open';
         const statusColorHex = status === 'cold' ? 0x90b4d4 : 0xfbc47a;
@@ -103,7 +149,8 @@ export class CaseSelectionScene extends Phaser.Scene {
         const statusText = this.add.text(width / 2 - 60, 0, status.toUpperCase(), {
             fontSize: '12px', color: '#333333', fontStyle: 'bold'
         }).setOrigin(0.5);
-        card.add([statusBg, statusText]);
+
+        card.add([cardBg, title, description, scrollZone, statusBg, statusText]);
 
         card.setSize(width, height).setInteractive({ useHandCursor: true });
         card.on('pointerdown', () => {
