@@ -9,7 +9,6 @@ import { VictoryScene } from './scenes/GameScriptScenes/victoryScene';
 import { GuideScene } from './guideScripts/guide';
 import { ClueDisplayJournalScene } from './clueScripts/clueDisplay';
 import { PeopleDisplayJournalScene } from './clueScripts/peopleDisplay';
-import { AccusationScene } from './clueScripts/Accusation_scripts/AccusationScene';
 import { DevHUD } from './scenes/DevHUD';
 import { DragAbleClueScene } from './clueScripts/dragAbleClueScene';
 import { Game } from './scenes/Game';
@@ -59,7 +58,6 @@ const config: Phaser.Types.Core.GameConfig = {
         CaseDetailsScene,
         ClueDisplayJournalScene,
         PeopleDisplayJournalScene,
-        AccusationScene,
         DragAbleClueScene,
         DevHUD
     ],

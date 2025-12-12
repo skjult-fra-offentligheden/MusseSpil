@@ -633,24 +633,51 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         (this.accuseButton?.getAt(0) as Phaser.GameObjects.GameObject).setInteractive();
     }
     
-    private createAccuseButton(width: number): Phaser.GameObjects.Container {
+private createAccuseButton(width: number): Phaser.GameObjects.Container {
         const btnContainer = this.add.container(0, 0);
         const btnWidth = width * 0.7;
         const btnHeight = 60;
+        
         const bg = this.add.graphics();
         bg.fillStyle(0xdc2626, 1);
         bg.fillRoundedRect(-btnWidth / 2, 0, btnWidth, btnHeight, 30);
+        
         const text = this.add.text(0, btnHeight / 2, '⚖️ Accuse Suspect', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+        
         btnContainer.add([bg, text]);
-        btnContainer.setSize(btnWidth, btnHeight).setAlpha(0.5);
+        btnContainer.setSize(btnWidth, btnHeight).setAlpha(0.5); // Disabled by default
+
+        // Logic for when the button is clicked
+        bg.setInteractive({ useHandCursor: true });
         bg.on('pointerdown', () => {
             if (this.selectedSuspectId) {
-                this.scene.get('ToturialScene').scene.start('GameOver', {
-                     reason: `You accused ${ (AllNPCsConfigs as any)[this.selectedSuspectId].displayName }.`,
-                     fromSceneKey: this.originScene
-                });
+                console.log(`[CaseDetailsScene] Accusing: ${this.selectedSuspectId}`);
+                
+                // 1. Check if they are the culprit
+                const isCulprit = this.gameState.culpritId === this.selectedSuspectId;
+                const suspectConfig = (AllNPCsConfigs as any)[this.selectedSuspectId];
+                const suspectName = suspectConfig ? suspectConfig.displayName : this.selectedSuspectId;
+
+                // 2. Close any open background scenes (like CaseSelection)
+                this.scene.stop('CaseSelectionScene');
+
+                // 3. Transition to the Result Scene
+                if (isCulprit) {
+                    console.log("[CaseDetailsScene] VICTORY!");
+                    this.scene.start('VictoryScene', { 
+                        suspectId: this.selectedSuspectId, 
+                        culpritDetails: this.gameState.culpritDetails 
+                    });
+                } else {
+                    console.log("[CaseDetailsScene] WRONG SUSPECT - GAME OVER");
+                    this.scene.start('GameOver', {
+                         reason: `You accused ${suspectName}, but they were innocent!`,
+                         fromSceneKey: this.originScene
+                    });
+                }
             }
         });
+        
         return btnContainer;
     }
 
