@@ -24,6 +24,7 @@ export class DialogueUI {
         this.spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
         this.scene.scale.on('resize', this.onResize, this);
+        this.scene.events.once('shutdown', this.destroy, this);
     }
 
     public setScene(scene: Phaser.Scene): void {
@@ -71,6 +72,15 @@ export class DialogueUI {
         // We will add options dynamically in showDialogue, so no need to create a container here
 
         return container;
+    }
+
+    public destroy() {
+        // Stop listening to resize events so we don't try to resize a destroyed object
+        this.scene.scale.off('resize', this.onResize, this);
+        
+        if (this.dialogueBox) {
+            this.dialogueBox.destroy();
+        }
     }
 
     public setPortrait(textureKey: string) {

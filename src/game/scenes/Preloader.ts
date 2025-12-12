@@ -30,10 +30,10 @@ export class Preloader extends Scene
         this.load.setPath('assets');
 
         ////Dialog, toturial:
-        this.load.json("cop2_toturial", "tilemaps/toturial_inside/cop2.json");
-        this.load.json("orangeshirt_toturial", "tilemaps/toturial_inside/orangeShirtMouse.json");
-        this.load.json("rockerMouse_toturial", "tilemaps/toturial_inside/rockerMouse.json");
-        this.load.json("pinkdressMouse_toturial", "tilemaps/toturial_inside/pinkDressGirlMouse.json");
+        // this.load.json("cop2_toturial", "tilemaps/toturial_inside/cop2.json");
+        // this.load.json("orangeshirt_toturial", "tilemaps/toturial_inside/orangeShirtMouse.json");
+        // this.load.json("rockerMouse_toturial", "tilemaps/toturial_inside/rockerMouse.json");
+        // this.load.json("pinkdressMouse_toturial", "tilemaps/toturial_inside/pinkDressGirlMouse.json");
         //this.load.json("objects_dialogues_toturial", "tilemaps/toturial_inside/objectsDialogue.json");
         //this.load.json("toturial_clues", "tilemaps/toturial_inside/clues.json");
 

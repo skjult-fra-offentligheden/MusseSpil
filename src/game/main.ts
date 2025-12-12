@@ -12,7 +12,7 @@ import { PeopleDisplayJournalScene } from './clueScripts/peopleDisplay';
 import { AccusationScene } from './clueScripts/Accusation_scripts/AccusationScene';
 import { DevHUD } from './scenes/DevHUD';
 import { DragAbleClueScene } from './clueScripts/dragAbleClueScene';
-
+import { Game } from './scenes/Game';
 // --- THESE ARE THE NEW, CORRECT IMPORTS ---
 import { CaseSelectionScene } from './clueScripts/CaseSelectionScene';
 import { CaseDetailsScene } from './clueScripts/CaseDetailsScene';
@@ -47,6 +47,7 @@ const config: Phaser.Types.Core.GameConfig = {
     scene: [
         Boot,
         Preloader,
+        Game,
         MainMenu,
         ToturialScene,
         UIGameOverlay,

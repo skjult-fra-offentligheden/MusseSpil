@@ -8,35 +8,4 @@
         "category": "evidence",
         "discovered": true
     }
-    //"Examine_phone": {
-    //    "id": "cluePhone",
-    //    "title": "Phone inspection",
-    //    "description": "this phone has texts about drug deals on it. Who does it belong to?",
-    //    "imageKey?": null,
-    //    "foundAt": "toturial",
-    //    "relatedNPCs": [ "DetectiveMouse" ],
-    //    "category": "evidence",
-    //    "discovered": false
-    //},
-    //"Examine_cokebag": {
-    //    "id": "clueCoke",
-    //    "title": "Examine cokebag",
-    //    "description": "This bag of coke was for sale. But who was the seller?",
-    //    "imageKey?": null,
-    //    "foundAt": "toturial",
-    //    "relatedNPCs": [ "DetectiveMouse" ],
-    //    "category": "evidence",
-    //    "discovered": true
-    //},
-    //"Examine_glue": {
-    //    "id": "glue",
-    //    "title": "Examine glue",
-    //    "description": "This is some glue",
-    //    "imageKey?": null,
-    //    "foundAt": "toturial",
-    //    "relatedNPCs": [ "DetectiveMouse" ],
-    //    "category": "evidence",
-    //    "discovered": true
-    //}
-
 }
