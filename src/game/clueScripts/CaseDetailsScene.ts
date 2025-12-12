@@ -483,13 +483,9 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
             const card = this.createSuspectCard(id, cardWidth);
             const col = index % colCount;
             const row = Math.floor(index / colCount);
-            const xPos = -contentWidth / 2 + col * (cardWidth + 20);
-            const yPos = gridY + row * (card.height + 20);
+            const xPos = -contentWidth / 2 + col * (cardWidth + 20) + (cardWidth / 2); 
+            const yPos = gridY + row * (card.height + 20) + (card.height / 2);
             card.setPosition(xPos, yPos);
-            const debugGraphics = this.add.graphics();
-            debugGraphics.lineStyle(4, 0xffff00, 1); // Thick Green Line
-            debugGraphics.strokeRect(0, 0, cardWidth, 120);
-            card.add(debugGraphics);
             scrollableContainer.add(card);
             this.suspectCardMap.set(id, card);
             card.on('pointerdown', () => {
@@ -565,16 +561,16 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const bg = this.add.graphics();
         bg.fillStyle(0xffffff, 1);
         bg.lineStyle(2, 0xd2b48c, 1);
-        bg.fillRoundedRect(0, 0, width, height, 10);
-        bg.strokeRoundedRect(0, 0, width, height, 10);
+        bg.fillRoundedRect(-width / 2, -height / 2, width, height, 10);
+        bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 10);
 
         const selection = this.add.graphics().setName('selectionIndicator');
         selection.lineStyle(4, 0xdc2626, 0); 
-        selection.strokeRoundedRect(0, 0, width, height, 10);
+        selection.strokeRoundedRect(-width / 2, -height / 2, width, height, 10);
 
         const portraitSize = 60;
-        const portraitX = 45;
-        const portraitY = 45;
+        const portraitX = -width / 2 + 45; // WAS: 45
+        const portraitY = -height / 2 + 45;
 
         const portrait = this.add.image(portraitX, portraitY, suspect.portrait.textureKey || 'portrait_unknown');
         portrait.setDisplaySize(portraitSize, portraitSize);
@@ -588,16 +584,16 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         portraitRing.lineStyle(2, 0x8B4513, 1);
         portraitRing.strokeCircle(portraitX, portraitY, portraitSize / 2);
 
-        const name = this.add.text(portraitX + 40, 25, suspect.displayName, { 
+        const name = this.add.text(portraitX + 40, -40, suspect.displayName, { 
             fontFamily: 'Georgia, serif', fontSize: '16px', color: '#543d25', fontStyle: 'bold', wordWrap: { width: width - (portraitX + 50) }
         });
         
-        const textStartY = 90;
+        const textStartY = -height / 2+55;
         const textStyle = { fontSize: '11px', color: '#543d25', wordWrap: { width: width - 20 } };
         const labelStyle = { fontSize: '11px', color: '#8B4513', fontStyle: 'bold' };
 
-        const alibiLabel = this.add.text(10, textStartY, '📍 Mice desc:', labelStyle);
-        const alibiText = this.add.text(10, textStartY + 15, suspect.alibi || 'Will be provided later', textStyle);
+        const alibiLabel = this.add.text(-width/4, textStartY, '📍 Mice desc:', labelStyle);
+        const alibiText = this.add.text(-width/4, textStartY + 15, suspect.alibi || 'Will be provided later', textStyle);
 
         card.add([bg, portrait, portraitRing, name, alibiLabel, alibiText, selection]);
         card.setSize(width, height);
@@ -605,13 +601,12 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         // --- FIX IS HERE ---
         // Instead of letting setInteractive() guess the center (which results in an offset hit area),
         // we explicitly define the hit area to match the top-left coordinate system used by the Graphics (bg).
-        const hitArea = new Phaser.Geom.Rectangle(0, 0, width, height); //problem her
-        card.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        card.setInteractive();
         card.input!.cursor = 'pointer';
-        const debugGraphics = this.add.graphics();
-        debugGraphics.lineStyle(4, 0x00ff00, 1); // Thick Green Line
-        debugGraphics.strokeRect(0, 0, width, height);
-        card.add(debugGraphics);
+        // const debugGraphics = this.add.graphics();
+        // debugGraphics.lineStyle(4, 0x00ff00, 1); // Thick Green Line
+        // debugGraphics.strokeRect(0, 0, width, height);
+        // card.add(debugGraphics);
         return card;
     }
 
@@ -620,14 +615,24 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.suspectCardMap.forEach((card, id) => {
             const indicator = card.getByName('selectionIndicator') as Phaser.GameObjects.Graphics;
             indicator.clear();
-                if (id === suspectId) {
-                    indicator.lineStyle(4, 0xdc2626, 1);
-                    indicator.strokeRoundedRect(0, 0, card.width, card.height, 10);
-                } else {
-                    indicator.lineStyle(4, 0xdc2626, 0);
-                    indicator.strokeRoundedRect(0, 0, card.width, card.height, 10);
-                }
+            
+            // --- FIX: Calculate offset relative to center ---
+            const offsetX = -card.width / 2;
+            const offsetY = -card.height / 2;
+
+            if (id === suspectId) {
+                indicator.lineStyle(4, 0xdc2626, 1);
+                // WAS: 0, 0
+                // NOW: offsetX, offsetY
+                indicator.strokeRoundedRect(offsetX, offsetY, card.width, card.height, 10);
+            } else {
+                indicator.lineStyle(4, 0xdc2626, 0);
+                // WAS: 0, 0
+                // NOW: offsetX, offsetY
+                indicator.strokeRoundedRect(offsetX, offsetY, card.width, card.height, 10);
+            }
         });
+
         this.accuseDetailsContainer?.setVisible(true);
         this.accuseButton?.setAlpha(1);
         (this.accuseButton?.getAt(1) as Phaser.GameObjects.Text).setText(`⚖️ Accuse ${ (AllNPCsConfigs as any)[suspectId].displayName }`);
