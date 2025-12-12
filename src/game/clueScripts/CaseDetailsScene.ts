@@ -7,9 +7,9 @@ import { UIManager } from '../managers/UIManager';
 import { TutorialCase } from '../../cases/TutorialCase';
 import { Clue } from '../classes/clue';
 import { GameState, BoardNodePosition, BoardConnectionData } from '../managers/GameState';
+import { Suspect } from './Accusation_scripts/suspect'; 
 
 type JournalTab = 'Mice' | 'Clues' | 'Board' | 'Accuse';
-// A new type to help manage draggable items on the board
 type BoardNode = { id: string, type: 'person' | 'clue', gameObject: Phaser.GameObjects.Container };
 
 export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher {
@@ -22,18 +22,18 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private headerContainer!: Phaser.GameObjects.Container;
     private tabsContainer!: Phaser.GameObjects.Container;
     
-    // --- All existing UI elements ---
+    // UI elements
     private journalContainer!: Phaser.GameObjects.Container;
     private tabs: { [key in JournalTab]?: Phaser.GameObjects.Text } = {};
     private contentPanes: { [key in JournalTab]?: Phaser.GameObjects.Container } = {};
 
-    // --- State for Accuse Tab ---
+    // Accuse Tab State
     private selectedSuspectId: string | null = null;
     private suspectCardMap: Map<string, Phaser.GameObjects.Container> = new Map();
     private accuseDetailsContainer?: Phaser.GameObjects.Container;
     private accuseButton?: Phaser.GameObjects.Container;
 
-    // --- NEW: State for Board Tab ---
+    // Board Tab State
     private boardNodes: BoardNode[] = [];
     private connections: { from: BoardNode, to: BoardNode }[] = [];
     private connectionLine!: Phaser.GameObjects.Graphics;
@@ -44,18 +44,14 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     private boardDragBounds!: Phaser.Geom.Rectangle;
     private initialJournalScale: number = 1;
     
-    private fullscreenBg!: Phaser.GameObjects.Rectangle; // Den store baggrund
-    private smallBoardBounds!: Phaser.Geom.Rectangle;     // De originale grænser (inde i bogen)
+    private fullscreenBg!: Phaser.GameObjects.Rectangle; 
+    private smallBoardBounds!: Phaser.Geom.Rectangle;     
     private boardZoneContainer!: Phaser.GameObjects.Container;
-    
-    // Den nye knap-container der ligger ovenpå alt
     private closeBtnContainer?: Phaser.GameObjects.Container; 
 
     constructor() {
         super({ key: 'CaseDetailsScene' });
     }
-
-    // --- LIFECYCLE METHODS ---
 
     preload() {
         this.load.image('journal_details_bg', 'assets/journal_assets/journal_details_bg.png');
@@ -83,31 +79,26 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
     }
     
     update() {
-        // This is new: it redraws the connection lines on the board every frame
         if (this.activeTab === 'Board' && !this.isBoardFullscreen) {
             this.drawConnections();
         } else if (this.activeTab === 'Board' && this.isBoardFullscreen) {
-             // Tegn også connections i fullscreen mode
              this.drawConnections();
         }
     }
 
-    // --- UI BUILDING ---
     private buildJournalUI() {
         const { width, height } = this.scale;
         this.journalContainer = this.add.container(width / 2, height / 2);
 
-        // VIGTIGT: Vi giver den et navn, så vi kan finde den senere
         const bg = this.add.image(0, 0, 'journal_details_bg').setName('journalBackground');
         
         this.initialJournalScale = Math.min((width * 0.9) / bg.width, (height * 0.9) / bg.height);
-        this.journalContainer.setScale(this.initialJournalScale); // Set the initial scale
+        this.journalContainer.setScale(this.initialJournalScale); 
         this.journalContainer.add(bg);
 
         const containerWidth = bg.width;
         const containerHeight = bg.height;
 
-        // Create containers for UI sections to make them easy to hide
         this.headerContainer = this.add.container(0, 0);
         this.tabsContainer = this.add.container(0, 0);
         this.journalContainer.add([this.headerContainer, this.tabsContainer]);
@@ -196,8 +187,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         }
     }
     
-    // --- CONTENT PANE CREATORS ---
-
     private createMiceContent(width: number, height: number): Phaser.GameObjects.Container {
         const contentY = -height / 2 + 330;
         const container = this.add.container(0, contentY);
@@ -347,7 +336,6 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const contentWidth = width * 0.85;
         const container = this.add.container(0, contentY);
         
-        // --- 1. Opret Scroll Zone til musen (Lægges BAGERST) ---
         const visibleHeight = 440; 
         const zone = this.add.zone(0, visibleHeight/2, contentWidth, visibleHeight)
             .setInteractive();
@@ -498,9 +486,12 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
             const xPos = -contentWidth / 2 + col * (cardWidth + 20);
             const yPos = gridY + row * (card.height + 20);
             card.setPosition(xPos, yPos);
+            const debugGraphics = this.add.graphics();
+            debugGraphics.lineStyle(4, 0xffff00, 1); // Thick Green Line
+            debugGraphics.strokeRect(0, 0, cardWidth, 120);
+            card.add(debugGraphics);
             scrollableContainer.add(card);
             this.suspectCardMap.set(id, card);
-            card.setInteractive({ useHandCursor: true });
             card.on('pointerdown', () => {
                 this.handleSuspectSelected(id);
             });
@@ -570,7 +561,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         const height = 120;
         const card = this.add.container(0, 0);
         const suspect = (AllNPCsConfigs as any)[suspectId];
-        
+        width = width;
         const bg = this.add.graphics();
         bg.fillStyle(0xffffff, 1);
         bg.lineStyle(2, 0xd2b48c, 1);
@@ -611,6 +602,16 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         card.add([bg, portrait, portraitRing, name, alibiLabel, alibiText, selection]);
         card.setSize(width, height);
 
+        // --- FIX IS HERE ---
+        // Instead of letting setInteractive() guess the center (which results in an offset hit area),
+        // we explicitly define the hit area to match the top-left coordinate system used by the Graphics (bg).
+        const hitArea = new Phaser.Geom.Rectangle(0, 0, width, height); //problem her
+        card.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        card.input!.cursor = 'pointer';
+        const debugGraphics = this.add.graphics();
+        debugGraphics.lineStyle(4, 0x00ff00, 1); // Thick Green Line
+        debugGraphics.strokeRect(0, 0, width, height);
+        card.add(debugGraphics);
         return card;
     }
 
@@ -630,10 +631,9 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         this.accuseDetailsContainer?.setVisible(true);
         this.accuseButton?.setAlpha(1);
         (this.accuseButton?.getAt(1) as Phaser.GameObjects.Text).setText(`⚖️ Accuse ${ (AllNPCsConfigs as any)[suspectId].displayName }`);
-        (this.accuseButton?.getAt(0) as Phaser.GameObjects.GameObject).setInteractive();
     }
     
-private createAccuseButton(width: number): Phaser.GameObjects.Container {
+    private createAccuseButton(width: number): Phaser.GameObjects.Container {
         const btnContainer = this.add.container(0, 0);
         const btnWidth = width * 0.7;
         const btnHeight = 60;
@@ -647,31 +647,44 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
         btnContainer.add([bg, text]);
         btnContainer.setSize(btnWidth, btnHeight).setAlpha(0.5); // Disabled by default
 
-        // Logic for when the button is clicked
-        bg.setInteractive({ useHandCursor: true });
+        const hitAreaRect = new Phaser.Geom.Rectangle(-btnWidth / 2, 0, btnWidth, btnHeight);
+        bg.setInteractive(hitAreaRect, Phaser.Geom.Rectangle.Contains);
+        bg.input!.cursor = 'pointer';
+
         bg.on('pointerdown', () => {
             if (this.selectedSuspectId) {
                 console.log(`[CaseDetailsScene] Accusing: ${this.selectedSuspectId}`);
                 
-                // 1. Check if they are the culprit
                 const isCulprit = this.gameState.culpritId === this.selectedSuspectId;
-                const suspectConfig = (AllNPCsConfigs as any)[this.selectedSuspectId];
-                const suspectName = suspectConfig ? suspectConfig.displayName : this.selectedSuspectId;
+                const config = (AllNPCsConfigs as any)[this.selectedSuspectId];
 
-                // 2. Close any open background scenes (like CaseSelection)
+                const suspectObj: Suspect = {
+                    id: this.selectedSuspectId,
+                    name: config?.displayName || this.selectedSuspectId,
+                    description: config?.description || 'No description',
+                    imageKey: config?.portrait?.textureKey || 'portrait_unknown',
+                    isCulprit: isCulprit,
+                    motive: config?.culpritDetails?.motive,
+                    alibi: config?.alibi
+                };
+
+                const motive = this.gameState.culpritDetails?.motive || "Unknown Motive";
+                const crime = this.gameState.culpritDetails?.crime || "The Case of the Missing Cheese"; 
+
                 this.scene.stop('CaseSelectionScene');
 
-                // 3. Transition to the Result Scene
                 if (isCulprit) {
                     console.log("[CaseDetailsScene] VICTORY!");
                     this.scene.start('VictoryScene', { 
-                        suspectId: this.selectedSuspectId, 
-                        culpritDetails: this.gameState.culpritDetails 
+                        suspect: suspectObj, 
+                        culprintDetailsMotive: motive,
+                        culprintDetailsCrime: crime
                     });
                 } else {
                     console.log("[CaseDetailsScene] WRONG SUSPECT - GAME OVER");
                     this.scene.start('GameOver', {
-                         reason: `You accused ${suspectName}, but they were innocent!`,
+                         suspect: suspectObj, 
+                         reason: undefined,   
                          fromSceneKey: this.originScene
                     });
                 }
@@ -711,7 +724,7 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
         const boardArea = this.add.graphics();
         boardArea.fillStyle(0xfde68a, 1);
         boardArea.fillRoundedRect(-contentWidth / 2, 0, contentWidth, contentHeight - boardY, 10);
-        boardArea.setName('smallBoardBg'); // VIGTIGT
+        boardArea.setName('smallBoardBg'); 
         this.boardZoneContainer.add(boardArea);
 
         this.smallBoardBounds = new Phaser.Geom.Rectangle(-contentWidth / 2, 0, contentWidth, contentHeight - boardY);
@@ -727,7 +740,7 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
 
         this.connectionLine = this.add.graphics();
         this.connectionLine.setDepth(10);
-        this.boardZoneContainer.add(this.connectionLine); // Tilføj til zone!
+        this.boardZoneContainer.add(this.connectionLine); 
 
         if (!this.gameState.boardNodePositions[this.activeCaseId]) {
              this.gameState.boardNodePositions[this.activeCaseId] = {};
@@ -743,12 +756,7 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
             const savedPos = caseNodePositions[id];
             
             const defaultX = -contentWidth / 2 + 100;
-            const defaultY = boardY + 70 + index * 120; // 0 i boardZone er toppen, så vi behøver ikke boardY her hvis noden er i zonen. Men lad os holde det.
-            // Hvis vi tilføjer til boardZoneContainer, er 0,0 toppen af det gule område.
-            // Så Y skal være relativ til det. 
-            // Din 'defaultY' ovenfor inkluderer 'boardY'. Hvis 'boardZoneContainer' allerede er flyttet ned med boardY,
-            // så vil noderne blive skubbet dobbelt ned.
-            // FIX: Relativ Y.
+            const defaultY = boardY + 70 + index * 120; 
             const relativeDefaultY = 70 + index * 120;
 
             node.setPosition(savedPos?.x ?? defaultX, savedPos?.y ?? relativeDefaultY);
@@ -791,8 +799,6 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
     const height = 100;
     const nodeContainer = this.add.container(0,0).setSize(width, height).setInteractive();
     
-    // FIX A: Set Node Depth higher than the line (which is 10)
-    // This ensures the card is always physically ON TOP of the red line
     nodeContainer.setDepth(100); 
 
     this.input.setDraggable(nodeContainer, true);
@@ -816,21 +822,16 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
     
     nodeContainer.add([bg, label, connectButton]);
 
-    // FIX B: Smart Click Handling
     connectButton.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
-        // If we are currently dragging a connection line...
         if (this.isConnecting) {
-            // ...then clicking this button should FINISH the connection
             this.handleConnectionEnd(id, type);
             event.stopPropagation();
         } else {
-            // ...otherwise, START a new connection
             event.stopPropagation();
             this.handleConnectionStart(id, type);
         }
     });
 
-    // Clicking the card body also finishes the connection
     nodeContainer.on('pointerdown', () => { 
         if (this.isConnecting) this.handleConnectionEnd(id, type); 
     });
@@ -855,30 +856,25 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
     private toggleBoardFullscreen(button: Phaser.GameObjects.Text) {
         this.isBoardFullscreen = !this.isBoardFullscreen;
         
-        // Find objects by name for safety
         const journalBg = this.journalContainer.getByName('journalBackground') as Phaser.GameObjects.Image;
         const smallBoardBg = this.boardZoneContainer.getByName('smallBoardBg') as Phaser.GameObjects.Graphics;
-        const journalCloseBtn = this.journalContainer.getByName('journalCloseBtn') as Phaser.GameObjects.Text; // <--- NEW
+        const journalCloseBtn = this.journalContainer.getByName('journalCloseBtn') as Phaser.GameObjects.Text; 
 
         const boardPane = this.contentPanes['Board'];
-        const boardTitle = boardPane?.getByName('boardTitle') as Phaser.GameObjects.Text; // <--- NEW
-        const boardInstr = boardPane?.getByName('boardInstructions') as Phaser.GameObjects.Text; // <--- NEW
+        const boardTitle = boardPane?.getByName('boardTitle') as Phaser.GameObjects.Text; 
+        const boardInstr = boardPane?.getByName('boardInstructions') as Phaser.GameObjects.Text; 
         
         const { width, height } = this.scale;
         const originalBoardY = 70; 
 
         if (this.isBoardFullscreen) {
-            // --- EXPAND TO FULLSCREEN ---
             
-            // 1. Show big background
             this.fullscreenBg.setVisible(true);
-            this.fullscreenBg.setInteractive(); // Enable input on BG to block clicks passing through
+            this.fullscreenBg.setInteractive(); 
             this.fullscreenBg.setDepth(-1); 
 
-            // 2. Bring Journal to front
             this.journalContainer.setDepth(100); 
 
-            // 3. Hide Journal UI
             if (journalBg) journalBg.setVisible(false);
             if (smallBoardBg) smallBoardBg.setVisible(false);
             if (journalCloseBtn) journalCloseBtn.setVisible(false); 
@@ -888,7 +884,6 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
             this.headerContainer.setVisible(false);
             this.tabsContainer.setVisible(false);
 
-            // 4. Animate to Full Screen
             this.tweens.add({
                 targets: this.journalContainer,
                 scale: 1,
@@ -899,10 +894,8 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
             
             this.boardZoneContainer.y = 0;
             
-            // Hide the original expand button
             button.setVisible(false);
 
-            // Create new "Close" container on top
             if (this.closeBtnContainer) this.closeBtnContainer.destroy();
             this.closeBtnContainer = this.add.container(0, 0).setDepth(9999).setScrollFactor(0);
 
@@ -917,21 +910,17 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
             this.closeBtnContainer.add([bg, text]);
             this.closeBtnContainer.setPosition(width - 100, 50)
 
-            // 5. Remove Mask and expand bounds
             this.boardZoneContainer.clearMask();
             this.boardDragBounds.setTo(-2000, -2000, 4000, 4000);
 
         } else {
-            // --- SHRINK TO JOURNAL ---
 
-            // FIX 1: Disable background interaction so it cannot steal clicks
             this.fullscreenBg.disableInteractive();
             this.fullscreenBg.setVisible(false);
-            if (journalCloseBtn) journalCloseBtn.setVisible(true); // <--- Show X
-            if (boardTitle) boardTitle.setVisible(true);           // <--- Show Title
+            if (journalCloseBtn) journalCloseBtn.setVisible(true);
+            if (boardTitle) boardTitle.setVisible(true);
             if (boardInstr) boardInstr.setVisible(true);
 
-            // Show elements again
             if (journalBg) journalBg.setVisible(true);
             if (smallBoardBg) smallBoardBg.setVisible(true);
             
@@ -953,28 +942,21 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
 
             this.boardZoneContainer.y = originalBoardY; 
 
-            // --- RESTORE EXPAND BUTTON ---
             button.setVisible(true);
             button.setText('[⤢] Expand');
             
-            // FIX 2: Bring the button to the very top of its container
-            // This ensures the boardZoneContainer (which was added after it) doesn't cover it
             if (button.parentContainer) {
                 button.parentContainer.bringToTop(button);
             }
 
-            // FIX 3: Force refresh the interactive state
-            // Often needed after a parent container has been scaled/tweened/hidden
             button.disableInteractive();
             button.setInteractive({ useHandCursor: true });
             
-            // Destroy temporary close button
             if (this.closeBtnContainer) {
                 this.closeBtnContainer.destroy();
                 this.closeBtnContainer = undefined;
             }
 
-            // Restore Mask & Bounds
             const bgWidth = journalBg.width;
             const contentWidth = bgWidth * 0.85;
             button.setPosition(contentWidth / 2, 10);
@@ -985,7 +967,6 @@ private createAccuseButton(width: number): Phaser.GameObjects.Container {
 
             this.boardDragBounds = Phaser.Geom.Rectangle.Clone(this.smallBoardBounds);
             
-            // Snap Back Logic (Bring nodes back into view)
             this.boardNodes.forEach(nodeData => {
                 const node = nodeData.gameObject;
                 if (!this.boardDragBounds.contains(node.x, node.y)) {
@@ -1014,11 +995,8 @@ private handleConnectionEnd(id: string, type: 'person' | 'clue') {
         
         if (this.connectionStartNode && endNode && this.connectionStartNode.id !== endNode.id) {
             
-            // 1. Get the array for the CURRENT case only
-            // If it doesn't exist yet, default to an empty array so .some() doesn't crash
             const currentCaseConns = this.gameState.boardConnections[this.activeCaseId] || [];
 
-            // 2. Check for duplicates inside that specific array
             const alreadyExists = currentCaseConns.some(
                 (c: any) => (c.fromId === this.connectionStartNode!.id && c.toId === endNode.id) ||
                             (c.fromId === endNode.id && c.toId === this.connectionStartNode!.id)
@@ -1027,37 +1005,31 @@ private handleConnectionEnd(id: string, type: 'person' | 'clue') {
             if (!alreadyExists) {
                 const connData = { fromId: this.connectionStartNode.id, toId: endNode.id };
                 
-                // 3. Ensure the array exists in GameState before pushing
                 if (!this.gameState.boardConnections[this.activeCaseId]) {
                     this.gameState.boardConnections[this.activeCaseId] = [];
                 }
 
-                // 4. Save to GameState
                 this.gameState.boardConnections[this.activeCaseId].push(connData);
                 this.gameState.save();
 
-                // 5. Update the visual lines immediately
                 this.connections.push({ from: this.connectionStartNode, to: endNode });
             }
         }
         
-        // Reset state
         this.isConnecting = false;
         this.connectionStartNode = null;
     }
 
     private handleConnectionStart(id: string, type: 'person' | 'clue') {
         this.time.delayedCall(50, () => {
-        this.isConnecting = true;
-        this.connectionStartNode = this.boardNodes.find(n => n.id === id) || null;
-    });
+            this.isConnecting = true;
+            this.connectionStartNode = this.boardNodes.find(n => n.id === id) || null;
+        });
     }
-
 
     private drawConnections() {
         this.connectionLine.clear().lineStyle(3, 0xef4444, 0.7);
 
-        // FIX: Brug klasse-variablen direkte
         if (!this.boardZoneContainer) return;
 
         this.connections.forEach(conn => {
@@ -1072,7 +1044,6 @@ private handleConnectionEnd(id: string, type: 'person' | 'clue') {
             const pointer = this.input.activePointer;
             const pointerPosition = new Phaser.Math.Vector2(pointer.x, pointer.y);
             
-            // Brug boardZoneContainer direkte her
             const matrix = this.boardZoneContainer.getWorldTransformMatrix();
             
             matrix.invert();
@@ -1086,7 +1057,6 @@ private handleConnectionEnd(id: string, type: 'person' | 'clue') {
             );
         }
     }
-    // --- UTILITY AND INTERFACE METHODS ---
 
     private closeJournal() {
         UIManager.getInstance().setJournalHotkeyEnabled(false);
