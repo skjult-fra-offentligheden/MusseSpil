@@ -3,7 +3,7 @@
         "rockerMouse": [
             {
                 "id": "greeting",
-                "speaker": "Rocker",
+                "speaker": "Mouse Jared",
                 "text": "This is bogus! I was just fixin' my guitar stand, got glue everywhere",
                 "options": [
                     {
@@ -22,7 +22,7 @@
             },
             {
                 "id": "play_stupid",
-                "speaker": "Rocker",
+                "speaker": "Mouse Jared",
                 "text": "Kill the guy",
                 "options": [
                     {
@@ -41,19 +41,19 @@
             },
             {
                 "id": "no_thanks",
-                "speaker": "Rocker",
+                "speaker": "Mouse Jared",
                 "text": "Detective, disrespectfully, leave",
                 "options": []
             },
             {
                 "id": "play_stupid2",
-                "speaker": "Rocker",
+                "speaker": "Mouse Jared",
                 "text": "You must be blind",
                 "options": []
             },
             {
                 "id": "Weird",
-                "speaker": "Rocker",
+                "speaker": "Mouse Jared",
                 "text": "... I am not talking to you anymore",
                 "options": []
             }

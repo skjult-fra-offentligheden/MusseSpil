@@ -3,7 +3,7 @@
         "pinkDressGirlMouse": [
             {
                 "id": "greeting",
-                "speaker": "Pink Mouse",
+                "speaker": "Mouse Jennie",
                 "text": "This is beneath me. That phone? Never seen it",
                 "options": [
                     {
@@ -22,13 +22,13 @@
             },
             {
                 "id": "compliment_response",
-                "speaker": "Pink Mouse",
+                "speaker": "Mouse Jennie",
                 "text": "Aww, thank you!",
                 "options": []
             },
             {
                 "id": "dismiss_response",
-                "speaker": "Pink Mouse",
+                "speaker": "Mouse Jennie",
                 "text": "Hmph, you’re just mean.",
                 "options": []
             }

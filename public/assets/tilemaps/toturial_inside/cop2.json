@@ -3,7 +3,7 @@
     [
         {
             "id": "cop2_tutorial_briefing",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Alright Rookie, listen up. We raided a suspected drug operation.",
             "options": [],
             "nextDialogueId": "cop2_tutorial_briefing_2",
@@ -11,14 +11,14 @@
         },
         {
             "id": "cop2_tutorial_briefing_2",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Nabbed these three mice. Scum of the earth mice.",
             "options": [],
             "nextDialogueId": "cop2_tutorial_briefing_3"
         },
         {
             "id": "cop2_tutorial_briefing_3",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "But well, there's only one bag of cocaine, so there is only one seller",
             "options": [],
             "nextDialogueId": "cop2_tutorial_briefing_4"
@@ -26,7 +26,7 @@
         },
         {
             "id": "cop2_tutorial_briefing_4",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "As the newest detective, you need to figure out who it was.",
             "options": [],
             "nextDialogueId": "cop2_tutorial_briefing_5"
@@ -34,21 +34,21 @@
         },
         {
             "id": "cop2_tutorial_briefing_5",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Okay, once you examined them, question the suspects about it.",
             "options": [],
             "nextDialogueId": "cop2_tutorial_briefing_6"
         },
         {
             "id": "cop2_tutorial_briefing_6",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Your job? Figure out which one of these squeakers was the *seller*. Look around, talk to everyone. Got it?",
             "options": [],
             "nextDialogueId": null
         },
         {
             "id": "greeting",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Need some pointers on how things work around here, Detective?",
             "once": false,
             "options": [
@@ -68,7 +68,7 @@
         },
         {
             "id": "ask_help",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Check the evidence on the table first. Inspect items in your journal, sometimes details hide in plain sight. Then talk to the suspects.",
             "options": [
                 {
@@ -89,7 +89,7 @@
         },
         {
             "id": "no_thanks",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Confidence is good, Rookie, but don't let it blind you. Follow procedure.",
             "options": [
 
@@ -113,13 +113,13 @@
         },
         {
             "id": "accept_help_response",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Good. Once you've examined the evidence, see how the suspects react when you ask them about it.",
             "options": []
         },
         {
             "id": "decline_help",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "... Just... try not to mess this up too badly, okay?",
             "options": [],
             "effectKey": "decreaseCopReputation",
@@ -127,7 +127,7 @@
         },
         {
             "id": "special_event_cocaine_gone",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "WHY DID YOU DO THIS. THIS WAS OUR BIGGEST EVINDENCE. ",
             "condition": "playerDidCocaine",
             "once": true,
@@ -150,7 +150,7 @@
         },
         {
             "id": "reveal_next_clue",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "There might be a minor crime related to the cheese",
             "options": [],
             "effectKey": "decreaseCopReputation",
@@ -158,7 +158,7 @@
         },
         {
             "id": "Hostile_cocaine",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": " And probably going to jail!",
             "options": [],
             "effectKey": "triggerGameOverFired",
@@ -166,7 +166,7 @@
         },
         {
             "id": "Sniffed glue_1",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Why the hell are you sniffing glue?! ",
             "condition": "playerDidGlue_1",
             "once": true,
@@ -190,7 +190,7 @@
         },
         {
             "id": "SniffedGlue2",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Fucking stop sniffing glue",
             "condition": "playerDidGlue_2",
             "once": true,
@@ -214,7 +214,7 @@
         },
         {
             "id": "SniffedGlue3",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "You're too retarded to even talk with'",
             "condition": "playerDidGlue_3",
             "options": [
@@ -238,7 +238,7 @@
         },
         {
             "id": "ate_cheese_1",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "Please don't eat the evidence, and save some cheese for me",
             "condition": "player_ate_cheese_1",
             "options": [
@@ -262,7 +262,7 @@
         },
         {
             "id": "ate_cheese_2",
-            "speaker": "Copper Holmes",
+            "speaker": "Chief Whiskers",
             "text": "I WANTED THAT CHESE!",
             "condition": "player_ate_cheese_2",
             "options": [

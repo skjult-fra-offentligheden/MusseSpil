@@ -1,7 +1,7 @@
 export const tutorialCases = {
   cases: {
     maincase: {
-      status_active: true,
+      active: true,
       main_toturial_case: 'Cocaine case',
       case_title: 'CASE: WHOSE DRUGS ARE THESE',
       case_description_player_task: 'Your task: Find out who bought the cocaine',
@@ -10,7 +10,7 @@ export const tutorialCases = {
       culpritNpcId: 'pinkDressGirlMouse',
     },
     bluecheese_case: {
-      status_active: false,
+      active: false,
       main_toturial_case: 'Cheese case',
       case_title: 'CASE: WHOSE CHEESE IS THIS',
       case_description_player_task: 'Your task: Find out who owns this cheese',
@@ -20,7 +20,7 @@ export const tutorialCases = {
     },
   
       officer_whiskers_case: {
-      status_active: false,
+      active: false,
       main_toturial_case: 'ASSAULT',
       case_title: 'CASE: Get revenge for assault',
       case_description_player_task: 'Your task: go into the accusation scene and accuse officer whiskers',

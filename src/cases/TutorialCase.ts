@@ -36,7 +36,7 @@ export const TutorialCase: CaseSceneConfig = {
             unlockWhen: {
                 kind: 'all', of: [
                     { kind: 'flag', id: 'usedCoke', value: true },
-                    { kind: 'flag', id: 'phoneTextRead', value: true }, // set by Journal when the phone text is read
+                    { kind: 'flag', id: 'phoneTextRead', value: true }, 
                 ]
             }
         },

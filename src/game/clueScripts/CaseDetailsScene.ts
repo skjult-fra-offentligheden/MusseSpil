@@ -660,7 +660,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
             if (this.selectedSuspectId) {
                 console.log(`[CaseDetailsScene] Accusing: ${this.selectedSuspectId}`);
                 
-                const isCulprit = this.gameState.culpritId === this.selectedSuspectId;
+                const isCulprit = this.activeCaseData.culpritNpcId === this.selectedSuspectId;
                 const config = (AllNPCsConfigs as any)[this.selectedSuspectId];
 
                 const suspectObj: Suspect = {
@@ -673,8 +673,8 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
                     alibi: config?.alibi
                 };
 
-                const motive = this.gameState.culpritDetails?.motive || "Unknown Motive";
-                const crime = this.gameState.culpritDetails?.crime || "The Case of the Missing Cheese"; 
+                const motive = config?.culpritDetails?.motive || "Unknown Motive";
+                const crime = config?.culpritDetails?.crimeCommitted || this.activeCaseData.case_title || "Unknown Crime";
 
                 this.scene.stop('CaseSelectionScene');
 
@@ -799,6 +799,7 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
         return container;
     }
 
+
     private createBoardNode(id: string, type: 'person' | 'clue'): Phaser.GameObjects.Container {
     const width = 180;
     const height = 100;
@@ -843,6 +844,17 @@ export class CaseDetailsScene extends Phaser.Scene implements ICategorySwitcher 
 
     return nodeContainer;
 }
+
+    // Note mangler at fjerne connections når man klikker på linjen udenfor en node
+
+private removeConnection(fromId: string, toId: string) {
+        this.connections = this.connections.filter(conn => {
+            return !( (conn.from.id === fromId && conn.to.id === toId) || (conn.from.id === toId && conn.to.id === fromId) );
+        });
+        this.connectionLine.clear();
+        this.isConnecting = false;
+        this.connectionStartNode = null;
+    }
 
     private updateBoardMask(width: number, height: number, globalYOffset: number, scale?: number) {
         const currentScale = scale !== undefined ? scale : this.journalContainer.scale;

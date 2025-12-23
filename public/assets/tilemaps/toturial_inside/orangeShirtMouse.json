@@ -3,7 +3,7 @@
         "orangeShirtMouse": [
             {
                 "id": "greeting",
-                "speaker": "Albino Mouse",
+                "speaker": "Mouse Jerry",
                 "text": "Drugs? No way! I was just... admiring the cheese. It's so much better than usual...",
                 "options": [
                     {
@@ -24,7 +24,7 @@
             },
             {
                 "id": "play_stupid",
-                "speaker": "Albino Mouse",
+                "speaker": "Mouse Jerry",
                 "text": "Everyone looks down on albinos",
                 "options": [
                     {
@@ -43,7 +43,7 @@
             },
             {
                 "id": "no_thanks",
-                "speaker": "Albino Mouse",
+                "speaker": "Mouse Jerry",
                 "text": "Thanks, now I have something to cry about tonight",
                 "options": [
                     {
@@ -63,7 +63,7 @@
             },
             {
                 "id": "Weird",
-                "speaker": "Albino Mouse",
+                "speaker": "Mouse Jerry",
                 "text": "That is a weird thing to say",
                 "options": [
                     {
@@ -82,7 +82,7 @@
             },
             {
                 "id": "i_want_a_lawyer",
-                "speaker": "Albino Mouse",
+                "speaker": "Mouse Jerry",
                 "text": "I want a lawyer",
                 "options": [
                 ]

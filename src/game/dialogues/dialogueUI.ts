@@ -1,4 +1,3 @@
-// src/dialogues/dialogueUI.ts
 import Phaser from 'phaser';
 import { DialogueNode, DialogueOption } from '../dialogues/dialogues';
 
@@ -12,10 +11,15 @@ export class DialogueUI {
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
     private spaceKey: Phaser.Input.Keyboard.Key;
     private enterKey: Phaser.Input.Keyboard.Key;
-    //portrait mode
+    
+    // Portrait mode
     private portraitImage: Phaser.GameObjects.Image;
     private portraitSize: number = 0;
 
+    // Continue Indicator
+    private continueIndicator: Phaser.GameObjects.Text; // Fixed spelling: Indicator
+    private continueTween: Phaser.Tweens.Tween | null = null;
+    private onContinueCallback?: () => void;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -34,7 +38,7 @@ export class DialogueUI {
 
     private generateDialogueUI(): Phaser.GameObjects.Container {
         const width = this.scene.cameras.main.width;
-        const boxHeight = 180; // Slightly taller to better fit portrait
+        const boxHeight = 180;
         const padding = 20;
 
         const container = this.scene.add.container(0, this.scene.cameras.main.height - boxHeight)
@@ -46,19 +50,17 @@ export class DialogueUI {
             .setOrigin(0, 0);
         container.add(this.dialogueBackground);
 
-        // --- NEW: PORTRAIT AND LAYOUT LOGIC ---
-        this.portraitSize = boxHeight - (padding * 3); // e.g., 140x140
+        // --- Portrait ---
+        this.portraitSize = boxHeight - (padding * 3);
         const portraitX = padding + (this.portraitSize / 2);
-        console.log(`[DialogueUI] Portrait X position: ${portraitX}, Size: ${this.portraitSize}`);
-
-        // Create the portrait image, but keep it hidden initially
+        
         this.portraitImage = this.scene.add.image(portraitX, boxHeight / 2, 'portrait_unknown')
             .setDisplaySize(this.portraitSize, this.portraitSize)
             .setOrigin(0.5)
             .setVisible(false);
         container.add(this.portraitImage);
 
-        // --- ADJUSTED: Text and Option Positions ---
+        // --- Text ---
         const textStartX = portraitX + (this.portraitSize / 2) + padding;
         const textWidth = width - textStartX - padding;
 
@@ -69,50 +71,68 @@ export class DialogueUI {
         });
         container.add(this.dialogueText);
 
-        // We will add options dynamically in showDialogue, so no need to create a container here
+        // --- Continue Button ---
+        this.continueIndicator = this.scene.add.text(width - 20, boxHeight - 20, 'Continue', {
+            fontSize: '20px',
+            color: '#ffffff',
+            backgroundColor: '#00ff0dff',
+            padding: { x: 10, y: 5 },
+        })
+        .setOrigin(1, 1)
+        .setVisible(false)
+        // Explicitly set interactive with a shape to guarantee it works
+        .setInteractive({ useHandCursor: true });
+
+        // Use pointerdown for snappier response
+        this.continueIndicator.on('pointerdown', () => {
+            console.log("Continue button clicked!"); // Debug log
+            if (this.onContinueCallback) {
+                this.onContinueCallback(); 
+            }
+        });
+
+        container.add(this.continueIndicator);
 
         return container;
-    }
-
-    public destroy() {
-        // Stop listening to resize events so we don't try to resize a destroyed object
-        this.scene.scale.off('resize', this.onResize, this);
-        
-        if (this.dialogueBox) {
-            this.dialogueBox.destroy();
-        }
-    }
-
-    public setPortrait(textureKey: string) {
-        if (this.scene.textures.exists(textureKey)) {
-            this.portraitImage.setTexture(textureKey).setVisible(true);
-        } else {
-            // Fallback to a default or hide it if texture is missing
-            this.portraitImage.setTexture('portrait_unknown').setVisible(true);
-            console.warn(`Portrait texture not found: ${textureKey}`);
-        }
-    }
-
-    // --- ADD THIS NEW METHOD to hide the portrait ---
-    public hidePortrait() {
-        this.portraitImage.setVisible(false);
     }
 
     public showDialogue(
         dialogue: DialogueNode,
         onOptionSelect: (option: DialogueOption) => void,
-        onExit: () => void
+        onExit: () => void,
+        onContinue: () => void
     ) {
         this.dialogueBox.setVisible(true);
         this.dialogueText.setText(dialogue.speaker ? `${dialogue.speaker}: ${dialogue.text}` : dialogue.text);
+        
         this.clearOptions();
         this.selectedOptionIndex = 0;
-        //console.log("[DialogueUI] showDialogue called for node:", dialogue.id);
-        // Render options
+        this.onContinueCallback = onContinue; // Store the callback
+        
+        // --- CLEAN LOGIC SPLIT ---
+        if (dialogue.options && dialogue.options.length > 0) {
+            // Case A: Options exist
+            this.hideContinueIndicator();
+            this.renderOptions(dialogue, onOptionSelect, onExit);
+        } else {
+            // Case B: No options, just reading
+            this.showContinueIndicator();
+        }
+
+        this.updateOptionHighlight();
+    }
+
+    private renderOptions(
+        dialogue: DialogueNode,
+        onOptionSelect: (option: DialogueOption) => void,
+        onExit: () => void
+    ) {
         const textBounds = this.dialogueText.getBounds();
         const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
         const optionsStartX = this.dialogueText.x;
         const optionsSpacingY = 30;
+
+        // 1. Create Option Buttons
         dialogue.options.forEach((option, index) => {
             const buttonText = this.scene.add.text(optionsStartX, optionsStartY + index * optionsSpacingY, option.speaker ? `${option.speaker}: ${option.text}` : option.text, {
                 fontSize: '16px',
@@ -124,23 +144,67 @@ export class DialogueUI {
 
             buttonText.setScrollFactor(0);
             buttonText.on('pointerup', () => onOptionSelect(option));
-            this.optionButtons.push(buttonText);
+            
+            this.optionButtons.push(buttonText); 
             this.dialogueBox.add(buttonText);
         });
 
-        // Add exit button
+        // 2. Create Exit Button
         const exitButton = this.scene.add.text(this.dialogueBackground.width - 40, this.dialogueBackground.height - 30, 'Exit Talk', {
             fontSize: '20px',
             color: '#ffffff',
             backgroundColor: '#ff0000',
             padding: { x: 10, y: 5 },
-        }).setInteractive({ useHandCursor: true }).setOrigin(1,1);
+        }).setInteractive({ useHandCursor: true }).setOrigin(1, 1);
 
         exitButton.setScrollFactor(0);
         exitButton.on('pointerup', onExit);
+        
+        this.optionButtons.push(exitButton);
         this.dialogueBox.add(exitButton);
+    }
 
-        this.updateOptionHighlight();
+    private showContinueIndicator() {
+        this.continueIndicator.setVisible(true);
+        this.continueIndicator.setAlpha(1);
+
+        if (this.continueTween) return;
+
+        this.continueTween = this.scene.tweens.add({
+            targets: this.continueIndicator,
+            alpha: 0.2,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+        });
+    }
+
+    private hideContinueIndicator() {
+        this.continueIndicator.setVisible(false);
+        if (this.continueTween) {
+            this.continueTween.stop();
+            this.continueTween = null;
+        }
+    }
+
+    public destroy() {
+        this.scene.scale.off('resize', this.onResize, this);
+        if (this.dialogueBox) {
+            this.dialogueBox.destroy();
+        }
+    }
+
+    public setPortrait(textureKey: string) {
+        if (this.scene.textures.exists(textureKey)) {
+            this.portraitImage.setTexture(textureKey).setVisible(true);
+        } else {
+            this.portraitImage.setTexture('portrait_unknown').setVisible(true);
+            console.warn(`Portrait texture not found: ${textureKey}`);
+        }
+    }
+
+    public hidePortrait() {
+        this.portraitImage.setVisible(false);
     }
 
     private updateOptionHighlight() {
@@ -160,7 +224,8 @@ export class DialogueUI {
 
     public hideDialogue() {
         this.dialogueBox.setVisible(false);
-        this.hidePortrait(); // Also hide the portrait when the box is hidden
+        this.hidePortrait(); 
+        this.hideContinueIndicator(); // Stop blinking
         this.clearOptions();
     }
 
@@ -168,7 +233,6 @@ export class DialogueUI {
         if (this.dialogueBox) this.dialogueBox.destroy();
         this.dialogueBox = this.generateDialogueUI();
     }
-
 
     private onResize(gameSize: Phaser.Structs.Size) {
         const { width, height } = gameSize;
@@ -188,6 +252,9 @@ export class DialogueUI {
         this.dialogueText.setPosition(textStartX, padding);
         this.dialogueText.setWordWrapWidth(textWidth);
 
+        // Update Continue Button Position
+        this.continueIndicator.setPosition(width - 20, boxHeight - 20);
+
         const textBounds = this.dialogueText.getBounds();
         const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
         const optionsSpacingY = 30;
@@ -196,29 +263,25 @@ export class DialogueUI {
             button.setWordWrapWidth(textWidth);
         });
     }
+
     public getSelectedOptionIndex(): number {
         return this.selectedOptionIndex;
     }
 
     public handleOptionNavigationInput(): void {
-        if (this.optionButtons.length === 0) {
-            return;
-        }
+        if (this.optionButtons.length === 0) return;
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
             this.selectedOptionIndex = Math.max(0, this.selectedOptionIndex - 1);
             this.updateOptionHighlight();
         } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
-            // Prevent index from going out of bounds for the number of buttons
             this.selectedOptionIndex = Math.min(this.optionButtons.length - 1, this.selectedOptionIndex + 1);
             this.updateOptionHighlight();
         }
     }
 
     private resizeAndPositionPortrait() {
-        if (!this.portraitImage.texture || !this.portraitImage.visible) {
-            return; // Nothing to resize
-        }
+        if (!this.portraitImage.texture || !this.portraitImage.visible) return;
 
         const texture = this.portraitImage.texture;
         const imageWidth = texture.getSourceImage().width;
@@ -227,18 +290,14 @@ export class DialogueUI {
         let newWidth, newHeight;
         const ratio = imageWidth / imageHeight;
 
-        // Determine if the image is wider than it is tall (landscape) or taller (portrait)
         if (imageWidth > imageHeight) {
-            // Wider image: its width should match the box size
             newWidth = this.portraitSize;
             newHeight = this.portraitSize / ratio;
         } else {
-            // Taller image: its height should match the box size
             newHeight = this.portraitSize;
             newWidth = this.portraitSize * ratio;
         }
 
-        // Apply the calculated, non-distorted size
         this.portraitImage.setDisplaySize(newWidth, newHeight);
     }
 }
