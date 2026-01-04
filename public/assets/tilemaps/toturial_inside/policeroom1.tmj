@@ -107,54 +107,54 @@
          "id":3,
          "name":"NPCspawnpoints",
          "objects":[
-                {
-                 "height":0,
-                 "id":1,
-                 "name":"pinkDressGirlMouse",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":628.899802983394,
-                 "y":260.153391500141
-                }, 
-                {
-                 "height":0,
-                 "id":2,
-                 "name":"orangeShirtMouse",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":630.253588516746,
-                 "y":400.57669575007
-                }, 
-                {
-                 "height":0,
-                 "id":3,
-                 "name":"rockerMouse",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":633.253588516746,
-                 "y":560.392625949901
-                }, 
-                {
-                 "height":0,
-                 "id":4,
-                 "name":"cop2",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":158.130875316634,
-                 "y":402.723895299747
-                }],
+            {
+                "height": 0,
+                "id": 1,
+                "name": "rockerMouse",
+                "point": true,
+                "rotation": 0,
+                "type": "",
+                "visible": true,
+                "width": 0,
+                "x": 657,
+                "y": 325
+            },
+            {
+                "height": 0,
+                "id": 2,
+                "name": "orangeShirtMouse",
+                "point": true,
+                "rotation": 0,
+                "type": "",
+                "visible": true,
+                "width": 0,
+                "x": 667,
+                "y": 403
+            },
+            {
+                "height": 0,
+                "id": 3,
+                "name": "pinkDressGirlMouse",
+                "point": true,
+                "rotation": 0,
+                "type": "",
+                "visible": true,
+                "width": 0,
+                "x": 670,
+                "y": 475
+            },
+            {
+                "height": 0,
+                "id": 4,
+                "name": "cop2",
+                "point": true,
+                "rotation": 0,
+                "type": "",
+                "visible": true,
+                "width": 0,
+                "x": 143,
+                "y": 286
+            }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -203,8 +203,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":143.323107233324,
-                 "y":163.838446383338
+                 "x":139,
+                 "y":166
                 }, 
                 {
                  "height":0,
@@ -215,8 +215,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":239.161553616662,
-                 "y":159.676892766676
+                 "x":237,
+                 "y":164
                 }, 
                 {
                  "height":0,
@@ -227,8 +227,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":341.323107233324,
-                 "y":161.676892766676
+                 "x":337,
+                 "y":166
                 }, 
                 {
                  "height":0,
@@ -239,8 +239,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":437.161553616662,
-                 "y":162.353785533352
+                 "x":435,
+                 "y":171
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -252,7 +252,7 @@
  "nextobjectid":13,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.11.2",
+ "tiledversion":"1.11.0",
  "tileheight":48,
  "tilesets":[
         {

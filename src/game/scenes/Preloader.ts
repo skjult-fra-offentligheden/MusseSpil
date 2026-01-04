@@ -47,7 +47,13 @@ export class Preloader extends Scene
         this.load.tilemapTiledJSON('scene1', 'tilemaps/windowsTilemap.tmj');
 
         //spritesheet
-        this.load.spritesheet('player', 'characterSprite/newPlayerSpritesheet.png', {frameWidth: 48, frameHeight: 48});        
+        this.load.spritesheet('player', 'characterSprite/newPlayerSpritesheet.png', {frameWidth: 48, frameHeight: 48});      
+        
+        //player walking sound
+        this.load.audio('playerWalk_inside', 'assets/Audio/walking/walking_inside3.mp3');
+
+        
+
         this.load.json("npc_dialogues", "dialogue/npcdialogue.json");
         this.load.json("objects_dialogues", "dialogue/objectsDialogue.json");
         this.load.json("scene_1_clues", "dialogue/clues.json");

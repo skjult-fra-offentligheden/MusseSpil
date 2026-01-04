@@ -119,6 +119,9 @@ export class ToturialScene extends Phaser.Scene {
         });
         
         this.load.image('fallback_missing_item_texture', 'assets/tilemaps/toturial_inside/cheese_32x32.png');
+
+        this.load.audio('background_music', 'assets/tilemaps/toturial_inside/TownTheme.mp3');
+        this.load.audio('walking_inside', 'assets/audio/walking/walking_inside3.mp3');
     
     }
 
@@ -304,6 +307,11 @@ create() {
             TutorialCase,
             this.npcs.map(n => ({ npcId: n.npcId, sprite: n, sensoryRange: (n as any).sensoryRange }))
         );
+
+        if (!this.sound.get('background_music')) {
+            this.sound.play('background_music', { loop: true, volume: 0.5 });
+        }
+
 
         this.events.on('shutdown', this.onShutdown, this);
         

@@ -4,7 +4,8 @@ export class Player extends Actor {
     public name: string; // <<< ADD THIS PROPERTY
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private knockbackUntil = 0;
-    // player!: Phaser.GameObjects.Sprite; // This line is redundant if Player extends Actor (which extends Sprite)
+    
+    private walkingSound!: Phaser.Sound.BaseSound;
 
     constructor(scene: Phaser.Scene, x: number, y: number, playerName: string = "Hero") { // <<< ADD playerName PARAMETER
         super(scene, x, y, 'player', 0); // 'player' is the texture key, 0 might be the initial frame
@@ -46,6 +47,9 @@ export class Player extends Actor {
             frameRate: 2,
             repeat: -1
         });
+
+        //music
+        this.walkingSound = this.scene.sound.add('playerWalk_inside', { loop: true, volume: 0.5 });
 
         // INPUT
         if (this.scene && this.scene.input && this.scene.input.keyboard) { // Add checks for robustness
@@ -93,10 +97,19 @@ export class Player extends Actor {
             this.anims.play('walk-down', true);
             isMoving = true;
         }
-
-        if (!isMoving) {
+        // Normalize and scale the velocity so that diagonal movement isn't faster
+        if (isMoving) {
+            if (!this.walkingSound.isPlaying) {
+                this.walkingSound.play();
+            }
+        } else  {
+            if (this.walkingSound.isPlaying) {
+                this.walkingSound.stop();
+            }
             this.anims.play('idle', true);
         }
+
+
     }
 
     // Allow external systems to apply a brief knockback stun window

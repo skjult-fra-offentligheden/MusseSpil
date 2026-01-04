@@ -80,7 +80,6 @@ export class DialogueUI {
         })
         .setOrigin(1, 1)
         .setVisible(false)
-        // Explicitly set interactive with a shape to guarantee it works
         .setInteractive({ useHandCursor: true });
 
         // Use pointerdown for snappier response
