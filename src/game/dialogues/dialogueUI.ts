@@ -17,9 +17,11 @@ export class DialogueUI {
     private portraitSize: number = 0;
 
     // Continue Indicator
-    private continueIndicator: Phaser.GameObjects.Text; // Fixed spelling: Indicator
+    private continueIndicator: Phaser.GameObjects.Text; 
     private continueTween: Phaser.Tweens.Tween | null = null;
-    private onContinueCallback?: () => void;
+    
+    // NEW: We store the function we want to run when the button is clicked here
+    private currentAction: (() => void) | null = null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -75,18 +77,18 @@ export class DialogueUI {
         this.continueIndicator = this.scene.add.text(width - 20, boxHeight - 20, 'Continue', {
             fontSize: '20px',
             color: '#ffffff',
-            backgroundColor: '#00ff0dff',
+            backgroundColor: '#00ff00', 
             padding: { x: 10, y: 5 },
         })
         .setOrigin(1, 1)
         .setVisible(false)
         .setInteractive({ useHandCursor: true });
 
-        // Use pointerdown for snappier response
+        // FIX: Permanent listener. It never gets removed.
+        // It simply executes whatever "this.currentAction" is set to at that moment.
         this.continueIndicator.on('pointerdown', () => {
-            console.log("Continue button clicked!"); // Debug log
-            if (this.onContinueCallback) {
-                this.onContinueCallback(); 
+            if (this.currentAction) {
+                this.currentAction();
             }
         });
 
@@ -106,32 +108,28 @@ export class DialogueUI {
         
         this.clearOptions();
         this.selectedOptionIndex = 0;
-        this.onContinueCallback = onContinue; // Store the callback
         
         // --- CLEAN LOGIC SPLIT ---
         if (dialogue.options && dialogue.options.length > 0) {
-            // Case A: Options exist
             this.hideContinueIndicator();
-            this.renderOptions(dialogue, onOptionSelect, onExit);
+            this.showContinueIndicator(dialogue, onExit, onContinue);
+            this.renderOptions(dialogue, onOptionSelect);
         } else {
-            // Case B: No options, just reading
-            this.showContinueIndicator();
-        }
+            this.showContinueIndicator(dialogue, onExit, onContinue);
 
         this.updateOptionHighlight();
+        }
     }
 
-    private renderOptions(
+private renderOptions(
         dialogue: DialogueNode,
-        onOptionSelect: (option: DialogueOption) => void,
-        onExit: () => void
+        onOptionSelect: (option: DialogueOption) => void
     ) {
         const textBounds = this.dialogueText.getBounds();
         const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
         const optionsStartX = this.dialogueText.x;
         const optionsSpacingY = 30;
 
-        // 1. Create Option Buttons
         dialogue.options.forEach((option, index) => {
             const buttonText = this.scene.add.text(optionsStartX, optionsStartY + index * optionsSpacingY, option.speaker ? `${option.speaker}: ${option.text}` : option.text, {
                 fontSize: '16px',
@@ -148,24 +146,42 @@ export class DialogueUI {
             this.dialogueBox.add(buttonText);
         });
 
-        // 2. Create Exit Button
-        const exitButton = this.scene.add.text(this.dialogueBackground.width - 40, this.dialogueBackground.height - 30, 'Exit Talk', {
-            fontSize: '20px',
-            color: '#ffffff',
-            backgroundColor: '#ff0000',
-            padding: { x: 10, y: 5 },
-        }).setInteractive({ useHandCursor: true }).setOrigin(1, 1);
+        // const exitButton = this.scene.add.text(this.dialogueBackground.width - 40, this.dialogueBackground.height - 30, 'Exit Talk', {
+        //     fontSize: '20px',
+        //     color: '#ffffff',
+        //     backgroundColor: '#ff0000',
+        //     padding: { x: 10, y: 5 },
+        // }).setInteractive({ useHandCursor: true }).setOrigin(1, 1);
 
-        exitButton.setScrollFactor(0);
-        exitButton.on('pointerup', onExit);
+        // exitButton.setScrollFactor(0);
+        // exitButton.on('pointerup', onExit);
         
-        this.optionButtons.push(exitButton);
-        this.dialogueBox.add(exitButton);
+        // this.optionButtons.push(exitButton);
+        // this.dialogueBox.add(exitButton);
+        // We do NOT add the "Exit Talk" button here anymore, forcing the player to choose.
     }
 
-    private showContinueIndicator() {
+    private showContinueIndicator(currentDialogue: DialogueNode, onExit: () => void, onContinue: () => void) {
         this.continueIndicator.setVisible(true);
         this.continueIndicator.setAlpha(1);
+
+        // Determine if this is the last node
+        const isLastNode = !currentDialogue.nextDialogueId;
+
+        // 1. Set Appearance and Action based on state
+        if (!isLastNode) {
+            this.continueIndicator.setText("Continue");
+            this.continueIndicator.setBackgroundColor('#00ff00'); // Green
+            this.currentAction = onContinue; // Store the "Continue" function
+        } else {
+            this.continueIndicator.setText("End");
+            this.continueIndicator.setBackgroundColor('#ff0000'); // Red
+            this.currentAction = onExit; // Store the "Exit" function
+        }
+
+        this.continueIndicator.setInteractive({ useHandCursor: true });
+        this.continueIndicator.setScrollFactor(0);
+
 
         if (this.continueTween) return;
 
@@ -180,6 +196,7 @@ export class DialogueUI {
 
     private hideContinueIndicator() {
         this.continueIndicator.setVisible(false);
+        this.currentAction = null; // Disable the button action
         if (this.continueTween) {
             this.continueTween.stop();
             this.continueTween = null;
@@ -224,7 +241,7 @@ export class DialogueUI {
     public hideDialogue() {
         this.dialogueBox.setVisible(false);
         this.hidePortrait(); 
-        this.hideContinueIndicator(); // Stop blinking
+        this.hideContinueIndicator(); 
         this.clearOptions();
     }
 
@@ -251,7 +268,6 @@ export class DialogueUI {
         this.dialogueText.setPosition(textStartX, padding);
         this.dialogueText.setWordWrapWidth(textWidth);
 
-        // Update Continue Button Position
         this.continueIndicator.setPosition(width - 20, boxHeight - 20);
 
         const textBounds = this.dialogueText.getBounds();
