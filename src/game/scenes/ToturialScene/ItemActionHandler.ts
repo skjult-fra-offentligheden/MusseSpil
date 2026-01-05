@@ -17,6 +17,7 @@ export class ItemActionHandler {
     private uiManager: UIManager;
     private gameState: GameState;
     private clueManager: ClueManager;
+    private currentMessage: Phaser.GameObjects.Text | null = null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -27,17 +28,15 @@ export class ItemActionHandler {
     }
 
     public useItem(inventoryItem: Item | null, target?: any) {
-        console.log("[ItemActionHandler useItem] 'this' refers to:", this);
-        console.log("[ItemActionHandler useItem] this.inventoryManager:", this.inventoryManager);
         if (!inventoryItem) {
-            this.showTemporaryMessage("⚠️ No active item selected to use!");
+            this.uiManager.showNotification("⚠️ No active item selected to use!");
             console.warn("⚠️ No active item selected to use!");
             return;
         }
 
         const itemConfig = AllItemConfigs[inventoryItem.itemId];
         if (!itemConfig || !itemConfig.use) {
-            this.showTemporaryMessage(`You can't use ${inventoryItem.itemName} that way.`);
+            this.uiManager.showNotification(`You can't use ${inventoryItem.itemName} that way.`);
             console.warn(`❌ Item ${inventoryItem.itemId} has no ItemConfig or use method defined.`);
             return;
         }
@@ -48,7 +47,7 @@ export class ItemActionHandler {
         const gameContext: Partial<ItemGameContext> = {
             scene: this.scene,
             inventoryManager: this.inventoryManager,
-            ui: { showPlayerMessage: (msg: string) => this.showTemporaryMessage(msg) },
+            ui: { showPlayerMessage: (msg: string) => this.uiManager.showNotification(msg) },
             gameState: this.gameState,
             clueManager: this.clueManager,
             targetItem: target,
@@ -60,7 +59,7 @@ export class ItemActionHandler {
         const useResult = itemConfig.use.call(itemConfig, gameContext);
 
         // Optional player toast
-        if (useResult.message) this.showTemporaryMessage(useResult.message);
+        if (useResult.message) this.uiManager.showNotification(useResult.message);
 
         // ─── Reconcile inventory quantity + visual phase with the item's reported status ───
         const startQty = inventoryItem.quantity ?? 0;
@@ -89,7 +88,7 @@ export class ItemActionHandler {
 
             const msg = useResult.message?.toLowerCase() ?? "";
             if (!msg.includes("used up") && !msg.includes("empty") && !msg.includes("gone")) {
-                this.showTemporaryMessage(`${inventoryItem.itemName} was used up.`);
+                this.uiManager.showNotification(`${inventoryItem.itemName} was used up.`);
             }
         } else {
             // Keep the item, store the post-use quantity
@@ -130,34 +129,44 @@ export class ItemActionHandler {
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
-    private showTemporaryMessage(message: string): void {
-        if (!this.scene || !this.scene.scale) return;
+    // private showTemporaryMessage(message: string): void {
+    //     if (!this.scene || !this.scene.scale) return;
 
-        const messageText = this.scene.add
-            .text(this.scene.scale.width / 2, this.scene.scale.height - 100, message, {
-                fontSize: "16px",
-                fontFamily: '"Verdana", "Arial", sans-serif',
-                color: "#ffffff",
-                backgroundColor: "rgba(0,0,0,0.75)",
-                padding: { x: 10, y: 5 },
-                align: "center",
-                wordWrap: { width: this.scene.scale.width - 40, useAdvancedWrap: true },
-            })
-            .setOrigin(0.5)
-            .setDepth(Phaser.Math.MAX_SAFE_INTEGER)
-            .setScrollFactor(0);
+    //     if (this.currentMessage) {
+    //         this.currentMessage.destroy();
+    //         this.currentMessage = null;
+    //     }
 
-        this.scene.time.delayedCall(2500, () => {
-            if (messageText.scene) {
-                this.scene.tweens.add({
-                    targets: messageText,
-                    alpha: 0,
-                    duration: 300,
-                    onComplete: () => messageText.destroy(),
-                });
-            } else {
-                messageText.destroy();
-            }
-        });
-    }
+    //     const messageText = this.scene.add
+    //         .text(this.scene.scale.width / 2, this.scene.scale.height - 100, message, {
+    //             fontSize: "16px",
+    //             fontFamily: '"Verdana", "Arial", sans-serif',
+    //             color: "#ffffff",
+    //             backgroundColor: "rgba(0,0,0,0.75)",
+    //             padding: { x: 10, y: 5 },
+    //             align: "center",
+    //             wordWrap: { width: this.scene.scale.width - 40, useAdvancedWrap: true },
+    //         })
+    //         .setOrigin(0.5)
+    //         .setDepth(Phaser.Math.MAX_SAFE_INTEGER)
+    //         .setScrollFactor(0);
+
+    //     this.currentMessage = messageText;
+
+    //     this.scene.time.delayedCall(2500, () => {
+    //         if (messageText.scene) {
+    //             this.scene.tweens.add({
+    //                 targets: messageText,
+    //                 alpha: 0,
+    //                 duration: 300,
+    //                 onComplete: () => {if (this.currentMessage === messageText) {
+    //                     this.currentMessage = null; 
+    //                 }
+    //                 messageText.destroy();},
+    //             });
+    //         } else {
+    //             messageText.destroy();
+    //         }
+    //     });
+    // }
 }

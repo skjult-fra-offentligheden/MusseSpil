@@ -199,9 +199,6 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     public initiateInteraction(playerParam?: Player): void {
         if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return;
-        if (this.config.speakingSoundKey) {
-            this.scene.sound.play(this.config.speakingSoundKey, { volume: 1.0 });
-        }
 
         this.setVelocity(0);
         this.isDialogueActive = true;
@@ -222,6 +219,12 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     public initiateDialogue(playerParam?: Player): void {
         console.log('this.dialogueManager', this.dialogueManager);
         console.log('scene.dialogueManager', (this.scene as any).dialogueManager);
+        console.log(`[NPC ${this.npcId}] initiateInteraction called.`);
+        if (this.config.speakingSoundKey) {
+            console.info(`[NPC ${this.npcId}] Playing speaking sound: ${this.config.speakingSoundKey}`);
+            this.scene.sound.play(this.config.speakingSoundKey, { volume: 1.0 });
+        }
+
         if (this.isDialogueActive || this.dialogueManager.isDialogueActive()) return;
         this.setVelocity(0);
         this.isDialogueActive = true;

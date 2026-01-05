@@ -61,6 +61,9 @@ export class ToturialScene extends Phaser.Scene {
     //Case
     public caseDirector!: CaseDirector;
 
+    // Toturial scene arrows. 
+    private tutorialArrows: { body: Body, arrow: Phaser.GameObjects.Graphics }[] = [];
+
     constructor() {
         super({ key: 'ToturialScene' });
     }
@@ -126,7 +129,7 @@ export class ToturialScene extends Phaser.Scene {
         this.load.audio("random_speaking_sound", "assets/Audio/talking/random_mouse_1_high_pitch.mp3");
     }
 
-create() {
+    create() {
         // 1. Setup Managers & State
         const state = GameState.getInstance(this);
         
@@ -296,6 +299,7 @@ create() {
         // 6. Setup Objects (Bodies/Clues)
         const Objectsclue = map.getObjectLayer('ObjectCluesSpawnpoints');
         this.createObjects(collisionLayer!, collisionLayer!, Objectsclue);
+        this.createTutorialArrows();
         this.interactables = [...this.npcs, ...this.Objects];
 
         // 7. Final Logic Setup
@@ -396,6 +400,14 @@ create() {
                 }
             }
         }
+
+        this.tutorialArrows = this.tutorialArrows.filter(item => {
+            if (!item.body.active) {
+                item.arrow.destroy(); // Destroy the graphics
+                return false; // Remove from array
+            }
+            return true; // Keep in array
+        });
 
         if (!interactableInRange) {
             this.hideInteractionPrompt();
@@ -567,6 +579,50 @@ private setupTutorialEvents() {
                  // Free roam / End of scripted tutorial
                  break;
         }
+    }
+
+    private createTutorialArrows() {
+        this.tutorialArrows = [];
+
+        // Loop through all objects in the room
+        this.Objects.forEach((obj) => {
+            // Only add arrows to things you can actually pick up
+            if (obj.active && obj.isCollectible) {
+                
+                // Draw a simple yellow triangle (Pointing down)
+                const arrow = this.add.graphics();
+                arrow.fillStyle(0xffff00, 1); // Yellow
+                arrow.lineStyle(2, 0x000000, 1); // Black outline
+                
+                // Draw triangle shape relative to (0,0)
+                const w = 16;
+                const h = 16;
+                arrow.beginPath();
+                arrow.moveTo(-w/2, -h); // Top Left
+                arrow.lineTo(w/2, -h);  // Top Right
+                arrow.lineTo(0, 0);     // Bottom Tip
+                arrow.closePath();
+                arrow.fillPath();
+                arrow.strokePath();
+
+                // Position it above the item
+                arrow.x = obj.x;
+                arrow.y = obj.y - 40;
+                arrow.setDepth(20); // Make sure it's above everything
+
+                // Add a bouncing animation
+                this.tweens.add({
+                    targets: arrow,
+                    y: arrow.y - 10,
+                    duration: 600,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+
+                this.tutorialArrows.push({ body: obj, arrow: arrow });
+            }
+        });
     }
     
     private onShutdown() {

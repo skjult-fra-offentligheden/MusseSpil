@@ -7,6 +7,7 @@ export class UIManager {
     private originScene: string;
     private clueManager: ClueManager | null = null;
     private journalHotkeyEnabled = true;
+    private activeNotification: Phaser.GameObjects.Text | null = null;
     private constructor() { }
 
     init(data: { originScene: string }) {
@@ -112,6 +113,12 @@ export class UIManager {
             console.log(`[UI NOTIFICATION - NO SCENE]: ${message}`);
             return;
         }
+
+        if (this.activeNotification) {
+            this.activeNotification.destroy();
+            this.activeNotification = null;
+        }
+
         console.log(`[UIManager] Showing notification: "${message}" on scene ${this.currentScene.scene.key}`);
         if (
             typeof message === "string" &&
@@ -146,6 +153,8 @@ export class UIManager {
             .setDepth(Phaser.Math.MAX_SAFE_INTEGER) // Ensure it's on top of everything
             .setScrollFactor(0); // Make it fixed to the camera, so it doesn't scroll with the world
 
+        this.activeNotification = notificationText;
+
         // Automatically destroy the text after a few seconds
         this.currentScene.tweens.add({
             targets: notificationText,
@@ -153,7 +162,11 @@ export class UIManager {
             delay: 2500,               // Start fading after 2.5 seconds
             duration: 500,             // Fade out over 0.5 seconds
             onComplete: () => {
-                notificationText.destroy();
+                // Only destroy if it hasn't been replaced by a newer message
+                if (this.activeNotification === notificationText) {
+                    notificationText.destroy();
+                    this.activeNotification = null;
+                }
             }
         });
     }
