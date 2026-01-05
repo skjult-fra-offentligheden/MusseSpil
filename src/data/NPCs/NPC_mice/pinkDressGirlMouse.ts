@@ -1,5 +1,4 @@
 import { NPCConfig, NPCMovementType, NPCAnimationConfig as NPCAnimationData, NPCAnimationDefinition, NPCAnimationSet } from '../npcTemplate'; // Adjust path
-import { DialogueNode } from "../../../game/dialogues/dialogues";
 // Assuming DialogueNode is also imported or defined in npcTemplate for simplicity
 
 const pinkDressGirlMouseAnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAnimationConfig
@@ -45,7 +44,7 @@ export const pinkDressGirlMouseConfig: NPCConfig = {
         "clueGlue": "Don't sniff that on the job, Detective!",
         "coke": "Evidence, detective. Don't get any ideas."
     },
-    // ... add other necessary properties like defaultScale, description etc.
+    speakingSoundKey: "girl_speaking_sound",
     // defaultScale: 1,
     // description: "The stern but fair police chief.",
     // initialMentalState: NPCMentalState.Neutral,

@@ -215,7 +215,7 @@
     "cop2": [
         {
             "id": "greeting",
-            "speaker": "Copper Holmes",
+            "speaker": "Mouse Jerry",
             "text": "Hey you!",
             "options": [
                 {
@@ -234,7 +234,7 @@
         },
         {
             "id": "ask_help",
-            "speaker": "Copper Holmes",
+            "speaker": "Mouse Jerry",
             "text": "Solve the murder, bum",
             "options": [
                 {
@@ -253,19 +253,19 @@
         },
         {
             "id": "no_thanks",
-            "speaker": "Copper Holmes",
+            "speaker": "Mouse Jerry",
             "text": "DO NOT YELL AT ME",
             "options": []
         },
         {
             "id": "accept_help_response",
-            "speaker": "Copper Holmes",
+            "speaker": "Mouse Jerry",
             "text": "Thank you!",
             "options": []
         },
         {
             "id": "decline_help",
-            "speaker": "Copper Holmes",
+            "speaker": "Mouse Jerry",
             "text": "...",
             "options": []
         }
@@ -518,7 +518,7 @@
     "orangeShirtMouse": [
         {
             "id": "greeting",
-            "speaker": "Albino Mouse",
+            "speaker": "Mouse Jerry",
             "text": "I hate being albino",
             "options": [
                 {
@@ -537,7 +537,7 @@
         },
         {
             "id": "play_stupid",
-            "speaker": "Albino Mouse",
+            "speaker": "Mouse Jerry",
             "text": "Everyone treats me like I am different",
             "options": [
                 {
@@ -556,19 +556,19 @@
         },
         {
             "id": "no_thanks",
-            "speaker": "Albino Mouse",
+            "speaker": "Mouse Jerry",
             "text": "Thanks, now I have something to cry about tonight",
             "options": []
         },
         {
             "id": "play_stupid2",
-            "speaker": "Albino Mouse",
+            "speaker": "Mouse Jerry",
             "text": "Thanks, now I have something to cry about tonight",
             "options": []
         },
         {
             "id": "Weird",
-            "speaker": "Albino Mouse",
+            "speaker": "Mouse Jerry",
             "text": "That is a weird thing to say",
             "options": []
         }
@@ -576,7 +576,7 @@
     "pinkDressGirlMouse": [
         {
             "id": "greeting",
-            "speaker": "Pink Mouse",
+            "speaker": "Mouse Jennie",
             "text": "Granny says I look pretty in pink!",
             "options": [
                 {
@@ -595,13 +595,13 @@
         },
         {
             "id": "compliment_response",
-            "speaker": "Pink Mouse",
+            "speaker": "Mouse Jennie",
             "text": "Aww, thank you!",
             "options": []
         },
         {
             "id": "dismiss_response",
-            "speaker": "Pink Mouse",
+            "speaker": "Mouse Jennie",
             "text": "Hmph, you’re just mean.",
             "options": []
         }
@@ -712,10 +712,10 @@
             "options": []
         }
     ],
-    "rockerMouse": [
+    "Mouse JaredMouse": [
         {
             "id": "greeting",
-            "speaker": "Rocker",
+            "speaker": "Mouse Jared",
             "text": "I did not do it",
             "options": [
                 {
@@ -734,7 +734,7 @@
         },
         {
             "id": "play_stupid",
-            "speaker": "Rocker",
+            "speaker": "Mouse Jared",
             "text": "Kill the guy",
             "options": [
                 {
@@ -753,19 +753,19 @@
         },
         {
             "id": "no_thanks",
-            "speaker": "Rocker",
+            "speaker": "Mouse Jared",
             "text": "Detective, disrespectfully, leave",
             "options": []
         },
         {
             "id": "play_stupid2",
-            "speaker": "Rocker",
+            "speaker": "Mouse Jared",
             "text": "You must be blind",
             "options": []
         },
         {
             "id": "Weird",
-            "speaker": "Rocker",
+            "speaker": "Mouse Jared",
             "text": "... I am not talking to you anymore",
             "options": []
         }

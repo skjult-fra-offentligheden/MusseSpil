@@ -1,5 +1,4 @@
 import { NPCConfig, NPCMovementType, NPCAnimationConfig as NPCAnimationData, NPCAnimationDefinition, NPCAnimationSet } from '../npcTemplate'; // Adjust path
-import { DialogueNode } from "../../../game/dialogues/dialogues";
 // Assuming DialogueNode is also imported or defined in npcTemplate for simplicity
 
 
@@ -48,7 +47,7 @@ export const OrangeShirtMouseConfig: NPCConfig = {
         "clueGlue": "WHY ARE YOU DOING THIS IN PUBLIC?!",
         "coke": "Share some later"
     },
-    // ... add other necessary properties like defaultScale, description etc.
+    speakingSoundKey: "random_speaking_sound",
     // defaultScale: 1,
     // description: "The stern but fair police chief.",
      // initialMentalState: NPCMentalState.Neutral,

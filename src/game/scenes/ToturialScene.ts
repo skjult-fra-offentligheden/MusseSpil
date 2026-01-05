@@ -121,8 +121,9 @@ export class ToturialScene extends Phaser.Scene {
         this.load.image('fallback_missing_item_texture', 'assets/tilemaps/toturial_inside/cheese_32x32.png');
 
         this.load.audio('background_music', 'assets/tilemaps/toturial_inside/TownTheme.mp3');
-        this.load.audio('walking_inside', 'assets/audio/walking/walking_inside3.mp3');
-    
+        this.load.audio("girl_speaking_sound", "assets/Audio/talking/female_mouse_1_high_pitch.mp3");
+        this.load.audio("male_speaking_sound", "assets/Audio/talking/male_mouse_1_low_pitch.mp3");
+        this.load.audio("random_speaking_sound", "assets/Audio/talking/random_mouse_1_high_pitch.mp3");
     }
 
 create() {
@@ -309,7 +310,7 @@ create() {
         );
 
         if (!this.sound.get('background_music')) {
-            this.sound.play('background_music', { loop: true, volume: 0.5 });
+            this.sound.play('background_music', { loop: true, volume: 0.2 });
         }
 
 

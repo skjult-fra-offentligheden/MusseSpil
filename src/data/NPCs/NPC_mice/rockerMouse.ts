@@ -1,5 +1,4 @@
 import { NPCConfig, NPCMovementType, NPCAnimationConfig as NPCAnimationData, NPCAnimationDefinition, NPCAnimationSet } from '../npcTemplate'; // Adjust path
-import { DialogueNode } from "../../../game/dialogues/dialogues";
 // Assuming DialogueNode is also imported or defined in npcTemplate for simplicity
 
 const rockerMouseAnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAnimationConfig
@@ -15,11 +14,6 @@ const rockerMouseAnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE
     walkLeftKey: "rockerMouse_anim_walk_left",
     walkRightKey: "rockerMouse_anim_walk_right"
 };
-
-//const rockerMouseDialogues: DialogueNode[] = [
-//    { id: "greeting", text: "Chief Whiskers. What do you need?", options: [/* your options here */] },
-//    { id: "rockerMouse_tutorial_briefing", text: "Listen up, rookie...", options: [/* ... */] },
-//];
  
 export const rockerMouseConfig: NPCConfig = {
     npcId: "rockerMouse",
@@ -29,7 +23,7 @@ export const rockerMouseConfig: NPCConfig = {
 
     animations: rockerMouseAnimationsData, // Assign the animation details we defined above
     isSuspect: true,
-    //dialogues: rockerMouseDialogues,   // Assign the dialogue we defined above
+    speakingSoundKey: "random_speaking_sound",
     
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed

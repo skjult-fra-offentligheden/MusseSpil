@@ -1,5 +1,4 @@
 import { NPCConfig, NPCMovementType, NPCAnimationConfig as NPCAnimationData, NPCAnimationDefinition, NPCAnimationSet } from '../npcTemplate'; // Adjust path
-import { DialogueNode } from "../../../game/dialogues/dialogues";
 // Assuming DialogueNode is also imported or defined in npcTemplate for simplicity
 
 const cop2AnimationsData: NPCAnimationSet = { // <<< USE THE CORRECT TYPE: NPCAnimationConfig
@@ -33,8 +32,7 @@ export const cop2Config: NPCConfig = {
         keyEvidence: [],
         motive: 'Lost his temper'
     },
-    //dialogues: cop2Dialogues,   // Assign the dialogue we defined above
-    
+    speakingSoundKey: "male_speaking_sound",    
     movementType: 'idle',
     speed: 0,                   // He's idle, so no speed
     sensoryRange: 250,

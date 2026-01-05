@@ -50,7 +50,7 @@ export class Preloader extends Scene
         this.load.spritesheet('player', 'characterSprite/newPlayerSpritesheet.png', {frameWidth: 48, frameHeight: 48});      
         
         //player walking sound
-        this.load.audio('playerWalk_inside', 'assets/Audio/walking/walking_inside3.mp3');
+        this.load.audio('playerWalk_inside', 'Audio/walking/walking_inside3.mp3');
 
         
 
