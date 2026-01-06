@@ -1,7 +1,7 @@
 import { CaseManager } from '../../../data/cases/CaseManager';
-import { MurderMysteryCase } from '../../../cases/IntroductionCityMurderCase'; // Your new file
+import { IntroductionCityMurderCase } from '../../../cases/IntroductionCityMurderCase';
 
-export class MurderBriefingScene extends Phaser.Scene {
+export class Introduction_city_murder extends Phaser.Scene {
     constructor() {
         super('introduction_city_murder');
     }
@@ -19,7 +19,7 @@ export class MurderBriefingScene extends Phaser.Scene {
         // 3. SWITCH THE LOGIC
         // This completely removes Tutorial rules (e.g. sniffing glue) 
         // and activates Murder rules (e.g. inspecting body)
-        CaseManager.getInstance().loadScenario(MurderMysteryCase);
+        CaseManager.getInstance().loadScenario(IntroductionCityMurderCase);
 
         // 4. Show Briefing UI (Text, Images, etc.)
         this.add.text(400, 300, "Briefing: A murder has occurred...", { fontSize: '24px' }).setOrigin(0.5);
