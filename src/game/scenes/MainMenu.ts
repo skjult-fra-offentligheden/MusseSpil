@@ -70,7 +70,8 @@ export class MainMenu extends Scene {
         // Defensive: make sure journal overlays are not lingering when starting gameplay
         ['ClueJournal', 'ClueDisplayJournalScene', 'PeopleDisplayJournalScene', 'AccusationScene', 'DragAbleClueScene', 'UIGameScene', 'DevHUDScene', 'InventoryScene', 'Guide']
             .forEach(k => { if (this.scene.isActive(k) || this.scene.isSleeping(k)) this.scene.stop(k); });
-        this.scene.start("ToturialScene");
+        this.scene.start("TutorialBriefingScene");
+        // this.scene.start("ToturialScene");
        // this.scene.start("Game");
         //this.scene.launch('UIGameScene');
 

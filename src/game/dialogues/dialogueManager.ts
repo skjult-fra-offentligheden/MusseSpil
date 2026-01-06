@@ -230,7 +230,6 @@ export class DialogueManager {
         }
     }
 
-    // --- NEW: Helper Method to Advance Dialogue ---
     private handleAdvance() {
         if (!this.currentDialogueNode) return;
 

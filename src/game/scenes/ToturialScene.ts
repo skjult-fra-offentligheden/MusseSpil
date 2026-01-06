@@ -194,8 +194,6 @@ export class ToturialScene extends Phaser.Scene {
         // (We removed the manual dialogue injection because cop2.json now has the data)
         const introNode = this.cop2dialogue.find((node: any) => node.id === 'cop2_tutorial_briefing');
         if (introNode) {
-            // We overwrite the options to include the Skip button.
-            // Note: We intentionally don't set 'nextDialogueId' so the options menu appears.
             introNode.options = [
                 {
                     id: "opt_start",
@@ -587,7 +585,8 @@ private setupTutorialEvents() {
         // Loop through all objects in the room
         this.Objects.forEach((obj) => {
             // Only add arrows to things you can actually pick up
-            if (obj.active && obj.isCollectible) {
+            if (obj.active && obj.isItemCollectible) {
+                console.log(`[Tutorial Arrows] Adding arrow to item: ${obj.itemId}`);
                 
                 // Draw a simple yellow triangle (Pointing down)
                 const arrow = this.add.graphics();

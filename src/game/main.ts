@@ -15,6 +15,7 @@ import { Game } from './scenes/Game';
 // --- THESE ARE THE NEW, CORRECT IMPORTS ---
 import { CaseSelectionScene } from './clueScripts/CaseSelectionScene';
 import { CaseDetailsScene } from './clueScripts/CaseDetailsScene';
+import { TutorialBriefingScene } from './scenes/BriefingScenes/ToturialBriefingScene'; 
 
 const LOGICAL_WIDTH = 1920; // Example: choose your desired base width
 const LOGICAL_HEIGHT = 1080; // Example: choose your desired base height
@@ -48,6 +49,7 @@ const config: Phaser.Types.Core.GameConfig = {
         Preloader,
         Game,
         MainMenu,
+        TutorialBriefingScene,
         ToturialScene,
         UIGameOverlay,
         InventoryScene,
@@ -59,7 +61,8 @@ const config: Phaser.Types.Core.GameConfig = {
         ClueDisplayJournalScene,
         PeopleDisplayJournalScene,
         DragAbleClueScene,
-        DevHUD
+        DevHUD,
+        
     ],
 };
 
