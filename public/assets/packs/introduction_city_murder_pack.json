@@ -1,0 +1,8 @@
+{
+    "section1": {
+        "files": [
+            { "type": "image", "key": "knifeBlood", "url": "assets/items/knifeBlood.png" },
+            { "type": "image", "key": "deadBody", "url": "assets/items/deadBody.png" }
+        ]
+    }
+}

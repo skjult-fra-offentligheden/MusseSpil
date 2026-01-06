@@ -117,6 +117,9 @@ export interface NPCConfig {
     // These would be functions defined directly in the NPC's config object.
     // 'this' context would be the NPC instance if called correctly.
 
+    //sound
+    speakingSoundKey?: string; // Key for the sound to play when the NPC speaks
+
     /** Called when this NPC is first created and added to the scene */
     onSpawn?: (this: NPC_Instance_Type, scene: Phaser.Scene) => void;
 

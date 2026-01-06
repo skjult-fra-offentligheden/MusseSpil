@@ -1,0 +1,170 @@
+{
+  "tutorial_assets": {
+    "files": [
+      {
+        "type": "json",
+        "key": "cop2_toturial",
+        "url": "assets/tilemaps/toturial_inside/cop2.json"
+      },
+      {
+        "type": "json",
+        "key": "orangeshirt_toturial",
+        "url": "assets/tilemaps/toturial_inside/orangeShirtMouse.json"
+      },
+      {
+        "type": "json",
+        "key": "rockerMouse_toturial",
+        "url": "assets/tilemaps/toturial_inside/rockerMouse.json"
+      },
+      {
+        "type": "json",
+        "key": "pinkdressMouse_toturial",
+        "url": "assets/tilemaps/toturial_inside/pinkDressGirlMouse.json"
+      },
+      {
+        "type": "json",
+        "key": "objects_dialogues_toturial",
+        "url": "assets/tilemaps/toturial_inside/objectsDialogue.json"
+      },
+      {
+        "type": "json",
+        "key": "toturial_clues",
+        "url": "assets/tilemaps/toturial_inside/clues.json"
+      },
+      {
+        "type": "image",
+        "key": "portrait_cop2",
+        "url": "assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png"
+      },
+      {
+        "type": "image",
+        "key": "portrait_rockermouse",
+        "url": "assets/npc/rockerMouse/Neutral_rockermouse_portrait.png"
+      },
+      {
+        "type": "image",
+        "key": "portrait_orangeshirt",
+        "url": "assets/npc/orangeShirtMouse/Neutralorangeshirtmouseportrait.png"
+      },
+      {
+        "type": "image",
+        "key": "portrait_pinkdress",
+        "url": "assets/npc/pinkDressGirlMouse/Neutralpinkdressgirlmouse.png"
+      },
+      {
+        "type": "image",
+        "key": "portrait_unknown",
+        "url": "assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png"
+      },
+      {
+        "type": "tilemapTiledJSON",
+        "key": "policeinside",
+        "url": "assets/tilemaps/toturial_inside/policeroom.tmj"
+      },
+      {
+        "type": "image",
+        "key": "background_toturial",
+        "url": "assets/tilemaps/toturial_inside/background.png"
+      },
+      {
+        "type": "image",
+        "key": "big_furniture",
+        "url": "assets/tilemaps/toturial_inside/big_furniture.png"
+      },
+      {
+        "type": "image",
+        "key": "objects_decoration",
+        "url": "assets/tilemaps/toturial_inside/objects_decoration.png"
+      },
+      {
+        "type": "atlas",
+        "key": "cop2",
+        "textureURL": "assets/npc/cop2Sprite/cop2sprite.png",
+        "atlasURL": "assets/npc/cop2Sprite/cop2sprite.json"
+      },
+      {
+        "type": "atlas",
+        "key": "orangeShirtMouse",
+        "textureURL": "assets/npc/orangeShirtMouse/orangeShirtMouse.png",
+        "atlasURL": "assets/npc/orangeShirtMouse/orangeShirtMouse.json"
+      },
+      {
+        "type": "atlas",
+        "key": "rockerMouse",
+        "textureURL": "assets/npc/rockerMouse/rockerMouse.png",
+        "atlasURL": "assets/npc/rockerMouse/rockerMouse.json"
+      },
+      {
+        "type": "atlas",
+        "key": "pinkDressGirlMouse",
+        "textureURL": "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.png",
+        "atlasURL": "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.json"
+      },
+      {
+        "type": "audio",
+        "key": "background_music",
+        "url": "assets/tilemaps/toturial_inside/TownTheme.mp3"
+      },
+      {
+        "type": "audio",
+        "key": "girl_speaking_sound",
+        "url": "assets/Audio/talking/female_mouse_1_high_pitch.mp3"
+      },
+      {
+        "type": "audio",
+        "key": "male_speaking_sound",
+        "url": "assets/Audio/talking/male_mouse_1_low_pitch.mp3"
+      },
+      {
+        "type": "audio",
+        "key": "random_speaking_sound",
+        "url": "assets/Audio/talking/random_mouse_1_high_pitch.mp3"
+      },
+      {
+        "type": "image",
+        "key": "fallback_missing_item_texture",
+        "url": "assets/tilemaps/toturial_inside/cheese_32x32.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/phone_32x32.png",
+        "url": "assets/tilemaps/toturial_inside/phone_32x32.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/phone_64x64.png",
+        "url": "assets/tilemaps/toturial_inside/phone_64x64.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cokebag_32x32_full.png",
+        "url": "assets/tilemaps/toturial_inside/cokebag_32x32_full.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cokebag_full_64x64.png",
+        "url": "assets/tilemaps/toturial_inside/cokebag_full_64x64.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/glue_32x32.png",
+        "url": "assets/tilemaps/toturial_inside/glue_32x32.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/glue_64x64.png",
+        "url": "assets/tilemaps/toturial_inside/glue_64x64.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cheese_32x32.png",
+        "url": "assets/tilemaps/toturial_inside/cheese_32x32.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cheese_64x64.png",
+        "url": "assets/tilemaps/toturial_inside/cheese_64x64.png"
+      }
+    ]
+  }
+}

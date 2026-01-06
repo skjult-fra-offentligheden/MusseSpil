@@ -12,11 +12,11 @@ import { UIManager } from '../managers/UIManager';
 import { ClueManager } from '../clueScripts/clueManager';
 import { Clue } from '../classes/clue';
 import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
-import { ItemConfig, PhaseArt } from '../../data/items/itemTemplate';
+// import { ItemConfig, PhaseArt } from '../../data/items/itemTemplate';
 import { CallbackHandler } from '../managers/CallBackManager';
 import { ItemActionHandler, ItemUsedEventPayload } from './ToturialScene/ItemActionHandler';
 import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'; // Assuming path to your new AllNPCConfigs
-import { NPCConfig } from '../../data/NPCs/npcTemplate';  // Assuming path to your new RichNPCConfig interface
+// import { NPCConfig } from '../../data/NPCs/npcTemplate';  // Assuming path to your new RichNPCConfig interface
 import { setupAllNPCAnimations, spawnNPCsFromList, NpcSpawnInstruction } from '../../factories/npcFactory'; // Or wherever you put animation setup
 import { ReactionManager } from '../NPCgeneral/toturialScene/ReactionsManager';
 import { CaseDirector } from '../../cases/CaseDirector';
@@ -24,6 +24,7 @@ import { TutorialCase } from '../../cases/TutorialCase';
 import { tutorialCases } from '../../data/cases/tutorialCases';
 import { GlobalEvents } from '../../factories/globalEventEmitter';
 import { tutorialCallbacks } from './ToturialScene/callbackToturialScene';
+import { CaseManager } from '../../data/cases/CaseManager';
 
 const MAX_DIALOGUE_DISTANCE = 70; // SUPER IMPORTANT
 
@@ -69,70 +70,71 @@ export class ToturialScene extends Phaser.Scene {
     }
 
     preload() {
-        //dialog skal loades ind her
-        this.load.json("cop2_toturial", "assets/tilemaps/toturial_inside/cop2.json");
-        this.load.json("orangeshirt_toturial", "assets/tilemaps/toturial_inside/orangeShirtMouse.json");
-        this.load.json("rockerMouse_toturial", "assets/tilemaps/toturial_inside/rockerMouse.json");
-        this.load.json("pinkdressMouse_toturial", "assets/tilemaps/toturial_inside/pinkDressGirlMouse.json");
-        this.load.json("objects_dialogues_toturial", "assets/tilemaps/toturial_inside/objectsDialogue.json");
-        this.load.json("toturial_clues", "assets/tilemaps/toturial_inside/clues.json");
+        // //dialog skal loades ind her
+        // this.load.json("cop2_toturial", "assets/tilemaps/toturial_inside/cop2.json");
+        // this.load.json("orangeshirt_toturial", "assets/tilemaps/toturial_inside/orangeShirtMouse.json");
+        // this.load.json("rockerMouse_toturial", "assets/tilemaps/toturial_inside/rockerMouse.json");
+        // this.load.json("pinkdressMouse_toturial", "assets/tilemaps/toturial_inside/pinkDressGirlMouse.json");
+        // this.load.json("objects_dialogues_toturial", "assets/tilemaps/toturial_inside/objectsDialogue.json");
+        // this.load.json("toturial_clues", "assets/tilemaps/toturial_inside/clues.json");
 
-        // --- 2. Load Images & Tilemaps ---
-        console.log("[ToturialScene Preload] Loading NPC portraits...");
-        this.load.image('portrait_cop2', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
-        this.load.image('portrait_rockermouse', 'assets/npc/rockerMouse/Neutral_rockermouse_portrait.png');
-        this.load.image('portrait_orangeshirt', 'assets/npc/orangeShirtMouse/Neutralorangeshirtmouseportrait.png');
-        this.load.image('portrait_pinkdress', 'assets/npc/pinkDressGirlMouse/Neutralpinkdressgirlmouse.png');
-        this.load.image('portrait_unknown', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
+        // // --- 2. Load Images & Tilemaps ---
+        // console.log("[ToturialScene Preload] Loading NPC portraits...");
+        // this.load.image('portrait_cop2', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
+        // this.load.image('portrait_rockermouse', 'assets/npc/rockerMouse/Neutral_rockermouse_portrait.png');
+        // this.load.image('portrait_orangeshirt', 'assets/npc/orangeShirtMouse/Neutralorangeshirtmouseportrait.png');
+        // this.load.image('portrait_pinkdress', 'assets/npc/pinkDressGirlMouse/Neutralpinkdressgirlmouse.png');
+        // this.load.image('portrait_unknown', 'assets/npc/cop2Sprite/neutral_portrait_officer_whiskers.png');
         
-        // Tilemap assets
-        this.load.tilemapTiledJSON('policeinside', 'assets/tilemaps/toturial_inside/policeroom.tmj');
-        this.load.image('background_toturial', 'assets/tilemaps/toturial_inside/background.png');
-        this.load.image('big_furniture', 'assets/tilemaps/toturial_inside/big_furniture.png');
-        this.load.image('objects_decoration', 'assets/tilemaps/toturial_inside/objects_decoration.png');
+        // // Tilemap assets
+        // this.load.tilemapTiledJSON('policeinside', 'assets/tilemaps/toturial_inside/policeroom.tmj');
+        // this.load.image('background_toturial', 'assets/tilemaps/toturial_inside/background.png');
+        // this.load.image('big_furniture', 'assets/tilemaps/toturial_inside/big_furniture.png');
+        // this.load.image('objects_decoration', 'assets/tilemaps/toturial_inside/objects_decoration.png');
 
-        // NPC Atlases
-        this.load.atlas("cop2", "assets/npc/cop2Sprite/cop2sprite.png", "assets/npc/cop2Sprite/cop2sprite.json");
-        this.load.atlas("orangeShirtMouse", "assets/npc/orangeShirtMouse/orangeShirtMouse.png", "assets/npc/orangeShirtMouse/orangeShirtMouse.json");
-        this.load.atlas("rockerMouse", "assets/npc/rockerMouse/rockerMouse.png", "assets/npc/rockerMouse/rockerMouse.json");
-        this.load.atlas("pinkDressGirlMouse", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.png", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.json");
-        console.log("[ToturialScene Preload] Loading item assets from AllItemConfigs...");
-        Object.values(AllItemConfigs).forEach((itemConfig: ItemConfig) => {
-             // (Keep your existing item loading logic here...)
-             if (itemConfig.art && itemConfig.art.large) {
-                if (typeof itemConfig.art.large === 'string') {
-                    this.load.image(itemConfig.art.large, itemConfig.art.large);
-                } else {
-                    const phaseArt = itemConfig.art.large as PhaseArt;
-                    this.load.image(phaseArt.full, phaseArt.full);
-                    this.load.image(phaseArt.half, phaseArt.half);
-                    this.load.image(phaseArt.empty, phaseArt.empty);
-                }
-            }
-            if (itemConfig.art && itemConfig.art.small) {
-                if (typeof itemConfig.art.small === 'string') {
-                    this.load.image(itemConfig.art.small, itemConfig.art.small);
-                } else { 
-                    const phaseArt = itemConfig.art.small as PhaseArt;
-                    this.load.image(phaseArt.full, phaseArt.full);
-                    this.load.image(phaseArt.half, phaseArt.half);
-                    this.load.image(phaseArt.empty, phaseArt.empty);
-                }
-            }
-        });
+        // // NPC Atlases
+        // this.load.atlas("cop2", "assets/npc/cop2Sprite/cop2sprite.png", "assets/npc/cop2Sprite/cop2sprite.json");
+        // this.load.atlas("orangeShirtMouse", "assets/npc/orangeShirtMouse/orangeShirtMouse.png", "assets/npc/orangeShirtMouse/orangeShirtMouse.json");
+        // this.load.atlas("rockerMouse", "assets/npc/rockerMouse/rockerMouse.png", "assets/npc/rockerMouse/rockerMouse.json");
+        // this.load.atlas("pinkDressGirlMouse", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.png", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.json");
+        // console.log("[ToturialScene Preload] Loading item assets from AllItemConfigs...");
+        // Object.values(AllItemConfigs).forEach((itemConfig: ItemConfig) => {
+        //      // (Keep your existing item loading logic here...)
+        //      if (itemConfig.art && itemConfig.art.large) {
+        //         if (typeof itemConfig.art.large === 'string') {
+        //             this.load.image(itemConfig.art.large, itemConfig.art.large);
+        //         } else {
+        //             const phaseArt = itemConfig.art.large as PhaseArt;
+        //             this.load.image(phaseArt.full, phaseArt.full);
+        //             this.load.image(phaseArt.half, phaseArt.half);
+        //             this.load.image(phaseArt.empty, phaseArt.empty);
+        //         }
+        //     }
+        //     if (itemConfig.art && itemConfig.art.small) {
+        //         if (typeof itemConfig.art.small === 'string') {
+        //             this.load.image(itemConfig.art.small, itemConfig.art.small);
+        //         } else { 
+        //             const phaseArt = itemConfig.art.small as PhaseArt;
+        //             this.load.image(phaseArt.full, phaseArt.full);
+        //             this.load.image(phaseArt.half, phaseArt.half);
+        //             this.load.image(phaseArt.empty, phaseArt.empty);
+        //         }
+        //     }
+        // });
         
-        this.load.image('fallback_missing_item_texture', 'assets/tilemaps/toturial_inside/cheese_32x32.png');
+        // this.load.image('fallback_missing_item_texture', 'assets/tilemaps/toturial_inside/cheese_32x32.png');
 
-        this.load.audio('background_music', 'assets/tilemaps/toturial_inside/TownTheme.mp3');
-        this.load.audio("girl_speaking_sound", "assets/Audio/talking/female_mouse_1_high_pitch.mp3");
-        this.load.audio("male_speaking_sound", "assets/Audio/talking/male_mouse_1_low_pitch.mp3");
-        this.load.audio("random_speaking_sound", "assets/Audio/talking/random_mouse_1_high_pitch.mp3");
+        // this.load.audio('background_music', 'assets/tilemaps/toturial_inside/TownTheme.mp3');
+        // this.load.audio("girl_speaking_sound", "assets/Audio/talking/female_mouse_1_high_pitch.mp3");
+        // this.load.audio("male_speaking_sound", "assets/Audio/talking/male_mouse_1_low_pitch.mp3");
+        // this.load.audio("random_speaking_sound", "assets/Audio/talking/random_mouse_1_high_pitch.mp3");
+        this.load.pack('tutorial_pack', 'assets/packs/toturial_case_packs.json', 'tutorial_assets');
     }
 
     create() {
         // 1. Setup Managers & State
         const state = GameState.getInstance(this);
-        
+        CaseManager.getInstance().loadScenario(TutorialCase);
         // --- LOGIC: ALWAYS RESTART TUTORIAL ---
         state.counters['tutorial_step'] = 0; 
         state.setFlag('tutorial_completed', false);
@@ -307,7 +309,6 @@ export class ToturialScene extends Phaser.Scene {
 
         this.caseDirector = new CaseDirector(
             this,
-            TutorialCase,
             this.npcs.map(n => ({ npcId: n.npcId, sprite: n, sensoryRange: (n as any).sensoryRange }))
         );
 
@@ -317,6 +318,14 @@ export class ToturialScene extends Phaser.Scene {
 
 
         this.events.on('shutdown', this.onShutdown, this);
+        this.caseDirector = new CaseDirector(
+            this,
+            this.npcs.map(n => ({ 
+                npcId: n.npcId, 
+                sprite: n, 
+                sensoryRange: (n as any).sensoryRange 
+            }))
+        );
         
         this.setupTutorialEvents();
         
@@ -347,7 +356,8 @@ export class ToturialScene extends Phaser.Scene {
 
     exitHouse() {
         // Return to the main game scene
-        this.scene.start('Game', { fromScene: 'HouseScene', playerX: this.startX, playerY: this.startY });
+        // this.scene.start('Game', { fromScene: 'HouseScene', playerX: this.startX, playerY: this.startY });
+        this.scene.start('Introduction_city_murder');
     }
 
     update(time: number, delta: number) {
