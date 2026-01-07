@@ -48,7 +48,7 @@ export class Game extends Phaser.Scene {
     }
 
     preload() {
-        // Preload assets...
+        // Preload assets spritesheets
         this.load.atlas("cop1", "assets/npc/cop1Sprite/cop1Sprite.png", "assets/npc/cop1Sprite/cop1Sprite.json")
         this.load.atlas("cop2", "assets/npc/cop2Sprite/cop2sprite.png", "assets/npc/cop2Sprite/cop2sprite.json")
         this.load.atlas("CopGirlSprite", "assets/npc/CopGirlSprite/CopGirlSprite.png", "assets/npc/CopGirlSprite/CopGirlSprite.json")
@@ -65,11 +65,19 @@ export class Game extends Phaser.Scene {
         this.load.atlas("rockerMouse", "assets/npc/rockerMouse/rockerMouse.png", "assets/npc/rockerMouse/rockerMouse.json")
         this.load.atlas("sorcerrorMouse", "assets/npc/sorcerrorMouse/sorcerrorMouse.png", "assets/npc/sorcerrorMouse/sorcerrorMouse.json")
         this.load.atlas("yellowShirtMouse", "assets/npc/yellowShirtMouse/yellowShirtMouse.png", "assets/npc/yellowShirtMouse/yellowShirtMouse.json")
-
+        // Preload objects
         this.load.image('DeadBody', 'assets/button/deadMouseVictim.png');
         this.load.image('knifeBlood', 'assets/button/knifeBlood.png');
         this.load.image('grannyBag', 'assets/button/grannyBag.png');
         this.load.image('gun', 'assets/button/gun.png');
+
+        // moved from major preloader.
+        this.load.image('background_floor', 'assets/tilemaps/Background_floor.png');
+        this.load.image('test_house_more', 'assets/tilemaps/test_house_more.png');
+        this.load.image('objects', 'assets/tilemaps/tilemap_objects.png');
+        this.load.tilemapTiledJSON('scene1', 'assets/tilemaps/public/assets/tilemaps/introduction_murder_case.tmj');
+
+        // tbd load dialogue and cases
     }
 
     create() {

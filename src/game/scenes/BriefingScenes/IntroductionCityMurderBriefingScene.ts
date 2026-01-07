@@ -3,7 +3,7 @@ import { IntroductionCityMurderCase } from '../../../cases/IntroductionCityMurde
 
 export class Introduction_city_murder extends Phaser.Scene {
     constructor() {
-        super('introduction_city_murder');
+        super('Introduction_city_murder');
     }
 
     preload() {
