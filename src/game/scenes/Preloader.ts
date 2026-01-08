@@ -40,11 +40,11 @@ export class Preloader extends Scene
         this.load.image('logo', 'widerNewlogoMouse.png');
         this.load.image('star', 'star.png');
 
-        //assets
-        this.load.image('background_floor', 'tilemaps/Background_floor.png');
-        this.load.image('test_house_more', 'tilemaps/test_house_more.png');
-        this.load.image('objects', 'tilemaps/tilemap_objects.png');
-        this.load.tilemapTiledJSON('scene1', 'tilemaps/windowsTilemap.tmj');
+        // //assets
+        // this.load.image('background_floor', 'tilemaps/Background_floor.png');
+        // this.load.image('test_house_more', 'tilemaps/test_house_more.png');
+        // this.load.image('objects', 'tilemaps/tilemap_objects.png');
+        // this.load.tilemapTiledJSON('scene1', 'tilemaps/windowsTilemap.tmj');
 
         //spritesheet
         this.load.spritesheet('player', 'characterSprite/newPlayerSpritesheet.png', {frameWidth: 48, frameHeight: 48});      
