@@ -4,129 +4,120 @@ import { activateTutorialCase } from '../../cases/tutorialCases';
 
 export const blueCheese: ItemConfig = {
     id: 'blueCheese',
-    name: 'Suspicious Blue Cheese', // User-friendly name for UI
-    clueId: 'blueCheese', // If interacting/collecting it generates a specific clue
+    name: 'Suspicious Blue Cheese',
+    clueId: 'blueCheese',
+    
+    // --- ARTWORK ---
     art: {
-        small: { // Example paths - replace with your actual asset paths
+        small: {
             full: 'assets/tilemaps/toturial_inside/cheese_32x32.png',
             half: 'assets/tilemaps/toturial_inside/cheese_32x32_half.png',
             empty: 'assets/tilemaps/toturial_inside/cheese_32x32_empty.png'
         },
-        large: { // Example paths - replace with your actual asset paths
+        large: {
             full: 'assets/tilemaps/toturial_inside/cheese_64x64.png',
             half: 'assets/tilemaps/toturial_inside/cheese_64x64_half.png',
             empty: 'assets/tilemaps/toturial_inside/cheese_64x64_eaten.png'
         }
     },
-    defaultScale: 0.5, // If used as a world sprite
+    defaultScale: 0.5,
     description: 'A pungent blue cheese. It has a surprisingly sweet undertone.',
     collectible: true,
 
     // --- DIALOGUE ---
     dialogue: [
         {
-            id: 'greeting', // Initial dialogue when interacting with the cheese
+            id: 'greeting',
             text: "This is some rather odorous blue cheese. It looks... edible?",
             options: [
                 {
                     id: 'pickupOption',
                     text: "Pick up the cheese",
-                    callbackId: "pick_up_cheese", // Will trigger handleCallback
-                    // nextDialogueId: 'pickedUpMessage' // Optional
+                    callbackId: "pick_up_cheese",
                 },
                 {
                     id: 'leaveOption',
                     text: "Leave it alone."
-                    // No nextDialogueId or callbackId, just closes dialogue
                 }
             ]
         },
         {
-            id: 'tastedDescription', // Example followup if taste_cheese had a nextDialogueId
-            text: "It's strangely compelling...",
-            options: [
-                { id: 'ok', text: "Interesting." }
-            ]
-        },
-        {
-            id: 'pickedUpMessage', // Example followup if pick_up_cheese had a nextDialogueId
+            id: 'pickedUpMessage',
             text: "You pocket the cheese.",
             options: [
                 { id: 'ok_collected', text: "Alright." }
             ]
         }
-        // You can add more dialogue nodes as needed for more complex interactions
-    ] as DialogueNode[], // Type assertion for clarity
+    ] as DialogueNode[],
 
     // --- STATE ---
     initialStatus: 'full',
     timesUsed: 0,
     currentStatus: 'full',
 
-    // --- CLUE INFO (Optional) ---
+    // --- CLUE INFO ---
     clueCategory: 'evidence',
-    // clueFoundAt: 'Police Station - Break Room', // Can be set if needed
 
     // --- METHODS ---
     getArt: function (this: ItemConfig, size: 'small' | 'large', phase: EvidencePhase | 'fixed'): string {
         const artSet = this.art[size];
-        if (typeof artSet === 'string') {
-            return artSet;
-        }
-        // Determine art from the phase passed as an argument, NOT from 'this.currentStatus'
+        if (typeof artSet === 'string') return artSet;
         const phaseKeyForArt = (phase === 'fixed' ? 'full' : phase) as keyof typeof artSet;
         return artSet[phaseKeyForArt] || artSet.full;
     },
 
-
+    // --- THE IMPORTANT PART: USE FUNCTION ---
     use: function (this: ItemConfig, gameContext: ItemGameContext) {
         const { gameState, clueManager } = gameContext;
         const clueId = this.clueId || this.id;
 
-        // 1. Get current state FROM GameState
+        // 1. Check if already empty
         const currentState = gameState.getOrInitClueState(clueId);
+        if (currentState.phase === 'empty') {
+            return {
+                message: "You already ate all the cheese! You greedy mouse.",
+                artChanged: false,
+                consumed: false
+            };
+        }
 
-        let message = "The cheese is already gone!";
-        let artChanged = false;
-        let aPortionWasUsed = false;
+        // 2. Degrade the item (Full -> Half -> Empty)
+        const newPhase = gameState.degradeClue(clueId);
+        let message = "You nibble the cheese.";
 
-        if (currentState.phase !== 'empty' && currentState.phase !== 'fixed') {
-            aPortionWasUsed = true;
-            artChanged = true;
+        // 3. Set the FLAGS for the Dialogue Manager
+        if (newPhase === 'half') {
+            // Level 1: Ate it once
+            gameState.setFlag('player_ate_cheese_1', true);
+            message = 'You take a big bite. The cheese is surprisingly sweet! It\'s now half-eaten.';
+        } 
+        else if (newPhase === 'empty') {
+            // Level 2: Ate it twice (finished it)
+            gameState.setFlag('player_ate_cheese_2', true);
+            message = 'You finish the cheese. It was delicious... but wait, was that evidence?';
+        }
 
-            // 2. DEGRADE the state IN GameState
-            const newPhase = gameState.degradeClue(clueId);
-
-            if (newPhase === 'half') {
-                message = 'You take a big bite. The cheese is surprisingly sweet! It\'s now half-eaten.';
-            } else if (newPhase === 'empty') {
-                message = 'You finish the cheese. It was delicious, with an odd, faint aftertaste of cola.';
-            }
-
-            // 3. Update the clue using the new state
-            if (clueManager) {
-                clueManager.updateClueDetails(clueId, {
-                    title: `${this.name} (${newPhase === 'half' ? 'Half-Eaten' : 'Eaten'})`,
-                    description: `You've eaten some of the cheese. ${message}`,
-                    // 4. Get the new art using the new state
-                    imageKey: this.getArt.call(this, 'small', newPhase)
-                });
-            }
+        // 4. Update the Clue/Journal Entry
+        if (clueManager) {
+            clueManager.updateClueDetails(clueId, {
+                title: `${this.name} (${newPhase === 'half' ? 'Half-Eaten' : 'Eaten'})`,
+                description: `You've eaten some of the cheese. ${message}`,
+                imageKey: this.getArt.call(this, 'small', newPhase)
+            });
         }
 
         return {
-            newStatus: gameState.getOrInitClueState(clueId).phase,
+            newStatus: newPhase,
             message: message,
-            artChanged: artChanged,
-            consumed: gameState.getOrInitClueState(clueId).phase === 'empty' && aPortionWasUsed
+            artChanged: true, // Updates UI icon
+            consumed: newPhase === 'empty' // Should we remove it from inventory? (True = yes)
         };
     },
 
-    // --- FIX: UPDATED handleCallback METHOD ---
+    // --- CALLBACKS ---
     handleCallback: function (this: ItemConfig, callbackId: string, gameContext: ItemGameContext) {
-        const { gameState, clueManager, inventoryManager, ui, world, interactedObject } = gameContext;
+        const { clueManager, inventoryManager, ui, world, interactedObject, gameState } = gameContext;
         const clueId = this.clueId || this.id;
-
         const currentPhase = gameState.getOrInitClueState(clueId).phase;
 
         switch (callbackId) {
@@ -137,49 +128,32 @@ export const blueCheese: ItemConfig = {
                 }
 
                 ui.showPlayerMessage("You cautiously pick up the blue cheese.");
-                const invItem = inventoryManager.createInventoryItemData(this);
-                inventoryManager.addItem(invItem);
+                
+                // Add to Inventory
+                if ((inventoryManager as any).createInventoryItemData) {
+                    const invItem = (inventoryManager as any).createInventoryItemData(this);
+                    inventoryManager.addItem(invItem);
+                }
 
-                // Add a clue related to picking up the cheese
+                // Add to Clue Journal
                 clueManager.addClue({
                     id: clueId,
                     title: `${this.name} Obtained`,
                     description: `You picked up a piece of ${this.name}. ${this.description}`,
-                    // Get the art for the CURRENT phase when creating the clue
                     imageKey: this.getArt.call(this, 'small', currentPhase),
                     category: this.clueCategory || 'evidence',
                     discovered: true,
                 });
 
-                // Activate the Illegal Cheese case when the player picks it up
+                // Trigger the Tutorial Case
                 activateTutorialCase('bluecheese_case', true);
-                ui.showNotification?.('New case added: WHOSE CHEESE IS THIS');
+                if (ui.showNotification) {
+                    ui.showNotification('New case added: WHOSE CHEESE IS THIS');
+                }
 
+                // Remove from World
                 if (world.removeItemSprite && interactedObject) {
                     world.removeItemSprite(interactedObject);
-                }
-                break;
-
-            case 'taste_cheese':
-                // This logic is for tasting the cheese in the world, before it's picked up.
-                if (currentPhase !== 'empty' && currentPhase !== 'fixed') {
-                    const newPhase = gameState.degradeClue(clueId);
-                    let messageFromTaste = "You nibble a bit of the cheese. Sweet, with a cola aftertaste.";
-                    if (newPhase === 'empty') {
-                        messageFromTaste = 'You finish off the remaining cheese from where it lies. Quite addictive.';
-                    }
-                    ui.showPlayerMessage(messageFromTaste);
-
-                    // Update the world sprite's texture if it can be refreshed
-                    if (interactedObject && typeof (interactedObject as any).refreshTexture === 'function') {
-                        (interactedObject as any).refreshTexture();
-                    }
-
-                    if (newPhase === 'empty' && world.removeItemSprite && interactedObject) {
-                        world.removeItemSprite(interactedObject);
-                    }
-                } else {
-                    ui.showPlayerMessage("It's already gone.");
                 }
                 break;
         }
@@ -189,5 +163,4 @@ export const blueCheese: ItemConfig = {
         gameContext.ui.showPlayerMessage(`The ${this.name || 'blue cheese'} feels strangely compelling in your hand.`);
         return { collected: true, message: `${(this as any).name || this.id} added to inventory.` };
     }
-
 };

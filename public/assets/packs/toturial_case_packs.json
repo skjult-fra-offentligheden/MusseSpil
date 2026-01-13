@@ -164,6 +164,26 @@
         "type": "image",
         "key": "assets/tilemaps/toturial_inside/cheese_64x64.png",
         "url": "assets/tilemaps/toturial_inside/cheese_64x64.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cokebag_32x32_half_empty.png",
+        "url": "assets/tilemaps/toturial_inside/cokebag_32x32_half_empty.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cokebag_32x32_empty.png",
+        "url": "assets/tilemaps/toturial_inside/cokebag_32x32_empty.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cheese_32x32_half.png",
+        "url": "assets/tilemaps/toturial_inside/cheese_32x32_half.png"
+      },
+      {
+        "type": "image",
+        "key": "assets/tilemaps/toturial_inside/cheese_32x32_empty.png",
+        "url": "assets/tilemaps/toturial_inside/cheese_32x32_empty.png"
       }
     ]
   }

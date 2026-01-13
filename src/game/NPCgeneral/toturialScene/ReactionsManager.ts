@@ -114,7 +114,7 @@ export class ReactionManager {
                     this.gs.setFlag(fx.id, true); // keep it simple: flags drive UI/accusations
                     break;
                 case 'attack':
-                    this.ui.showNotification(`⚠ ${fx.attackerId} lashes out at you!`);
+                    this.ui.showNotification(`⚠ ${fx.attackerId} lashes out at you!`);                    
                     break;
                 case 'gameover':
                     this.ui.showNotification(`🚫 ${fx.reason}`);

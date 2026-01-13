@@ -94,15 +94,33 @@ export const glue: ItemConfig = {
     // --- FIX: Updated use method to be stateless ---
     use: function (this: ItemConfig, gameContext: ItemGameContext) {
         const { gameState } = gameContext;
-        const currentState = gameState.getOrInitClueState(this.clueId!);
 
-        if (currentState.phase === 'empty') {
-            return { message: "You've already used this glue for something.", artChanged: false, consumed: false };
+        // 1. Check if we have already sniffed it multiple times
+        if (!gameState.getFlag("playerDidGlue_1")) {
+            gameState.setFlag("playerDidGlue_1", true);
+            return { 
+                message: "You take a deep sniff of the glue. Whoa, that smells strong... and chemically.", 
+                artChanged: false, 
+                consumed: false 
+            };
+        } 
+        else if (!gameState.getFlag("playerDidGlue_2")) {
+            gameState.setFlag("playerDidGlue_2", true);
+            return { 
+                message: "You sniff it again. Your head starts spinning slightly. Why are you doing this?", 
+                artChanged: false, 
+                consumed: false 
+            };
+        } 
+        else {
+            // Depending on how far you want to go, you can keep setting this or stop at 3
+            gameState.setFlag("playerDidGlue_3", true); 
+            return { 
+                message: "Okay, you definitely have a problem now. The world looks a bit wobbly.", 
+                artChanged: false, 
+                consumed: false 
+            };
         }
-
-        // Logic for using glue on a target would go here
-        // For now, default message:
-        return { message: "You look at the tube of glue. What do you want to use it on?", artChanged: false, consumed: false };
     },
 
     // --- FIX: Updated handleCallback to be stateless ---

@@ -142,7 +142,7 @@
                 {
                     "id": "Hostile_cocaine",
                     "speaker": "Detective",
-                    "text": "I loooooooveeeeeeecocaiiineeeee",
+                    "text": "I loooooooveeeeeee cocaiiineeeee",
                     "nextDialogueId": "Hostile_cocaine",
                     "effectKey": "decreaseCopReputation"
                 }
@@ -282,5 +282,46 @@
             ],
             "effectKey": "decreaseCopReputation",
             "once": true
-        }
+        },
+        {
+            "id": "Has_phone_clue_1",
+            "speaker": "Chief Whiskers",
+            "text": "This phone was used to buy the drugs!",
+            "condition": "HAS_PHONE_CLUE",
+            "options": [
+                {
+                    "id": "Has_phone_clue_1_response_1",
+                    "speaker": "Detective",
+                    "text": "Ahh, so i just need to find the owner then",
+                    "nextDialogueId": "Correct_clue_interpretation"
+                },
+                {
+                    "id": "Has_phone_clue_1_response_2",
+                    "speaker": "Detective",
+                    "text": "Ahhh the phone must be guilty then",
+                    "nextDialogueId": "Wrong_clue_interpretation"
+                }
+            ],
+            "effectKey": "increaseCopReputation",
+            "once": true
+        },
+                    {
+                "id": "Correct_clue_interpretation",
+                "speaker": "Chief Whiskers",
+                "text": "Yes, correct. Find the owner and accuse them",
+                "condition": "HAS_PHONE_CLUE",
+                "options": [
+                ],
+                "once": true
+            },
+            {
+                "id": "Wrong_clue_interpretation",
+                "speaker": "Chief Whiskers",
+                "text": "No, that's not how it works. Try to think this through next time",
+                "condition": "HAS_PHONE_CLUE",
+                "options": [
+                ],
+                "effectKey": "decreaseCopReputation",
+                "once": true
+            }
     ]}

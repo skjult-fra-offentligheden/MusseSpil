@@ -98,6 +98,12 @@ export class DialogueManager {
         // Filter based on conditions
         let specialEventNode: DialogueNode | undefined = undefined;
         for (const node of this.currentDialogues) {
+            // 1. Check if this node is 'once' and has already been visited
+            if (node.once && this.currentNpc && this.currentNpc.npcMemory.visitedDialogues.has(node.id)) {
+                continue; // Skip this node, we've already seen it
+            }
+
+            // 2. Check the condition
             if (node.condition) {
                 const result = this.evaluateCondition(node.condition, node.id);
                 if (typeof result === "string" && node.id === result) {
@@ -212,20 +218,47 @@ export class DialogueManager {
         const gameState = GameState.getInstance();
 
         switch (conditionKey) {
-            case "PLAYER_ATE_CHEESE_ONCE":
-                const cheeseState = gameState.getOrInitClueState('blueCheese');
-                if (cheeseState.phase === 'half') {
-                    return nodeId;
-                }
-                return false;
-
+            // --- EXISTING ---
             case "HAS_PHONE_CLUE":
-                if (gameState.isClueDiscovered('clue_phone_gang_connection')) {
-                    return nodeId;
-                }
-                return false;
+                return gameState.isClueDiscovered('clue_phone_gang_connection') ? nodeId : false;
+
+            // ============================================================
+            // 🧀 CHEESE TRIGGERS (Exclusive Levels)
+            // ============================================================
+            // Show Level 1 ONLY if Level 2 hasn't happened yet
+            case "player_ate_cheese_1":
+                return (gameState.getFlag("player_ate_cheese_1") && !gameState.getFlag("player_ate_cheese_2")) ? nodeId : false;
+            
+            case "player_ate_cheese_2":
+                return gameState.getFlag("player_ate_cheese_2") ? nodeId : false;
+
+            case "PLAYER_ATE_CHEESE_ONCE": 
+                // Keep this simple or link it to level 1 logic
+                return (gameState.getFlag("player_ate_cheese_1") && !gameState.getFlag("player_ate_cheese_2")) ? nodeId : false;
+
+            // ============================================================
+            // 🧴 GLUE TRIGGERS (Exclusive Levels)
+            // ============================================================
+            // Level 1: Active only if we haven't reached Level 2
+            case "playerDidGlue_1":
+                return (gameState.getFlag("playerDidGlue_1") && !gameState.getFlag("playerDidGlue_2")) ? nodeId : false;
+
+            // Level 2: Active only if we haven't reached Level 3
+            case "playerDidGlue_2":
+                return (gameState.getFlag("playerDidGlue_2") && !gameState.getFlag("playerDidGlue_3")) ? nodeId : false;
+
+            // Level 3: Always active if reached
+            case "playerDidGlue_3":
+                return gameState.getFlag("playerDidGlue_3") ? nodeId : false;
+
+            // ============================================================
+            // ⚪ COCAINE TRIGGERS
+            // ============================================================
+            case "playerDidCocaine":
+                return gameState.getFlag("playerDidCocaine") ? nodeId : false;
 
             default:
+                console.warn(`Condition "${conditionKey}" not implemented in DialogueManager.`);
                 return false;
         }
     }

@@ -16,7 +16,6 @@ export const tutorialCallbacks: Record<string, CallbackFn> = {
         }
     },
     start_investigation: ({ gs, ui }) => {
-        // This runs if they choose "I'm on it"
         gs.incrementCounter('tutorial_step'); // Move to step 1
         ui.showNotification('Objective: Search for clues.');
     },
@@ -30,9 +29,8 @@ export const tutorialCallbacks: Record<string, CallbackFn> = {
 
         // 2. Unlock functionality (like journal) just in case
         ui.setJournalHotkeyEnabled(true);
-
-        // 3. Transition to Main Game
-        // Ensure you have coordinates if needed, or defaults will be used
         scene.scene.start('Game', { fromScene: 'ToturialScene' });
     }
+
+    
 };
