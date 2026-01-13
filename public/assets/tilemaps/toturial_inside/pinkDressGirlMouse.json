@@ -1,36 +1,124 @@
+{
+    "pinkDressGirlMouse": [
+        {
+            "id": "greeting",
+            "speaker": "Mouse Jennie",
+            "text": "This is beneath me. That phone? Never seen it. And I certainly don't know anything about any white powder.",
+            "options": [
+                {
+                    "id": "compliment",
+                    "speaker": "Detective",
+                    "text": "You do look lovely!",
+                    "nextDialogueId": "compliment_response",
+                    "effectKey": "increaseNPCReputation",
+                    "once": true
+                },
+                {
+                    "id": "dismiss",
+                    "speaker": "Detective",
+                    "text": "Granny says a lot of things.",
+                    "nextDialogueId": "dismiss_response"
+                },
+                {
+                    "id": "press_drugs",
+                    "speaker": "Detective",
+                    "text": "You brought up the powder first...",
+                    "nextDialogueId": "suspicious_response"
+                }
+            ]
+        },
+        {
+            "id": "compliment_response",
+            "speaker": "Mouse Jennie",
+            "text": "Aww, thank you! At least one cop here has manners.",
+            "options": []
+        },
+        {
+            "id": "dismiss_response",
+            "speaker": "Mouse Jennie",
+            "text": "Hmph, you’re just mean. I'm not talking to you.",
+            "options": []
+        },
+        {
+            "id": "suspicious_response",
+            "speaker": "Mouse Jennie",
+            "text": "I... I was just guessing! Because of the raid! Go away!",
+            "options": []
+        },
 
-    {
-        "pinkDressGirlMouse": [
-            {
-                "id": "greeting",
-                "speaker": "Mouse Jennie",
-                "text": "This is beneath me. That phone? Never seen it",
-                "options": [
-                    {
-                        "id": "compliment",
-                        "speaker": "Detective",
-                        "text": "You do look lovely!",
-                        "nextDialogueId": "compliment_response"
-                    },
-                    {
-                        "id": "dismiss",
-                        "speaker": "Detective",
-                        "text": "Granny says a lot of things.",
-                        "nextDialogueId": "dismiss_response"
-                    }
-                ]
-            },
-            {
-                "id": "compliment_response",
-                "speaker": "Mouse Jennie",
-                "text": "Aww, thank you!",
-                "options": []
-            },
-            {
-                "id": "dismiss_response",
-                "speaker": "Mouse Jennie",
-                "text": "Hmph, you’re just mean.",
-                "options": []
-            }
-        
-]}
+        {
+            "id": "special_event_cocaine_gone",
+            "speaker": "Mouse Jennie",
+            "text": "YOU FINISHED IT?! Do you know how much that cos-... uh, how dangerous that is?!",
+            "condition": "playerDidCocaine",
+            "once": true,
+            "options": [
+                {
+                    "id": "caught_slip",
+                    "speaker": "Detective",
+                    "text": "You seemed worried about the cost there.",
+                    "nextDialogueId": "defensive_cocaine"
+                },
+                {
+                    "id": "crazy_cop",
+                    "speaker": "Detective",
+                    "text": "I feel GREAT!",
+                    "nextDialogueId": null
+                }
+            ]
+        },
+        {
+            "id": "defensive_cocaine",
+            "speaker": "Mouse Jennie",
+            "text": "I don't know what you're talking about! Talk to my lawyer!",
+            "options": []
+        },
+
+        {
+            "id": "Sniffed_glue_reaction",
+            "speaker": "Mouse Jennie",
+            "text": "Ugh, get away from me! You smell like chemicals and desperation.",
+            "condition": "playerDidGlue_1",
+            "once": true,
+            "options": []
+        },
+
+        {
+            "id": "Ate_cheese_1",
+            "speaker": "Mouse Jennie",
+            "text": "Ew, you're eating evidence? That's so unprofessional. And fattening.",
+            "condition": "player_ate_cheese_1",
+            "once": true,
+            "options": [
+                {
+                    "id": "rude_cheese",
+                    "speaker": "Detective",
+                    "text": "It's quality cheese!",
+                    "nextDialogueId": null
+                }
+            ]
+        },
+
+        {
+            "id": "has_phone_clue_1",
+            "speaker": "Mouse Jennie",
+            "text": "Stop waving that phone around. It doesn't match my outfit anyway.",
+            "condition": "HAS_PHONE_CLUE",
+            "once": true,
+            "options": [
+                {
+                    "id": "phone_check",
+                    "speaker": "Detective",
+                    "text": "Are you sure? It has messages about a 'drop off'.",
+                    "nextDialogueId": "phone_denial_hard"
+                }
+            ]
+        },
+        {
+            "id": "phone_denial_hard",
+            "speaker": "Mouse Jennie",
+            "text": "I said I've never seen it! Leave me alone!",
+            "options": []
+        }
+    ]
+}

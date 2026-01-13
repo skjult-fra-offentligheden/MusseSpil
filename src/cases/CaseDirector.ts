@@ -6,6 +6,7 @@ import { GameState } from '../game/managers/GameState';
 import { GlobalEvents } from '../factories/globalEventEmitter';        
 import type { ItemUsedEventPayload } from '../data/events/eventTypes'; 
 import { activateTutorialCase } from '../data/cases/tutorialCases';
+import { CaseManager } from '../data/cases/CaseManager';
 
 type WitnessableNPC = {
     npcId: string;
@@ -15,19 +16,20 @@ type WitnessableNPC = {
 
 export class CaseDirector {
     private scene: Phaser.Scene;
-    private cfg: CaseSceneConfig;
+    // private cfg: CaseSceneConfig;
     private ui = UIManager.getInstance();
     private gs: GameState;
     private npcs: WitnessableNPC[];
     private firedLock = false;
+    private get cfg(): CaseSceneConfig | null {
+        return CaseManager.getInstance().getActiveConfig();
+    }
 
     constructor(
         scene: Phaser.Scene,
-        cfg: CaseSceneConfig,
         npcs: Array<{ npcId: string; sprite: any; sensoryRange?: number }>
     ) {
         this.scene = scene;
-        this.cfg = cfg;
         this.npcs = npcs as WitnessableNPC[];
         this.gs = GameState.getInstance(this.scene);
 
@@ -39,7 +41,7 @@ export class CaseDirector {
         GlobalEvents.on('itemUsedFromInventory', this.onItemUse, this);
 
         console.log('[CaseDirector] Listening for itemUsedFromInventory');
-        console.log('[CaseDirector] failStates =', this.cfg.failStates);
+        console.log('[CaseDirector] Initialized. Active Case:', this.cfg?.id ?? 'NONE');
     }
 
     destroy() {
@@ -47,12 +49,14 @@ export class CaseDirector {
     }
 
     // ——— Public API for Accusation UI ———
-    getAvailableCrimesFor(suspectId: string) {
+getAvailableCrimesFor(suspectId: string) {
+        if (!this.cfg) return []; // Safety check
         return this.cfg.crimes.filter(c => c.suspectId === suspectId && this.eval(c.unlockWhen));
     }
 
     // ——— Internals ———
     private onItemUse = (p: ItemUsedEventPayload) => {
+        if (!this.cfg) return;
         const status = p.useResult?.newStatus as 'half' | 'empty' | undefined;
 
         // 1) Witnesses in range (use helper)

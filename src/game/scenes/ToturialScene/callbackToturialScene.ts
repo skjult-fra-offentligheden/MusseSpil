@@ -16,7 +16,7 @@ export const tutorialCallbacks: Record<string, CallbackFn> = {
         }
     },
     start_investigation: ({ gs, ui }) => {
-        gs.incrementCounter('tutorial_step'); // Move to step 1
+        gs.incrementCounter('tutorial_step'); 
         ui.showNotification('Objective: Search for clues.');
     },
 

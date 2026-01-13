@@ -267,13 +267,13 @@
             "condition": "player_ate_cheese_2",
             "options": [
                 {
-                    "id": "Excuse_glue_3",
+                    "id": "ate_cheese_2_friendly",
                     "speaker": "Detective",
                     "text": "After this mystery i'll buy you a better one",
                     "nextDialogueId": null
                 },
                 {
-                    "id": "Hostile_glue_3",
+                    "id": "ate_cheese_2_hostile",
                     "speaker": "Detective",
                     "text": "You should have eaten it before me",
                     "nextDialogueId": null,
