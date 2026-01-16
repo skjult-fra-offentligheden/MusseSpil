@@ -238,6 +238,8 @@ export class Game extends Phaser.Scene {
         const mask = this.roofMaskGraphics.createGeometryMask();
         mask.setInvertAlpha(true); // Invert so drawing a shape creates a hole
         this.roofLayerSolid.setMask(mask);
+
+        //darkness
         this.add.rectangle(0, 0, map.widthInPixels, map.heightInPixels, 0x000000, 0.3)
             .setOrigin(0, 0)
             .setDepth(100);

@@ -11,28 +11,24 @@ import { InventoryManager } from '../managers/itemMananger';
 import { UIManager } from '../managers/UIManager';
 import { ClueManager } from '../clueScripts/clueManager';
 import { Clue } from '../classes/clue';
-import { AllItemConfigs } from '../../data/items/AllItemConfig'; 
+import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
+// import { ItemConfig, PhaseArt } from '../../data/items/itemTemplate';
 import { CallbackHandler } from '../managers/CallBackManager';
-import { ItemActionHandler } from './ToturialScene/ItemActionHandler';
-import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'; 
-import { setupAllNPCAnimations, spawnNPCsFromList, NpcSpawnInstruction } from '../../factories/npcFactory'; 
+import { ItemActionHandler, ItemUsedEventPayload } from './ToturialScene/ItemActionHandler';
+import { AllNPCsConfigs } from '../../data/NPCs/AllNPCsConfigs'; // Assuming path to your new AllNPCConfigs
+// import { NPCConfig } from '../../data/NPCs/npcTemplate';  // Assuming path to your new RichNPCConfig interface
+import { setupAllNPCAnimations, spawnNPCsFromList, NpcSpawnInstruction } from '../../factories/npcFactory'; // Or wherever you put animation setup
 import { ReactionManager } from '../NPCgeneral/toturialScene/ReactionsManager';
 import { CaseDirector } from '../../cases/CaseDirector';
 import { TutorialCase } from '../../cases/TutorialCase';
 import { tutorialCases } from '../../data/cases/tutorialCases';
+import { GlobalEvents } from '../../factories/globalEventEmitter';
 import { tutorialCallbacks } from './ToturialScene/callbackToturialScene';
 import { CaseManager } from '../../data/cases/CaseManager';
-// --- NEW IMPORTS ---
-import { YarnManager } from '../dialogues/YarnManager';
-import { DialogueUI } from '../dialogues/dialogueUI';
 
-const MAX_DIALOGUE_DISTANCE = 70;
+const MAX_DIALOGUE_DISTANCE = 70; // SUPER IMPORTANT
 
 export class ToturialScene extends Phaser.Scene {
-    // --- PROPERTIES ---
-    private yarnManager!: YarnManager;
-    private dialogueUI!: DialogueUI; // Shared UI
-    
     private camera!: Phaser.Cameras.Scene2D.Camera;
     private interactionText!: Phaser.GameObjects.Text;
     npcs!: NPC[];
@@ -53,16 +49,20 @@ export class ToturialScene extends Phaser.Scene {
     private inventoryManager!: InventoryManager; 
     private isIntroDialogueActive: boolean = false;
     public callbackHandler!: CallbackHandler; 
-    public dialogueManager!: DialogueManager; // Keeping this for other NPCs/Objects
+    public dialogueManager!: DialogueManager;
 
-    //NPC Dialogues (Old System)
+    //NPC Dialogues
     private cop2dialogue: any;
     private rockermousedialogue: any;
     private orangeShirtMouse: any;
     private pinkdressMouse: any;
 
     public itemActionHandler!: ItemActionHandler;
+
+    //Case
     public caseDirector!: CaseDirector;
+
+    // Toturial scene arrows. 
     private tutorialArrows: { body: Body, arrow: Phaser.GameObjects.Graphics }[] = [];
 
     constructor() {
@@ -70,30 +70,18 @@ export class ToturialScene extends Phaser.Scene {
     }
 
     preload() {
-        // --- 1. Load Old Dialogues (For other NPCs) ---
-        this.load.json("orangeshirt_toturial", "assets/tilemaps/toturial_inside/orangeShirtMouse.json");
-        this.load.json("rockerMouse_toturial", "assets/tilemaps/toturial_inside/rockerMouse.json");
-        this.load.json("pinkdressMouse_toturial", "assets/tilemaps/toturial_inside/pinkDressGirlMouse.json");
-        this.load.json("objects_dialogues_toturial", "assets/tilemaps/toturial_inside/objectsDialogue.json");
-        this.load.json("toturial_clues", "assets/tilemaps/toturial_inside/clues.json");
-
-        // --- 2. Load Images, Tilemaps, Atlases ---
         this.load.pack('tutorial_pack', 'assets/packs/toturial_case_packs.json', 'tutorial_assets');
-
-        // --- 3. LOAD YARN FILE (The New System) ---
-        // Ensure this path matches where you put the fixed cop2.json!
-        this.load.json('cop2_yarn', 'assets/dialogue/yarn/cop2.json');
     }
 
     create() {
         // 1. Setup Managers & State
         const state = GameState.getInstance(this);
         CaseManager.getInstance().loadScenario(TutorialCase);
-        
+        // --- LOGIC: ALWAYS RESTART TUTORIAL ---
         state.counters['tutorial_step'] = 0; 
         state.setFlag('tutorial_completed', false);
+        // --------------------------------------
 
-        // Debugging Flags
         {
             const gs = GameState.getInstance();
             const _setFlag = gs.setFlag.bind(gs);
@@ -134,43 +122,74 @@ export class ToturialScene extends Phaser.Scene {
             this.scene.launch('UIGameScene');
         }
 
-        // --- SETUP YARN MANAGER (NEW) ---
-        // We create a DialogueUI explicitly to pass to YarnManager
-        this.dialogueUI = new DialogueUI(this);
-        this.yarnManager = new YarnManager(this, this.dialogueUI);
-        
-        // Load the data into Yarn
-        const yarnData = this.cache.json.get('cop2_yarn');
-        this.yarnManager.loadDialogue(yarnData);
-
-
-        // --- SETUP OLD DIALOGUE MANAGER (For Objects/Other NPCs) ---
+        // --- 2. LOAD & UNWRAP DIALOGUE DATA (THE FIX) ---
+        console.log("[ToturialScene] Loading Dialogue Data...");
         const loadDialogue = (key: string, propName: string) => {
+            // Check if key exists in cache
+            const exists = this.cache.json.exists(key);
+            console.log(`[ToturialScene] Checking cache for key: '${key}'... Exists? ${exists}`);
+            
             const data = this.cache.json.get(key) || {};
-            return Array.isArray(data) ? data : (data[propName] || []);
+            if (exists) {
+                console.log(`[ToturialScene] Data for '${key}':`, data);
+            }
+
+            // If the JSON is { "cop2": [...] }, we want the array inside.
+            const result = Array.isArray(data) ? data : (data[propName] || []);
+            console.log(`[ToturialScene] Unwrapped result for '${propName}':`, result);
+            return result;
         };
 
-        this.rockermousedialogue = loadDialogue("rockerMouse_toturial", "rockerMouse");
-        this.pinkdressMouse = loadDialogue("pinkdressMouse_toturial", "pinkDressGirlMouse");
-        this.orangeShirtMouse = loadDialogue("orangeshirt_toturial", "orangeShirtMouse");
+        this.cop2dialogue = loadDialogue("cop2_ink", "cop2");
+        this.rockermousedialogue = loadDialogue("rockerMouse_ink", "rockerMouse");
+        this.pinkdressMouse = loadDialogue("pinkdressMouse_ink", "pinkDressGirlMouse");
+        this.orangeShirtMouse = loadDialogue("orangeshirt_ink", "orangeShirtMouse");
         this.objectData = this.cache.json.get("objects_dialogues_toturial") || {};
 
+        // (We removed the manual dialogue injection because cop2.json now has the data)
+        const introNode = this.cop2dialogue.find((node: any) => node.id === 'cop2_tutorial_briefing');
+        if (introNode) {
+            introNode.options = [
+                {
+                    id: "opt_start",
+                    text: "I'm on it. What's the situation?",
+                    nextDialogueId: "cop2_tutorial_briefing_2" // Continue normal flow
+                },
+                {
+                    id: "opt_skip",
+                    text: "[Skip Tutorial] I know the drill.",
+                    callbackId: "tutorial/skip_tutorial" // Trigger skip callback
+                }
+            ];
+            // Clear the nextDialogueId so the manager stops to show options
+            introNode.nextDialogueId = undefined; 
+        }
+        // Combine into one map for the Manager
         this.dialoguesData = {
             'orangeShirtMouse': this.orangeShirtMouse,
             'pinkDressGirlMouse': this.pinkdressMouse,
+            'cop2': this.cop2dialogue,
             'rockerMouse': this.rockermousedialogue,
             ...this.objectData
         };
 
-        this.callbackHandler = new CallbackHandler(this, this.clueManager, this.inventoryManager, uiManager);
+        // Initialize Callbacks & Dialogue Manager
+        this.callbackHandler = new CallbackHandler(
+            this,
+            this.clueManager,
+            this.inventoryManager,
+            uiManager
+        );
         this.callbackHandler.registerHandlers('tutorial', tutorialCallbacks);
-        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.inventoryManager, this.callbackHandler);
+        const uiScene = this.scene.get('UIGameScene');
+        this.dialogueManager = new DialogueManager(uiScene, this.dialoguesData, this.clueManager, this.inventoryManager, this.callbackHandler);
 
-        // 3. Setup Map & Physics
+        // 3. Setup Map & Physics (The "World")
         const map = this.make.tilemap({ key: 'policeinside' });
         const backgroundTileset = map.addTilesetImage('background_toturial', 'background_toturial');
         const bigFurnitureTileset = map.addTilesetImage('big_furniture', 'big_furniture');
         const objectsDecorationTileset = map.addTilesetImage('objects_decoration', 'objects_decoration');
+
         const mapLayers = [backgroundTileset!, bigFurnitureTileset!, objectsDecorationTileset!];
 
         map.createLayer('Below Player', mapLayers, 0, 0);
@@ -258,6 +277,9 @@ export class ToturialScene extends Phaser.Scene {
         );
         
         this.setupTutorialEvents();
+        
+        // This will now trigger the intro (because step is 0)
+        // And DialogueManager will find the node because we fixed the data structure!
         this.checkTutorialState(); 
         
         this.scene.launch('UIGameScene');
@@ -276,37 +298,35 @@ export class ToturialScene extends Phaser.Scene {
         });
 
         this.triggers.add(trigger);
+
+
+
     }
 
     exitHouse() {
+        // Return to the main game scene
+        // this.scene.start('Game', { fromScene: 'HouseScene', playerX: this.startX, playerY: this.startY });
         this.scene.start('Introduction_city_murder');
     }
 
     update(time: number, delta: number) {
         this.player.update();
         this.npcs.forEach((npc) => npc.update(time, delta));
-        
-        // Update both managers
-        if (this.dialogueManager) this.dialogueManager.update();
-        // YarnManager handles updates internally via its UI callbacks
+        if (this.dialogueManager) { // Check if it exists
+            this.dialogueManager.update();
+        }
 
-        // Check if ANY dialogue is active to freeze player/camera
-        const isYarnActive = (this.yarnManager as any).isRunning; // Accessing private prop (safe if you add a getter in YarnManager)
-        const isOldActive = this.dialogueManager && this.dialogueManager.isDialogueActive();
+        if (this.dialogueManager && this.dialogueManager.isDialogueActive() && !this.isIntroDialogueActive) {
+            const currentNpc = this.dialogueManager.getCurrentNpc();
+            if (currentNpc) {
+                const playerPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
+                const npcPosition = new Phaser.Math.Vector2(currentNpc.x, currentNpc.y);
+                const distance = Phaser.Math.Distance.BetweenPoints(playerPosition, npcPosition);
 
-        if ((isYarnActive || isOldActive) && !this.isIntroDialogueActive) {
-            // Distance check logic for OLD system (Yarn can have its own if needed)
-            if (isOldActive) {
-                const currentNpc = this.dialogueManager.getCurrentNpc();
-                if (currentNpc) {
-                    const playerPosition = new Phaser.Math.Vector2(this.player.x, this.player.y);
-                    const npcPosition = new Phaser.Math.Vector2(currentNpc.x, currentNpc.y);
-                    const distance = Phaser.Math.Distance.BetweenPoints(playerPosition, npcPosition);
-
-                    if (distance > MAX_DIALOGUE_DISTANCE) {
-                         this.dialogueManager.endDialogue();
-                         this.hideInteractionPrompt();
-                    }
+                if (distance > MAX_DIALOGUE_DISTANCE) {
+                    console.warn(`[ToturialScene] Ending dialogue due to distance! Player: (${playerPosition.x}, ${playerPosition.y}), NPC: (${npcPosition.x}, ${npcPosition.y}), Distance: ${distance}, Max: ${MAX_DIALOGUE_DISTANCE}`);
+                    this.dialogueManager.endDialogue();
+                    this.hideInteractionPrompt();
                 }
             }
             return;
@@ -324,7 +344,6 @@ export class ToturialScene extends Phaser.Scene {
             });
         });
 
-        // --- INTERACTION LOGIC ---
         if (
             interactableInRange &&
             this.cursors &&
@@ -333,29 +352,18 @@ export class ToturialScene extends Phaser.Scene {
             if (activeInteractable) {
                 if (activeInteractable instanceof Body) {
                     activeInteractable.initiateInteraction(this.player);
-                } 
-                else if (activeInteractable instanceof NPC) {
-                    // *** YARN INTEGRATION FOR COP2 ***
-                    if (activeInteractable.npcId === 'cop2') {
-                        // 1. Tell GameState we are talking to Cop2 (for memory checks)
-                        GameState.getInstance().setCurrentNpc('cop2');
-                        // 2. Start the Master Node (it handles logic internally)
-                        this.yarnManager.startDialogue('Cop2_Start'); 
-                    } 
-                    else {
-                        // All other NPCs use the old system
-                        activeInteractable.initiateDialogue();
-                    }
+                } else {
+                    activeInteractable.initiateDialogue(); //start dialogue i deleted
                 }
             }
         }
 
         this.tutorialArrows = this.tutorialArrows.filter(item => {
             if (!item.body.active) {
-                item.arrow.destroy(); 
-                return false; 
+                item.arrow.destroy(); // Destroy the graphics
+                return false; // Remove from array
             }
-            return true; 
+            return true; // Keep in array
         });
 
         if (!interactableInRange) {
@@ -368,12 +376,11 @@ export class ToturialScene extends Phaser.Scene {
             let promptText = 'Press [SPACE] to interact';
             if (target) {
                 if (target instanceof NPC) {
-                    promptText = `Press [SPACE] to talk to ${target.npcId}`; 
+                    promptText = `Press [SPACE] to talk to ${target.npcId}`; // Or use a display name if NPCs have one
                 } else if (target instanceof Body) {
-                    promptText = `Press [SPACE] to examine ${target.itemId}`; 
+                    promptText = `Press [SPACE] to examine ${target.itemId}`; // Or use an item display name
                 }
-            } else if (typeof target === 'string') {
-                promptText = target;
+                // Add more checks if you have other interactable types
             }
 
             const camera = this.cameras.main;
@@ -399,52 +406,80 @@ export class ToturialScene extends Phaser.Scene {
     }
 
     private createObjects(
-        collisionLayer: Phaser.Tilemaps.TilemapLayer | null, 
+        collisionLayer: Phaser.Tilemaps.TilemapLayer | null, // Allow null if optional
         collisionLayer2: Phaser.Tilemaps.TilemapLayer | null,
         ObjectsclueLayer: Phaser.Types.Tilemaps.ObjectLayer | null
     ): void {
         const gameState = GameState.getInstance();
         const objectSpawnPoints = ObjectsclueLayer ? getNPCPositions(ObjectsclueLayer) : {};
 
+        // Define items to spawn with their itemId and Tiled object name (for position)
         const itemsToSpawn = [
             { itemId: 'cluePhone', spawnPointName: 'cluePhone' },
             { itemId: 'coke', spawnPointName: 'clueCoke' },
             { itemId: 'clueGlue', spawnPointName: 'glue' },
             { itemId: 'blueCheese', spawnPointName: 'clueCheese' },
+            // ... add all items you want to spawn in this scene
         ];
 
-        this.Objects = []; 
+        this.Objects = []; // Initialize if not already
 
         itemsToSpawn.forEach(itemDataToSpawn => {
-            if (gameState.collectedItems.has(itemDataToSpawn.itemId)) return; 
-            if (!AllItemConfigs[itemDataToSpawn.itemId]) return; 
-            
+            // 1. Check if item should be spawned (not collected, config exists, spawn point exists)
+            if (gameState.collectedItems.has(itemDataToSpawn.itemId)) {
+                // console.log(`[createObjects] Item ${itemDataToSpawn.itemId} already collected. Skipping.`);
+                return; // Skip this item
+            }
+            if (!AllItemConfigs[itemDataToSpawn.itemId]) {
+                console.warn(`[createObjects] No ItemConfig found for itemId: "${itemDataToSpawn.itemId}". Skipping.`);
+                return; // Skip this item
+            }
             const spawnPosition = objectSpawnPoints[itemDataToSpawn.spawnPointName];
-            if (!spawnPosition) return; 
+            if (!spawnPosition) {
+                console.warn(`[createObjects] No spawn point found for: "${itemDataToSpawn.spawnPointName}" (itemId: ${itemDataToSpawn.itemId}). Skipping.`);
+                return; // Skip this item
+            }
 
+            // 2. Create the Body instance using the new constructor
             const body = new Body(
                 this,
                 spawnPosition.x,
                 spawnPosition.y,
                 itemDataToSpawn.itemId,
-                this.dialogueManager 
+                this.dialogueManager // Pass the scene's dialogue manager
             );
 
             this.Objects.push(body);
-            body.setDepth(5); 
+            // scene.add.existing(body) and scene.physics.add.existing(body) are handled in Body constructor.
+            body.setDepth(5); // Set depth if needed (or Body could handle its default depth)
 
+            // Setup colliders (player vs item, item vs world layers)
             if (this.player && collisionLayer) this.physics.add.collider(this.player, body);
             if (collisionLayer) this.physics.add.collider(body, collisionLayer);
             if (collisionLayer2) this.physics.add.collider(body, collisionLayer2);
         });
 
-        this.interactables = [...this.npcs, ...this.Objects]; 
+        // Update the scene's interactables list
+        this.interactables = [...this.npcs, ...this.Objects]; // Assuming this.npcs is already populated
     }
 
-    private setupTutorialEvents() {
+private setupTutorialEvents() {
+        // Advance tutorial when specific dialogues end
+        this.events.on('dialogueEnded_cop2', () => {
+             const gs = GameState.getInstance();
+             const step = gs.getCounter('tutorial_step');
+             this.isIntroDialogueActive = false;
+             // If we just finished the intro (step 0), move to step 1
+             if (step === 0) {
+                 gs.incrementCounter('tutorial_step'); // Now 1
+                 this.checkTutorialState();
+             }
+        });
+
         // Advance tutorial when a clue is collected
         this.events.on('clueCollected', (clue: Clue) => {
             const gs = GameState.getInstance();
+            // If we are looking for evidence (Step 1) and find the phone or coke
             if (gs.getCounter('tutorial_step') === 1) {
                 gs.incrementCounter('tutorial_step'); // Now 2
                 this.checkTutorialState();
@@ -455,71 +490,85 @@ export class ToturialScene extends Phaser.Scene {
     private checkTutorialState() {
         const gs = GameState.getInstance();
         const step = gs.getCounter('tutorial_step');
-        
-        // This is important for Yarn checks to work during the intro!
-        gs.setCurrentNpc('cop2'); 
+        const chiefWhiskers = this.npcs.find(n => n.npcId === 'cop2');
 
         console.log(`[Tutorial] Checking state: ${step}`);
 
         switch (step) {
             case 0:
-                // STEP 0: INTRO - Force start Yarn Dialogue
-                this.isIntroDialogueActive = true;
-                this.time.delayedCall(500, () => {
-                    // Logic handles the "visited" check, so just run the start node
-                    this.yarnManager.startDialogue('Cop2_Start');
-                    
-                    // Note: Your Yarn file checks if visited("Cop2_Tutorial_Briefing") is false.
-                    // If it is false, it plays the briefing.
-                    // Once that finishes, the player is free.
-                    
-                    // Manually advance step after delay or assume player will talk again?
-                    // Usually you'd put a command like <<advanceTutorialStep>> in Yarn,
-                    // but for now let's just assume once they close the box, they are free.
-                    this.isIntroDialogueActive = false;
-                    gs.incrementCounter('tutorial_step');
-                });
+                // STEP 0: INTRO
+                // Force start the briefing dialogue immediately
+                if (chiefWhiskers) {
+                    this.isIntroDialogueActive = true;
+                    // Slight delay to let the scene fade in
+                    this.time.delayedCall(500, () => {
+                        this.dialogueManager.startDialogue('cop2', 'cop2_tutorial_briefing', chiefWhiskers);
+                    });
+                }
                 break;
 
             case 1:
-                this.showInteractionPrompt(null);
+                // STEP 1: INVESTIGATION
+                // Player has control. Show a hint?
+                this.showInteractionPrompt(null); // Clear prompt
                 UIManager.getInstance().setJournalHotkeyEnabled(true);
                 UIManager.getInstance().showNotification("Objective: Search the room for clues.");
                 break;
 
             case 2:
+                // STEP 2: EVIDENCE FOUND
+                // Unlock the Journal
                 UIManager.getInstance().setJournalHotkeyEnabled(true);
+                
                 UIManager.getInstance().showNotification("Journal Unlocked! Press 'J'");
+                
+                // Force Cop to talk again about the evidence
+                if (chiefWhiskers) {
+                    this.time.delayedCall(1000, () => {
+                         this.dialogueManager.startDialogue('cop2', 'cop2_evidence_reaction', chiefWhiskers);
+                    });
+                }
+                // Advance step automatically so we don't loop this logic
                 gs.incrementCounter('tutorial_step'); 
                 break;
             
             case 3:
+                 // Free roam / End of scripted tutorial
                  break;
         }
     }
 
     private createTutorialArrows() {
         this.tutorialArrows = [];
+
+        // Loop through all objects in the room
         this.Objects.forEach((obj) => {
+            // Only add arrows to things you can actually pick up
             if (obj.active && obj.isItemCollectible) {
-                const arrow = this.add.graphics();
-                arrow.fillStyle(0xffff00, 1); 
-                arrow.lineStyle(2, 0x000000, 1); 
+                console.log(`[Tutorial Arrows] Adding arrow to item: ${obj.itemId}`);
                 
+                // Draw a simple yellow triangle (Pointing down)
+                const arrow = this.add.graphics();
+                arrow.fillStyle(0xffff00, 1); // Yellow
+                arrow.lineStyle(2, 0x000000, 1); // Black outline
+                
+                // Draw triangle shape relative to (0,0)
                 const w = 16;
                 const h = 16;
                 arrow.beginPath();
-                arrow.moveTo(-w/2, -h); 
-                arrow.lineTo(w/2, -h); 
-                arrow.lineTo(0, 0); 
+                arrow.moveTo(-w/2, -h); // Top Left
+                arrow.lineTo(w/2, -h);  // Top Right
+                arrow.lineTo(0, 0);     // Bottom Tip
                 arrow.closePath();
                 arrow.fillPath();
                 arrow.strokePath();
 
+                // Position it above the item
                 arrow.x = obj.x;
                 arrow.y = obj.y - 40;
-                arrow.setDepth(20); 
+                arrow.setDepth(20); // Make sure it's above everything
 
+                // Add a bouncing animation
                 this.tweens.add({
                     targets: arrow,
                     y: arrow.y - 10,

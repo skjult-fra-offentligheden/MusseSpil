@@ -97,7 +97,7 @@ export class DialogueUI {
         return container;
     }
 
-    public showDialogue(
+public showDialogue(
         dialogue: DialogueNode,
         onOptionSelect: (option: DialogueOption) => void,
         onExit: () => void,
@@ -109,24 +109,26 @@ export class DialogueUI {
         this.clearOptions();
         this.selectedOptionIndex = 0;
         
-        // --- CLEAN LOGIC SPLIT ---
+        // --- FIX: Logic Logic Split ---
         if (dialogue.options && dialogue.options.length > 0) {
-            this.hideContinueIndicator();
-            this.showContinueIndicator(dialogue, onExit, onContinue);
+            // If we have choices, hide the "Continue" button so user MUST pick an option
+            this.hideContinueIndicator(); 
             this.renderOptions(dialogue, onOptionSelect);
         } else {
+            // Only show "Continue" if there are no choices
             this.showContinueIndicator(dialogue, onExit, onContinue);
-
-        this.updateOptionHighlight();
+            this.updateOptionHighlight();
         }
     }
 
-private renderOptions(
+    private renderOptions(
         dialogue: DialogueNode,
         onOptionSelect: (option: DialogueOption) => void
     ) {
-        const textBounds = this.dialogueText.getBounds();
-        const optionsStartY = textBounds.bottom - this.dialogueBox.y + 15;
+        // --- FIX: Use local coordinates instead of global bounds ---
+        // getBounds() can be 0 or wrong if the container isn't rendered yet.
+        // Use local y + displayHeight for reliable positioning.
+        const optionsStartY = this.dialogueText.y + this.dialogueText.displayHeight + 25; 
         const optionsStartX = this.dialogueText.x;
         const optionsSpacingY = 30;
 
@@ -145,20 +147,6 @@ private renderOptions(
             this.optionButtons.push(buttonText); 
             this.dialogueBox.add(buttonText);
         });
-
-        // const exitButton = this.scene.add.text(this.dialogueBackground.width - 40, this.dialogueBackground.height - 30, 'Exit Talk', {
-        //     fontSize: '20px',
-        //     color: '#ffffff',
-        //     backgroundColor: '#ff0000',
-        //     padding: { x: 10, y: 5 },
-        // }).setInteractive({ useHandCursor: true }).setOrigin(1, 1);
-
-        // exitButton.setScrollFactor(0);
-        // exitButton.on('pointerup', onExit);
-        
-        // this.optionButtons.push(exitButton);
-        // this.dialogueBox.add(exitButton);
-        // We do NOT add the "Exit Talk" button here anymore, forcing the player to choose.
     }
 
     private showContinueIndicator(currentDialogue: DialogueNode, onExit: () => void, onContinue: () => void) {

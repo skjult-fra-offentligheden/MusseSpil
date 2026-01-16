@@ -66,8 +66,8 @@ getAvailableCrimesFor(suspectId: string) {
         // 1a) If cheese eaten near Officer Whiskers twice, he rushes and pushes the player
     // Trigger shove/assault case only when the cheese is fully eaten near Whiskers (second use)
     if (p.itemId === 'blueCheese' && (status === 'empty') && p.player) {
-    console.log('[CaseDirector] Cheese eaten near whiskers check: status=', status);
-    const whiskers = this.npcs.find(n => n.npcId === 'cop2');
+        console.log('[CaseDirector] Cheese eaten near whiskers check: status=', status);
+        const whiskers = this.npcs.find(n => n.npcId === 'cop2');
     if (!whiskers) return;
 
     const scene = this.scene as Phaser.Scene;

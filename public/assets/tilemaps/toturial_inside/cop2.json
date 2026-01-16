@@ -282,7 +282,7 @@
             ],
             "effectKey": "decreaseCopReputation",
             "once": true
-        },
+        }, 
         {
             "id": "Has_phone_clue_1",
             "speaker": "Chief Whiskers",

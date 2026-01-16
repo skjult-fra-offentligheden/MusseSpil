@@ -127,46 +127,4 @@ export class ItemActionHandler {
             `[ItemActionHandler] POST-EMIT 'itemUsedFromInventory' for ${eventPayload.itemId}`
         );
     }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-    // private showTemporaryMessage(message: string): void {
-    //     if (!this.scene || !this.scene.scale) return;
-
-    //     if (this.currentMessage) {
-    //         this.currentMessage.destroy();
-    //         this.currentMessage = null;
-    //     }
-
-    //     const messageText = this.scene.add
-    //         .text(this.scene.scale.width / 2, this.scene.scale.height - 100, message, {
-    //             fontSize: "16px",
-    //             fontFamily: '"Verdana", "Arial", sans-serif',
-    //             color: "#ffffff",
-    //             backgroundColor: "rgba(0,0,0,0.75)",
-    //             padding: { x: 10, y: 5 },
-    //             align: "center",
-    //             wordWrap: { width: this.scene.scale.width - 40, useAdvancedWrap: true },
-    //         })
-    //         .setOrigin(0.5)
-    //         .setDepth(Phaser.Math.MAX_SAFE_INTEGER)
-    //         .setScrollFactor(0);
-
-    //     this.currentMessage = messageText;
-
-    //     this.scene.time.delayedCall(2500, () => {
-    //         if (messageText.scene) {
-    //             this.scene.tweens.add({
-    //                 targets: messageText,
-    //                 alpha: 0,
-    //                 duration: 300,
-    //                 onComplete: () => {if (this.currentMessage === messageText) {
-    //                     this.currentMessage = null; 
-    //                 }
-    //                 messageText.destroy();},
-    //             });
-    //         } else {
-    //             messageText.destroy();
-    //         }
-    //     });
-    // }
 }
