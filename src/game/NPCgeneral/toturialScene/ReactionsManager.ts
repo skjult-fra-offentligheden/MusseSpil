@@ -49,10 +49,15 @@ export class ReactionManager {
         const wIds = new Set(witnesses.map(w => w.id));
         // Book-keeping flags for the instant-fail
         if (p.itemId === 'blueCheese') e.push({ kind: 'flag', set: 'didTasteCheese' });
-        if (p.itemId === 'coke') e.push({ kind: 'flag', set: 'didSniffCoke' });
+        if (p.itemId === 'coke') e.push({ kind: 'flag', set: 'playerDidCocaine' });
 
         // Glue: everyone barks (if in range)
         if (p.itemId === 'clueGlue') {
+            const count = this.gs.incrementCounter('glueSniffCount');
+            if (count === 1) this.gs.setFlag('playerDidGlue_1', true);
+            if (count === 2) this.gs.setFlag('playerDidGlue_2', true);
+            if (count === 3) this.gs.setFlag('playerDidGlue_3', true);
+
             for (const w of wIds) e.push({ kind: 'bark', npcId: w, text: this.pickBark(w, 'clueGlue') });
         }
 

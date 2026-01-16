@@ -128,16 +128,37 @@ export class DialogueManager {
 
         if (startDialogue) {
             this.currentDialogueNode = startDialogue;
-            // --- FIX: Pass handleAdvance here ---
+
+            // --- ADD THIS BLOCK ---
+            // If this node is meant to be shown only once, mark it as visited immediately
+            if (startDialogue.once && this.currentNpc) {
+                this.currentNpc.npcMemory.visitedDialogues.add(startDialogue.id);
+            }
+            // ---------------------
+
             this.dialogueUI.showDialogue(
-                startDialogue,
+                startDialogue, // Use getFilteredNode(startDialogue) here if you implemented the option filter
                 this.handleOptionSelection.bind(this),
                 this.handleExitTalk.bind(this),
-                this.handleAdvance.bind(this) // <--- Passed correctly here
+                this.handleAdvance.bind(this)
             );
         } else {
             this.isActive = false;
         }
+    }
+
+    private getFilteredNode(node: DialogueNode): DialogueNode {
+        if (!this.currentNpc) return node;
+
+        const validOptions = node.options.filter(option => {
+            if (option.once) {
+                if (this.currentNpc?.npcMemory.visitedOptions?.has(option.id)) {
+                    return false;
+                }
+            }
+            return true;
+        })
+        return { ...node, options: validOptions };
     }
 
     private getDialogueById(id: string): DialogueNode | undefined {
@@ -145,6 +166,13 @@ export class DialogueManager {
     }
 
     private handleOptionSelection(option: DialogueOption) {
+        if (option.once && this.currentNpc) {
+            if (!this.currentNpc.npcMemory.visitedOptions){
+                this.currentNpc.npcMemory.visitedOptions = new Set();
+            }
+            this.currentNpc.npcMemory.visitedOptions.add(option.id);
+        }
+
         if (option.callbackId) {
             this.callbackHandler.handleCallback(option.callbackId);
         }
@@ -153,9 +181,10 @@ export class DialogueManager {
             const nextDialogue = this.getDialogueById(option.nextDialogueId);
             if (nextDialogue) {
                 this.currentDialogueNode = nextDialogue;
+                const nodeToShow = this.getFilteredNode(nextDialogue);
                 // --- FIX: Pass handleAdvance here ---
                 this.dialogueUI.showDialogue(
-                    nextDialogue,
+                    nodeToShow,
                     this.handleOptionSelection.bind(this),
                     this.handleExitTalk.bind(this),
                     this.handleAdvance.bind(this) // <--- Passed correctly here
@@ -254,8 +283,10 @@ export class DialogueManager {
             // ============================================================
             // ⚪ COCAINE TRIGGERS
             // ============================================================
-            case "playerDidCocaine":
-                return gameState.getFlag("playerDidCocaine") ? nodeId : false;
+            case "playerDidCocaine_1":
+                return gameState.getFlag("playerDidCocaine_1") ? nodeId : false;
+            case "playerDidCocaine_2":
+                return gameState.getFlag("playerDidCocaine_2") ? nodeId : false ? nodeId : false;
 
             default:
                 console.warn(`Condition "${conditionKey}" not implemented in DialogueManager.`);
@@ -263,7 +294,7 @@ export class DialogueManager {
         }
     }
 
-    private handleAdvance() {
+private handleAdvance() {
         if (!this.currentDialogueNode) return;
 
         if (this.currentDialogueNode.nextDialogueId) {
@@ -272,11 +303,18 @@ export class DialogueManager {
 
             if (nextDialogue) {
                 this.currentDialogueNode = nextDialogue;
+
+                // --- ADD THIS BLOCK ---
+                if (nextDialogue.once && this.currentNpc) {
+                    this.currentNpc.npcMemory.visitedDialogues.add(nextDialogue.id);
+                }
+                // ---------------------
+
                 this.dialogueUI.showDialogue(
-                    nextDialogue,
+                    nextDialogue, 
                     this.handleOptionSelection.bind(this),
                     this.handleExitTalk.bind(this),
-                    this.handleAdvance.bind(this) // Recursive pass
+                    this.handleAdvance.bind(this)
                 );
             } else {
                 this.endDialogue();

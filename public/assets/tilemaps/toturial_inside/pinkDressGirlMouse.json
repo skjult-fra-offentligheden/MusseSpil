@@ -75,15 +75,6 @@
         },
 
         {
-            "id": "Sniffed_glue_reaction",
-            "speaker": "Mouse Jennie",
-            "text": "Ugh, get away from me! You smell like chemicals and desperation.",
-            "condition": "playerDidGlue_1",
-            "once": true,
-            "options": []
-        },
-
-        {
             "id": "Ate_cheese_1",
             "speaker": "Mouse Jennie",
             "text": "Ew, you're eating evidence? That's so unprofessional. And fattening.",
@@ -119,6 +110,38 @@
             "speaker": "Mouse Jennie",
             "text": "I said I've never seen it! Leave me alone!",
             "options": []
+        },
+
+        {
+            "id": "glue_reaction_3",
+            "condition": "playerDidGlue_3",
+            "speaker": "Mouse Jennie",
+            "text": "Eww! You smell terrible and your eyes are spinning! Get away!",
+            "options": [
+                { "id": "leave", "speaker": "Detective", "text": "Whoa... pretty colors...", "nextDialogueId": "greeting" }
+            ],
+            "once": true
+            
+        },
+        {
+            "id": "glue_reaction_2",
+            "condition": "playerDidGlue_2",
+            "speaker": "Mouse Jennie",
+            "text": "Are you okay? You look really dizzy.",
+            "options": [
+                { "id": "dizzy", "speaker": "Detective", "text": "I'm f-fine... just tired.", "nextDialogueId": "greeting" }
+            ],
+            "once": true
+        },
+        {
+            "id": "glue_reaction_1",
+            "condition": "playerDidGlue_1",
+            "speaker": "Mouse Jennie",
+            "text": "Is that glue? You shouldn't be doing that while working.",
+            "options": [
+                { "id": "deny", "speaker": "Detective", "text": "It's for evidence!", "nextDialogueId": "greeting" }
+            ],
+            "once": true
         }
     ]
 }

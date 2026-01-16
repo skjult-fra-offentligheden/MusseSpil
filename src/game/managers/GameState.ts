@@ -1,6 +1,5 @@
 import Phaser from 'phaser'; // Import Phaser to use Scene and Registry
 import { ClueManager } from "../clueScripts/clueManager"; // Adjust path if necessary
-import { Suspect } from "../Accusation_scripts/suspect"; //
 import { EvidencePhase } from "../scenes/ToturialScene/evidenceArt"
 import { AllItemConfigs } from "../../data/items/AllItemConfig"
 
