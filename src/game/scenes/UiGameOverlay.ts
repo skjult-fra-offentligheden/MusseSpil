@@ -275,8 +275,8 @@ export class UIGameOverlay extends Phaser.Scene {
             // The activeItemIcon should be null already from the reset at the start
             // We just need to ensure no slot has the active style
             this.itemSlots.forEach(s => s.setStrokeStyle(2, 0xffffff).setScale(1));
-            // Optionally, you might want to nullify this.activeItem itself here if it's truly gone
-            // this.activeItem = null;
+            this.activeItem = null;
+            this.activeItemIcon = null;
         }
     };
 
@@ -324,6 +324,12 @@ export class UIGameOverlay extends Phaser.Scene {
 
     private useActiveItem() {
         if (!this.activeItem) return; // Guard clause
+        if (!this.inventoryManager.getItems().some(item => item.itemId === this.activeItem?.itemId)) {
+            console.log(`Active item ${this.activeItem.itemId} no longer exists. Clearing selection.`);
+            this.activeItem = null;
+            this.activeItemIcon = null;
+            return;
+        }
 
         // 1. Get the main gameplay scene
         const mainScene = this.scene.get('ToturialScene') as import('../scenes/ToturialScene').ToturialScene;

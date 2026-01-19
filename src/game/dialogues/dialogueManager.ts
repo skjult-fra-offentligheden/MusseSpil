@@ -173,7 +173,7 @@ export class DialogueManager {
         this.endDialogue();
     }
 
-    public endDialogue() {
+    public endDialogue(_options?: { saveState?: boolean }) {
         if (!this.isActive) return;
 
         const npcIdThatWasTalking = this.currentNpcId;

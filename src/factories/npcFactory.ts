@@ -2,7 +2,7 @@
 
 import Phaser from 'phaser';
 import { NPC } from '../game/NPCgeneral/npc';
-import { DialogueManager } from '../game/dialogues/dialogueManager'; // Adjust path
+import type { DialogueController } from '../game/dialogues/dialogueController'; // Adjust path
 import { AllNPCsConfigs } from '../data/NPCs/AllNPCsConfigs';   // Adjust path to your aggregated NPC configs
 import { NPCConfig as RichNPCConfig, NPCAnimationSet, NPCAnimationDefinition } from '../data/NPCs/npcTemplate'; // Adjust path to your detailed NPCConfig interface and related types
 
@@ -86,7 +86,7 @@ export function createNPCInstance(
     x: number,
     y: number,
     npcId: string,
-    dialogueManager: DialogueManager,
+    dialogueManager: DialogueController,
     collisionLayers?: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapLayer[] // Optional
 ): NPC | null {
     const npcConfigData = AllNPCsConfigs[npcId];
@@ -96,7 +96,7 @@ export function createNPCInstance(
     }
 
     const nodesForNpc =
-        (dialogueManager as any).dialoguesData?.[npcId]  // quick & dirty
+        (dialogueManager as any).dialoguesData?.[npcId]
         ?? [];
 
     // The NPC constructor now takes the rich npcConfigData and handles most of its internal setup
@@ -156,7 +156,7 @@ export interface NpcSpawnInstruction {
 export function spawnNPCsFromList(
     scene: Phaser.Scene,
     spawnList: NpcSpawnInstruction[],
-    dialogueManager: DialogueManager,
+    dialogueManager: DialogueController,
     collisionLayers: Phaser.Tilemaps.TilemapLayer[] // Assuming always an array
 ): NPC[] {
     const createdNpcs: NPC[] = [];

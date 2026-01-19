@@ -179,6 +179,7 @@ export const phone: ItemConfig = {
                 pickupAndClueActions(`Messages on the phone discuss drug deals involving 'packages' and payments.`, `Drug Texts on ${this.name}`, 'half');
                 break;
 
+            case 'pick_up_phone':
             case 'pick_up_phone_noted_gang_call':
                 pickupAndClueActions(`The phone's call log shows frequent calls to a contact named 'The Butcher', suggesting gang ties.`, `Gang Connection via ${this.name}`, 'empty');
                 break;

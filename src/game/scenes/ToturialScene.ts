@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { Player } from '../classes/player';
 import { NPC } from '../NPCgeneral/npc';
-import { DialogueNode } from "../dialogues/dialogues"
-import { DialogueManager } from '../dialogues/dialogueManager';
+import { InkDialogueManager } from '../dialogues/inkDialogueManager';
+import type { DialogueController } from '../dialogues/dialogueController';
 import { Interactable } from '../managers/interactables';
 import { Body } from '../classes/body';
 import { getNPCPositions } from '../../factories/npcPositionsPreProcessing';
@@ -35,7 +35,6 @@ export class ToturialScene extends Phaser.Scene {
     public cursors: Phaser.Types.Input.Keyboard.CursorKeys | undefined;
     interactionPrompt!: Phaser.GameObjects.Text | null;
     Objects!: Body[];
-    private dialoguesData!: { [npcId: string]: DialogueNode[] };
     private player: Player;
     private triggers!: Phaser.Physics.Arcade.StaticGroup;
     private exitX!: number;
@@ -45,17 +44,10 @@ export class ToturialScene extends Phaser.Scene {
     interactables!: Interactable[];
     private clueManager!: ClueManager;
     private clueData: { [key: string]: Clue }
-    private objectData!: { [npcId: string]: DialogueNode[] };
     private inventoryManager!: InventoryManager; 
     private isIntroDialogueActive: boolean = false;
     public callbackHandler!: CallbackHandler; 
-    public dialogueManager!: DialogueManager;
-
-    //NPC Dialogues
-    private cop2dialogue: any;
-    private rockermousedialogue: any;
-    private orangeShirtMouse: any;
-    private pinkdressMouse: any;
+    public dialogueManager!: DialogueController;
 
     public itemActionHandler!: ItemActionHandler;
 
@@ -180,46 +172,6 @@ export class ToturialScene extends Phaser.Scene {
             this.scene.launch('UIGameScene');
         }
 
-        // --- 2. LOAD & UNWRAP DIALOGUE DATA (THE FIX) ---
-        const loadDialogue = (key: string, propName: string) => {
-            const data = this.cache.json.get(key) || {};
-            // If the JSON is { "cop2": [...] }, we want the array inside.
-            return Array.isArray(data) ? data : (data[propName] || []);
-        };
-
-        this.cop2dialogue = loadDialogue("cop2_toturial", "cop2");
-        this.rockermousedialogue = loadDialogue("rockerMouse_toturial", "rockerMouse");
-        this.pinkdressMouse = loadDialogue("pinkdressMouse_toturial", "pinkDressGirlMouse");
-        this.orangeShirtMouse = loadDialogue("orangeshirt_toturial", "orangeShirtMouse");
-        this.objectData = this.cache.json.get("objects_dialogues_toturial") || {};
-
-        // (We removed the manual dialogue injection because cop2.json now has the data)
-        const introNode = this.cop2dialogue.find((node: any) => node.id === 'cop2_tutorial_briefing');
-        if (introNode) {
-            introNode.options = [
-                {
-                    id: "opt_start",
-                    text: "I'm on it. What's the situation?",
-                    nextDialogueId: "cop2_tutorial_briefing_2" // Continue normal flow
-                },
-                {
-                    id: "opt_skip",
-                    text: "[Skip Tutorial] I know the drill.",
-                    callbackId: "tutorial/skip_tutorial" // Trigger skip callback
-                }
-            ];
-            // Clear the nextDialogueId so the manager stops to show options
-            introNode.nextDialogueId = undefined; 
-        }
-        // Combine into one map for the Manager
-        this.dialoguesData = {
-            'orangeShirtMouse': this.orangeShirtMouse,
-            'pinkDressGirlMouse': this.pinkdressMouse,
-            'cop2': this.cop2dialogue,
-            'rockerMouse': this.rockermousedialogue,
-            ...this.objectData
-        };
-
         // Initialize Callbacks & Dialogue Manager
         this.callbackHandler = new CallbackHandler(
             this,
@@ -228,7 +180,19 @@ export class ToturialScene extends Phaser.Scene {
             uiManager
         );
         this.callbackHandler.registerHandlers('tutorial', tutorialCallbacks);
-        this.dialogueManager = new DialogueManager(this, this.dialoguesData, this.clueManager, this.inventoryManager, this.callbackHandler);
+        this.dialogueManager = new InkDialogueManager(
+            this,
+            {
+                npcInkKeys: {
+                    cop2: 'cop2_toturial_ink',
+                    rockerMouse: 'rockerMouse_toturial_ink',
+                    orangeShirtMouse: 'orangeShirtMouse_toturial_ink',
+                    pinkDressGirlMouse: 'pinkDressGirlMouse_toturial_ink'
+                },
+                objectsInkKey: 'objects_dialogues_toturial_ink'
+            },
+            this.callbackHandler
+        );
 
         // 3. Setup Map & Physics (The "World")
         const map = this.make.tilemap({ key: 'policeinside' });
@@ -376,7 +340,7 @@ export class ToturialScene extends Phaser.Scene {
 
                 if (distance > MAX_DIALOGUE_DISTANCE) {
                     console.warn(`[ToturialScene] Ending dialogue due to distance! Player: (${playerPosition.x}, ${playerPosition.y}), NPC: (${npcPosition.x}, ${npcPosition.y}), Distance: ${distance}, Max: ${MAX_DIALOGUE_DISTANCE}`);
-                    this.dialogueManager.endDialogue();
+                    this.dialogueManager.endDialogue({ saveState: false });
                     this.hideInteractionPrompt();
                 }
             }

@@ -1,22 +1,22 @@
 // src/classes/Body.ts
 import Phaser from 'phaser';
-import { DialogueManager } from '../dialogues/dialogueManager'; // Adjust path
+import type { DialogueController } from '../dialogues/dialogueController'; // Adjust path
 import { Player } from './player'; // Adjust path
 import { Interactable } from '../managers/interactables'; // Adjust path
 import { AllItemConfigs } from '../../data/items/AllItemConfig'; // Adjust path
-import { ItemConfig, DialogueNode, PhaseArt, EvidencePhase } from '../../data/items/itemTemplate'; // Adjusted DialogueEntry to DialogueNode for consistency
+import { ItemConfig, PhaseArt, EvidencePhase } from '../../data/items/itemTemplate'; // Adjusted DialogueEntry to DialogueNode for consistency
 
 export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
     public itemId: string;
     private itemConfig: ItemConfig;
-    private dialogueManager: DialogueManager;
+    private dialogueManager: DialogueController;
 
     constructor(
         scene: Phaser.Scene,
         x: number,
         y: number,
         itemId: string,
-        dialogueManager: DialogueManager
+        dialogueManager: DialogueController
     ) {
         const configFromGlobal = AllItemConfigs[itemId];
         let determinedInitialTextureKey: string;
@@ -141,23 +141,12 @@ export class Body extends Phaser.Physics.Arcade.Sprite implements Interactable {
             console.warn(`[Body initiateDialogue] itemConfig not initialized for ${this.itemId}.`);
             return;
         }
-        // Use itemConfig.dialogue, which should be an array of DialogueNode
-        if (this.itemConfig.dialogue && this.itemConfig.dialogue.length > 0) {
-            this.dialogueManager.startDialogue(
-                this.itemId, // Context for dialogue manager (e.g., to find related ItemConfig)
-                this.itemConfig.dialogue[0].id, // ID of the first dialogue node to start with
-                this // The interactor (this Body instance)
-            );
-        } else {
-            // Fallback if no dialogue: maybe show description or allow direct pickup?
-            console.log(`[Body initiateDialogue] No dialogue for ${this.itemId}. Description: ${this.itemConfig.description}`);
-            // If collectible and no dialogue, maybe trigger pickup directly?
-            // const gameScene = this.scene as any;
-            // if (this.itemConfig.collectible && gameScene.callbackHandler) {
-            //     gameScene.callbackHandler.setContext(this);
-            //     gameScene.callbackHandler.handleCallback('ACTION_PICKUP');
-            // }
-        }
+        const startNodeId = this.itemConfig.dialogue?.[0]?.id || 'greeting';
+        this.dialogueManager.startDialogue(
+            this.itemId,
+            startNodeId,
+            this
+        );
     }
 
     public update(): void {

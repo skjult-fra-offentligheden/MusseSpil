@@ -2,7 +2,7 @@
 
 import Phaser, { Scene } from 'phaser';
 import { DialogueNode } from './dialogues';
-import { DialogueManager } from '../dialogues/dialogueManager';
+import type { DialogueController } from '../dialogues/dialogueController';
 import { Interactable } from '../managers/interactables';
 import { Player } from '../classes/player';
 import { InventoryManager } from '../managers/itemMananger';
@@ -20,7 +20,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
 
     private dialogues: DialogueNode[];
     private isDialogueActive: boolean = false;
-    private dialogueManager: DialogueManager;
+    private dialogueManager: DialogueController;
     public npcId: string;
     declare body: Phaser.Physics.Arcade.Body;
     private dialogueState: string;
@@ -56,7 +56,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite implements Interactable {
     public portraitTextureKey?: string;
     public portraitFrame?: string | number;
     public portraitScale?: number;
-    constructor(scene: Phaser.Scene, x: number, y: number, config: RichNPCConfig, dialogueNodesForThisNPC: DialogueNode[], dialogueManager: DialogueManager) {
+    constructor(scene: Phaser.Scene, x: number, y: number, config: RichNPCConfig, dialogueNodesForThisNPC: DialogueNode[], dialogueManager: DialogueController) {
         if (!scene.textures.exists(config.textureKey)) {
             console.error(`[NPC Constructor - ${config.npcId}] Texture key "${config.textureKey}" NOT FOUND in cache. Preload it! Using fallback.`);
             // It's better to throw an error or have a proper fallback texture defined in your game config

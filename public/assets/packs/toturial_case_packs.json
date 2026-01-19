@@ -28,6 +28,31 @@
       },
       {
         "type": "json",
+        "key": "objects_dialogues_toturial_ink",
+        "url": "assets/tilemaps/toturial_inside/ink_files/objects.ink.json"
+      },
+      {
+        "type": "json",
+        "key": "cop2_toturial_ink",
+        "url": "assets/tilemaps/toturial_inside/ink_files/cop2.ink.json"
+      },
+      {
+        "type": "json",
+        "key": "rockerMouse_toturial_ink",
+        "url": "assets/tilemaps/toturial_inside/ink_files/rocker mouse.json"
+      },
+      {
+        "type": "json",
+        "key": "orangeShirtMouse_toturial_ink",
+        "url": "assets/tilemaps/toturial_inside/ink_files/Mouse Jerry.json"
+      },
+      {
+        "type": "json",
+        "key": "pinkDressGirlMouse_toturial_ink",
+        "url": "assets/tilemaps/toturial_inside/ink_files/pinkDressgirlMouse.json"
+      },
+      {
+        "type": "json",
         "key": "toturial_clues",
         "url": "assets/tilemaps/toturial_inside/clues.json"
       },
