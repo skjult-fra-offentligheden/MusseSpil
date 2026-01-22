@@ -130,6 +130,8 @@ export class ToturialScene extends Phaser.Scene {
         // --- LOGIC: ALWAYS RESTART TUTORIAL ---
         state.counters['tutorial_step'] = 0; 
         state.setFlag('tutorial_completed', false);
+        state.setCounter('copReputation', 0);
+        state.setCounter('npcReputation', 0);
         // --------------------------------------
 
         {

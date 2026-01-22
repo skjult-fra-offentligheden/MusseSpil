@@ -3,31 +3,6 @@
     "files": [
       {
         "type": "json",
-        "key": "cop2_toturial",
-        "url": "assets/tilemaps/toturial_inside/cop2.json"
-      },
-      {
-        "type": "json",
-        "key": "orangeshirt_toturial",
-        "url": "assets/tilemaps/toturial_inside/orangeShirtMouse.json"
-      },
-      {
-        "type": "json",
-        "key": "rockerMouse_toturial",
-        "url": "assets/tilemaps/toturial_inside/rockerMouse.json"
-      },
-      {
-        "type": "json",
-        "key": "pinkdressMouse_toturial",
-        "url": "assets/tilemaps/toturial_inside/pinkDressGirlMouse.json"
-      },
-      {
-        "type": "json",
-        "key": "objects_dialogues_toturial",
-        "url": "assets/tilemaps/toturial_inside/objectsDialogue.json"
-      },
-      {
-        "type": "json",
         "key": "objects_dialogues_toturial_ink",
         "url": "assets/tilemaps/toturial_inside/ink_files/objects.ink.json"
       },

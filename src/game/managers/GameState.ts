@@ -187,6 +187,12 @@ export class GameState {
         return v;
     }
 
+    public setCounter(id: string, value: number): number {
+        this.counters[id] = value;
+        this.save();
+        return value;
+    }
+
     // ---- Persistence ----
     private storageKey = 'GameStateV1';
 

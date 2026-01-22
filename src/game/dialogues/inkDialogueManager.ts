@@ -27,6 +27,7 @@ export class InkDialogueManager implements DialogueController {
     private spaceKey: Phaser.Input.Keyboard.Key;
     private enterKey: Phaser.Input.Keyboard.Key;
     private storyStateBySourceId: Map<string, string> = new Map();
+    private isSyncingReputation: boolean = false;
 
     constructor(scene: Phaser.Scene, inkSources: InkSources, callbackHandler: CallbackHandler) {
         this.scene = scene;
@@ -85,6 +86,7 @@ export class InkDialogueManager implements DialogueController {
 
         this.bindExternalFunctions();
         this.syncStoryVariables();
+        this.observeReputationVariables();
 
         if (!this.chooseStartPath(sourceId, startDialogueNodeId)) {
             console.warn(`[InkDialogueManager] No valid ink path for ${sourceId} (${startDialogueNodeId}).`);
@@ -276,19 +278,19 @@ export class InkDialogueManager implements DialogueController {
         });
 
         this.story.BindExternalFunction('increaseCopReputation', () => {
-            this.adjustReputation('reputation_cops', 1);
+            this.adjustGlobalReputation('copReputation', 1);
         });
 
         this.story.BindExternalFunction('decreaseCopReputation', () => {
-            this.adjustReputation('reputation_cops', -1);
+            this.adjustGlobalReputation('copReputation', -1);
         });
 
         this.story.BindExternalFunction('increaseNPCReputation', () => {
-            this.adjustReputation('reputation_civilians', 1);
+            this.adjustGlobalReputation('npcReputation', 1);
         });
 
         this.story.BindExternalFunction('decreaseNPCReputation', () => {
-            this.adjustReputation('reputation_civilians', -1);
+            this.adjustGlobalReputation('npcReputation', -1);
         });
 
         this.story.BindExternalFunction('triggerGameOverFired', () => {
@@ -297,9 +299,13 @@ export class InkDialogueManager implements DialogueController {
         });
     }
 
-    private adjustReputation(field: 'reputation_cops' | 'reputation_civilians', delta: number) {
-        if (!this.currentNpc) return;
-        this.currentNpc.npcMemory[field] += delta;
+    private adjustGlobalReputation(counterId: 'copReputation' | 'npcReputation', delta: number) {
+        const gs = GameState.getInstance(this.scene);
+        const nextValue = gs.getCounter(counterId) + delta;
+        this.isSyncingReputation = true;
+        gs.setCounter(counterId, nextValue);
+        this.syncReputationVars();
+        this.isSyncingReputation = false;
     }
 
     private syncStoryVariables() {
@@ -313,9 +319,10 @@ export class InkDialogueManager implements DialogueController {
         this.setStoryVar('player_ate_cheese_1', gs.getFlag('player_ate_cheese_1'));
         this.setStoryVar('player_ate_cheese_2', gs.getFlag('player_ate_cheese_2'));
         this.setStoryVar('HAS_PHONE_CLUE', gs.isClueDiscovered('clue_phone_gang_connection'));
+        this.syncReputationVars();
     }
 
-    private setStoryVar(name: string, value: boolean) {
+    private setStoryVar(name: string, value: boolean | number) {
         if (!this.story) return;
         const vars: any = this.story.variablesState as any;
 
@@ -328,6 +335,69 @@ export class InkDialogueManager implements DialogueController {
         } catch (error) {
             console.warn(`[InkDialogueManager] Skipping undeclared ink var "${name}".`, error);
         }
+    }
+
+    private getCopReputationVarNames(): string[] {
+        return ['copReputation', 'cop_reputation'];
+    }
+
+    private getNpcReputationVarNames(): string[] {
+        return ['npcReputation', 'civilian_reputation', 'global_civ_rep'];
+    }
+
+    private syncReputationVars() {
+        if (!this.story) return;
+        const gs = GameState.getInstance(this.scene);
+        const copValue = gs.getCounter('copReputation');
+        const npcValue = gs.getCounter('npcReputation');
+
+        for (const name of this.getCopReputationVarNames()) {
+            this.setStoryVar(name, copValue);
+        }
+        for (const name of this.getNpcReputationVarNames()) {
+            this.setStoryVar(name, npcValue);
+        }
+    }
+
+    private observeReputationVariables() {
+        for (const name of this.getCopReputationVarNames()) {
+            this.observeStoryVar(name, (value) => {
+                this.updateGlobalReputationFromStory('copReputation', value);
+            });
+        }
+        for (const name of this.getNpcReputationVarNames()) {
+            this.observeStoryVar(name, (value) => {
+                this.updateGlobalReputationFromStory('npcReputation', value);
+            });
+        }
+    }
+
+    private observeStoryVar(name: string, onChange: (value: any) => void) {
+        if (!this.story) return;
+        const vars: any = this.story.variablesState as any;
+
+        if (typeof vars?.GlobalVariableExistsWithName === 'function' && !vars.GlobalVariableExistsWithName(name)) {
+            return;
+        }
+
+        try {
+            this.story.ObserveVariable(name, (_varName: string, value: any) => {
+                onChange(value);
+            });
+        } catch (error) {
+            console.warn(`[InkDialogueManager] Could not observe ink var "${name}".`, error);
+        }
+    }
+
+    private updateGlobalReputationFromStory(counterId: 'copReputation' | 'npcReputation', value: any) {
+        if (typeof value !== 'number') return;
+        const gs = GameState.getInstance(this.scene);
+        if (gs.getCounter(counterId) === value) return;
+        if (this.isSyncingReputation) return;
+        this.isSyncingReputation = true;
+        gs.setCounter(counterId, value);
+        this.syncReputationVars();
+        this.isSyncingReputation = false;
     }
 
     private getObjectInkKnot(sourceId: string): string | null {
