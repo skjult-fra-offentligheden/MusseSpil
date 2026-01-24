@@ -53,7 +53,7 @@ export class Game extends Phaser.Scene {
     }
 
     preload() {
-        this.load.pack('introduction_murder_case_pack', 'assets/packs/introduction_city_murder_pack.json', 'murder_case_assets');
+        this.load.pack('introduction_murder_case_pack', 'assets/packs/introduction_city_murder_pack.json', 'murder_assets');
     }
 
     create() {
@@ -112,43 +112,69 @@ export class Game extends Phaser.Scene {
         // Background image layer (from Tiled imagelayer)
         this.createImageLayersFromMap(map);
 
-        const tilesets = [
-            map.addTilesetImage('house_sprites', 'house_sprites'),
-            map.addTilesetImage('detail_sprites', 'detail_sprites')
-        ].filter(t => t !== null) as Phaser.Tilemaps.Tileset[];
+        const tilesets = this.bindTilesetImagesByName(map);
 
         if (tilesets.length === 0) {
             console.error('[Game] No tilesets were created for introduction_murder_case.tmj.');
         }
 
-        const baseLayerNames = ['Details_1'];
-        baseLayerNames.forEach((layerName, index) => {
+        const belowLayerNames = ['Details_1'];
+
+        const collisionLayerNames = new Set([
+            'Collision_layer_1',
+            'Collision_layer_2',
+            'Collision_layer_3',
+            'Houses',
+            'Houses_layer',
+            'houses_layer_3',
+            'houses_layer_4'
+        ]);
+        const aboveLayerNames = ['Above_player_1', 'Above_player_2'];
+
+        this.collisionLayers = [];
+        this.abovePlayerLayers = [];
+
+        let baseDepth = 1;
+        map.layers.forEach((layerData) => {
+            const layerName = layerData.name;
+            
+            // Skip above-player layers for now
+            if (aboveLayerNames.includes(layerName)) return;
+
             const layer = map.createLayer(layerName, tilesets, 0, 0);
-            if (layer) {
-                layer.setDepth(1 + index);
+            if (!layer) return;
+
+            const isCollisionLayer = collisionLayerNames.has(layerName)
+                || layerName.toLowerCase().includes('collision');
+
+            if (isCollisionLayer) {
+                // 1. Set collision for all tiles except index -1 (empty)
+                layer.setCollisionByExclusion([-1]);
+                
+                // 2. DEBUG: Make them visible but faint so you can see where you're getting stuck
+                layer.setVisible(true);
+                layer.setAlpha(0.5); 
+                
+                // 3. Set a high depth so it sits on top of background but maybe under player
+                layer.setDepth(baseDepth);
+                
+                this.collisionLayers.push(layer);
+            } else {
+                layer.setDepth(baseDepth);
             }
-        });
-
-        const collisionLayerNames = ['Collision_layer_1', 'Collision_layer_2', 'Collision_layer_3', 'Houses_layer', 'houses_layer_3', 'houses_layer_4', 'Houses'];
-        this.collisionLayers = collisionLayerNames
-            .map((layerName) => map.createLayer(layerName, tilesets, 0, 0))
-            .filter((layer): layer is Phaser.Tilemaps.TilemapLayer => !!layer);
-
-        this.collisionLayers.forEach((layer) => {
-            layer.setCollisionByExclusion([-1]);
-            layer.setVisible(false);
+            
+            baseDepth += 1;
         });
 
         // --- Above Player Layers (X-Ray Effect) ---
-        const aboveLayerNames = ['Above_player_1', 'Above_player_2'];
-        this.abovePlayerLayers = [];
-
         aboveLayerNames.forEach((layerName, index) => {
             const solidLayer = map.createLayer(layerName, tilesets, 0, 0);
             if (!solidLayer) {
                 return;
             }
-            solidLayer.setDepth(11 + index);
+            const fadedDepth = baseDepth + index * 2;
+            const solidDepth = fadedDepth + 1;
+            solidLayer.setDepth(solidDepth);
             this.abovePlayerLayers.push(solidLayer);
 
             const fadedLayer = map.createBlankLayer(
@@ -163,7 +189,7 @@ export class Game extends Phaser.Scene {
             );
             if (fadedLayer) {
                 this.copyLayerTiles(solidLayer, fadedLayer);
-                fadedLayer.setDepth(10 + index);
+                fadedLayer.setDepth(fadedDepth);
                 fadedLayer.setAlpha(0.5);
             }
         });
@@ -215,7 +241,12 @@ export class Game extends Phaser.Scene {
         this.player = new Player(this, startX, startY);
         this.player.setDepth(5);
         this.physics.add.overlap(this.player, this.triggers, this.onTriggerOverlap, undefined, this);
-        this.collisionLayers.forEach((layer) => this.physics.add.collider(this.player, layer));
+        this.collisionLayers.forEach((layer) => {
+            const collider = this.physics.add.collider(this.player, layer);
+            
+            // Optional: add a name for debugging
+            collider.setName(`Collider_${layer.layer.name}`);
+        });
 
         // --- Create NPCs ---
         this.createNPCs(this.npcPositions, this.collisionLayers);
@@ -234,7 +265,7 @@ export class Game extends Phaser.Scene {
         gameState.suspectsData = this.suspectsData;
         gameState.clueManager = this.clueManager;
         gameState.npcIdleFrames = this.npcIdleFrames;
-
+        this.physics.world.createDebugGraphic();
         EventBus.emit('current-scene-ready', this);
     }
 
