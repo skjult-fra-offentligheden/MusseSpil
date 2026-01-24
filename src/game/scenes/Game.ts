@@ -13,9 +13,9 @@ import { Interactable } from '../managers/interactables';
 import { GuideScene } from '../guideScripts/guide';
 import { Clue } from '../classes/clue';
 import { getNPCPositions } from '../../factories/npcPositionsPreProcessing';
-import { createNPCInstance } from '../../factories/npcFactory';
 import { GameState } from '../managers/GameState';
 import { UIManager } from '../managers/UIManager';
+import type { NPCConfig } from '../../data/NPCs/npcTemplate';
 
 const MAX_DIALOGUE_DISTANCE = 125;
 
@@ -26,8 +26,7 @@ export class Game extends Phaser.Scene {
     public cursors: Phaser.Types.Input.Keyboard.CursorKeys | undefined;
     
     // Layers for X-Ray effect
-    private roofLayerFaded!: Phaser.GameObjects.Image; 
-    private roofLayerSolid!: Phaser.GameObjects.Image; 
+    private abovePlayerLayers: Phaser.Tilemaps.TilemapLayer[] = [];
     private roofMaskGraphics!: Phaser.GameObjects.Graphics;
     
     npcs!: NPC[];
@@ -45,8 +44,7 @@ export class Game extends Phaser.Scene {
     public npcIdleFrames: any;
     private triggers!: Phaser.Physics.Arcade.Group;
     
-    private mapWalls!: Phaser.Physics.Arcade.StaticGroup;
-    private roofZones!: Phaser.Physics.Arcade.StaticGroup;
+    private collisionLayers: Phaser.Tilemaps.TilemapLayer[] = [];
 
     public npcPositions = {};
 
@@ -55,35 +53,7 @@ export class Game extends Phaser.Scene {
     }
 
     preload() {
-        // --- NPC Assets ---
-        this.load.atlas("cop1", "assets/npc/cop1Sprite/cop1Sprite.png", "assets/npc/cop1Sprite/cop1Sprite.json");
-        this.load.atlas("cop2", "assets/npc/cop2Sprite/cop2sprite.png", "assets/npc/cop2Sprite/cop2sprite.json");
-        this.load.atlas("CopGirlSprite", "assets/npc/CopGirlSprite/CopGirlSprite.png", "assets/npc/CopGirlSprite/CopGirlSprite.json");
-        this.load.atlas("fancyMouse", "assets/npc/fancyMouse/fancyMouse.png", "assets/npc/fancyMouse/fancyMouse.json");
-        this.load.atlas("fatMouse", "assets/npc/fatMouse/fatMouse.png", "assets/npc/fatMouse/fatMouse.json");
-        this.load.atlas("ghostMouse", "assets/npc/ghostMouse/ghostMouse.png", "assets/npc/ghostMouse/ghostMouse.json");
-        this.load.atlas("grannyMouse", "assets/npc/grannyMouse/grannyMouse.png", "assets/npc/grannyMouse/grannyMouse.json");
-        this.load.atlas("mageMouse", "assets/npc/mageMouse/mageMouse.png", "assets/npc/mageMouse/mageMouse.json");
-        this.load.atlas("orangeShirtMouse", "assets/npc/orangeShirtMouse/orangeShirtMouse.png", "assets/npc/orangeShirtMouse/orangeShirtMouse.json");
-        this.load.atlas("pinkDressGirlMouse", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.png", "assets/npc/pinkDressGirlMouse/pinkDressGirlMouse.json");
-        this.load.atlas("redDressCyborgMouse", "assets/npc/redDressCyborgMouse/redDressCyborgMouse.png", "assets/npc/redDressCyborgMouse/redDressCyborgMouse.json");
-        this.load.atlas("redDressgirlMouse", "assets/npc/redDressgirlMouse/redDressgirlMouse.png", "assets/npc/redDressgirlMouse/redDressgirlMouse.json");
-        this.load.atlas("redShirtMouse", "assets/npc/redShirtMouse/redShirtMouse.png", "assets/npc/redShirtMouse/redShirtMouse.json");
-        this.load.atlas("rockerMouse", "assets/npc/rockerMouse/rockerMouse.png", "assets/npc/rockerMouse/rockerMouse.json");
-        this.load.atlas("sorcerrorMouse", "assets/npc/sorcerrorMouse/sorcerrorMouse.png", "assets/npc/sorcerrorMouse/sorcerrorMouse.json");
-        this.load.atlas("yellowShirtMouse", "assets/npc/yellowShirtMouse/yellowShirtMouse.png", "assets/npc/yellowShirtMouse/yellowShirtMouse.json");
-        
-        // --- UI Assets ---
-        this.load.image('grannyBag', 'assets/button/grannyBag.png');
-        this.load.image('gun', 'assets/button/gun.png');
-
-        // --- Map Assets ---
-        // UPDATED: We only load the background and the "above" layer. 
-        // The visible "collision_layer.png" is removed as requested.
-        this.load.image('background_terrain', 'assets/tilemaps/background_terrain.png');
-        this.load.image('above_world', 'assets/tilemaps/above_world.png');
-        
-        this.load.tilemapTiledJSON('scene1', 'assets/tilemaps/introduction_murder_case.tmj');
+        this.load.pack('introduction_murder_case_pack', 'assets/packs/introduction_city_murder_pack.json', 'murder_case_assets');
     }
 
     create() {
@@ -98,6 +68,7 @@ export class Game extends Phaser.Scene {
         uiManager.setScene(this, "Game");
 
         const state = GameState.getInstance(this);
+        // this needs to change to real game asset
         try {
             // @ts-ignore
             if (typeof tutorialCases !== 'undefined' && tutorialCases.cases) {
@@ -138,70 +109,94 @@ export class Game extends Phaser.Scene {
         // --- MAP LOADING ---
         const map = this.make.tilemap({ key: 'scene1' });
 
-        // 1. Background (Layer "background" in Tiled)
-        this.add.image(0, 0, 'background_terrain').setOrigin(0, 0).setDepth(0);
-        
-        // 2. No Visible Collision Layer (As requested)
-        
-        // --- COLLISION LOGIC (Walls) ---
-        // Generates invisible walls from the "Collisions" Object Layer
-        this.mapWalls = this.physics.add.staticGroup();
-        const collisionLayer = map.getObjectLayer('Collisions'); 
-        
-        if (collisionLayer) {
-            collisionLayer.objects.forEach(obj => {
-                const width = obj.width ?? 32;
-                const height = obj.height ?? 32;
-                // Tiled objects are top-left origin, Phaser bodies are center origin
-                const x = (obj.x ?? 0) + width / 2;
-                const y = (obj.y ?? 0) + height / 2;
-                
-                // Invisible wall for physics
-                const wall = this.add.rectangle(x, y, width, height, 0x000000, 0); 
-                this.physics.add.existing(wall, true);
-                this.mapWalls.add(wall);
-            });
+        // Background image layer (from Tiled imagelayer)
+        this.createImageLayersFromMap(map);
+
+        const tilesets = this.bindTilesetImagesByName(map);
+
+        if (tilesets.length === 0) {
+            console.error('[Game] No tilesets were created for introduction_murder_case.tmj.');
         }
 
-        // --- TRANSPARENCY ZONES ---
-        // Generates sensors from the "Above Player" Object Layer
-        this.roofZones = this.physics.add.staticGroup();
-        const roofLayer = map.getObjectLayer('Above Player'); 
+        const baseLayerNames = ['Details_1'];
+        baseLayerNames.forEach((layerName, index) => {
+            const layer = map.createLayer(layerName, tilesets, 0, 0);
+            if (layer) {
+                layer.setDepth(1 + index);
+            }
+        });
 
-        if (roofLayer) {
-            roofLayer.objects.forEach(obj => {
-                const width = obj.width ?? 32;
-                const height = obj.height ?? 32;
-                const x = (obj.x ?? 0) + width / 2;
-                const y = (obj.y ?? 0) + height / 2;
-                
-                // Invisible sensor zone
-                const zone = this.add.rectangle(x, y, width, height, 0x0000ff, 0); 
-                this.physics.add.existing(zone, true);
-                this.roofZones.add(zone);
-            });
-        }
+        const collisionLayerNames = ['Collision_layer_1', 'Collision_layer_2', 'Collision_layer_3', 'Houses_layer', 'houses_layer_3', 'houses_layer_4', 'Houses'];
+        this.collisionLayers = collisionLayerNames
+            .map((layerName) => map.createLayer(layerName, tilesets, 0, 0))
+            .filter((layer): layer is Phaser.Tilemaps.TilemapLayer => !!layer);
+
+        this.collisionLayers.forEach((layer) => {
+            layer.setCollisionByExclusion([-1]);
+            layer.setVisible(false);
+        });
+
+        // --- Above Player Layers (X-Ray Effect) ---
+        const aboveLayerNames = ['Above_player_1', 'Above_player_2'];
+        this.abovePlayerLayers = [];
+
+        aboveLayerNames.forEach((layerName, index) => {
+            const solidLayer = map.createLayer(layerName, tilesets, 0, 0);
+            if (!solidLayer) {
+                return;
+            }
+            solidLayer.setDepth(11 + index);
+            this.abovePlayerLayers.push(solidLayer);
+
+            const fadedLayer = map.createBlankLayer(
+                `${layerName}_faded`,
+                tilesets,
+                0,
+                0,
+                map.width,
+                map.height,
+                map.tileWidth,
+                map.tileHeight
+            );
+            if (fadedLayer) {
+                this.copyLayerTiles(solidLayer, fadedLayer);
+                fadedLayer.setDepth(10 + index);
+                fadedLayer.setAlpha(0.5);
+            }
+        });
+
+        this.roofMaskGraphics = this.make.graphics();
+        const roofMask = this.roofMaskGraphics.createGeometryMask();
+        roofMask.setInvertAlpha(true); // Invert so drawing a shape creates a hole
+        this.abovePlayerLayers.forEach((layer) => layer.setMask(roofMask));
+        this.add.rectangle(0, 0, map.widthInPixels, map.heightInPixels, 0x000000, 0.3)
+            .setOrigin(0, 0)
+            .setDepth(100);
 
         // --- NPC SPAWNING ---
-        const npcSpawnLayer = map.getObjectLayer('NPCspawnpoints');
-        this.npcPositions = getNPCPositions(npcSpawnLayer!);
+        const npcSpawnLayer = map.getObjectLayer('Spawnpoints');
+        this.npcPositions = npcSpawnLayer ? getNPCPositions(npcSpawnLayer) : {};
 
         const playerSpawn = npcSpawnLayer?.objects.find(obj => obj.name === 'Player' || obj.name === 'player');
         const startX = playerSpawn?.x ?? 300;
         const startY = playerSpawn?.y ?? 300;
 
         // --- TRIGGERS ---
-        const triggersLayer = map.getObjectLayer('Triggers');
+        const triggersLayer = map.getObjectLayer('Triggers') ?? map.getObjectLayer('Entrances');
         this.triggers = this.physics.add.staticGroup();
         if (triggersLayer) {
-             triggersLayer.objects.forEach((objData) => {
-                const x = objData.x! + objData.width! * 0.5;
-                const y = objData.y! + objData.height! * 0.5;
-                const trigger = this.add.rectangle(x, y, objData.width, objData.height, undefined, 0);
+            triggersLayer.objects.forEach((objData) => {
+                const width = objData.width ?? 0;
+                const height = objData.height ?? 0;
+                const x = (objData.x ?? 0) + width * 0.5;
+                const y = (objData.y ?? 0) + height * 0.5;
+                const trigger = this.add.rectangle(x, y, width, height, undefined, 0);
                 this.physics.add.existing(trigger, true);
                 const destinationProperty = objData.properties?.find(p => p.name === 'destination');
-                trigger.setData('type', objData.name);
-                trigger.setData('destination', destinationProperty?.value);
+                const triggerName = objData.name || '';
+                const isDoor = triggerName.toLowerCase().includes('entrance') || triggerName.toLowerCase().includes('door');
+                trigger.setData('type', isDoor ? 'door' : triggerName);
+                trigger.setData('destination', destinationProperty?.value ?? triggerName);
                 this.triggers.add(trigger);
             });
         }
@@ -217,30 +212,14 @@ export class Game extends Phaser.Scene {
         this.player = new Player(this, startX, startY);
         this.player.setDepth(5);
         this.physics.add.overlap(this.player, this.triggers, this.onTriggerOverlap, undefined, this);
-        this.physics.add.collider(this.player, this.mapWalls);
+        this.collisionLayers.forEach((layer) => this.physics.add.collider(this.player, layer));
 
         // --- Create NPCs ---
-        this.createNPCs(null, this.npcPositions);
+        this.createNPCs(this.npcPositions, this.collisionLayers);
 
         // --- Create Objects ---
         this.Objects = []; 
-        this.createObjects(null);
-
-        // --- VISUALS FOR ROOFS (X-Ray Effect) ---
-        // Layer 1: Faded version (Bottom) - Always visible
-        this.roofLayerFaded = this.add.image(0, 0, 'above_world').setOrigin(0, 0).setDepth(10).setAlpha(0.5);
-
-        // Layer 2: Solid version (Top) - Masked
-        this.roofLayerSolid = this.add.image(0, 0, 'above_world').setOrigin(0, 0).setDepth(11);
-
-        // Create Mask
-        this.roofMaskGraphics = this.make.graphics();
-        const mask = this.roofMaskGraphics.createGeometryMask();
-        mask.setInvertAlpha(true); // Invert so drawing a shape creates a hole
-        this.roofLayerSolid.setMask(mask);
-        this.add.rectangle(0, 0, map.widthInPixels, map.heightInPixels, 0x000000, 0.3)
-            .setOrigin(0, 0)
-            .setDepth(100);
+        this.createObjects();
 
         this.camera.startFollow(this.player);
         this.camera.setZoom(1.6);
@@ -265,11 +244,15 @@ export class Game extends Phaser.Scene {
         // 1. Clear the mask (restores solid roof everywhere)
         this.roofMaskGraphics.clear();
 
-        // 2. Check if player is under a roof
+        // 2. Check if player is under a roof tile
         let isUnderRoof = false;
-        this.physics.overlap(this.player, this.roofZones, () => {
-             isUnderRoof = true;
-        });
+        for (const layer of this.abovePlayerLayers) {
+            const tile = layer.getTileAtWorldXY(this.player.x, this.player.y);
+            if (tile && tile.index !== -1) {
+                isUnderRoof = true;
+                break;
+            }
+        }
 
         // 3. If under roof, punch a hole
         if (isUnderRoof) {
@@ -321,33 +304,175 @@ export class Game extends Phaser.Scene {
     
     // --- Helper Methods ---
 
-    private createNPCs(collisionLayer: Phaser.Tilemaps.TilemapLayer | null, npcPositions: any): void {
-        const created: NPC[] = [];
-        if (npcPositions) {
-            Object.entries(npcPositions).forEach(([npcId, rawPos]) => {
-                if (npcId.toLowerCase() === 'player') return;
+    private resolveNpcTextureKey(spawnName: string): string | null {
+        const aliases: Record<string, string> = {
+            'Cop Whiskers': 'cop2',
+            'Cop Grayson': 'greysonSprite',
+            'Mouse Jared': 'rockerMouse',
+            'Ghost': 'ghostMouse'
+        };
 
-                const pos = (rawPos as { x?: number; y?: number }) || {};
-                const x = typeof pos.x === 'number' ? pos.x : 0;
-                const y = typeof pos.y === 'number' ? pos.y : 0;
-                
-                const npc = createNPCInstance(this, x, y, npcId, this.dialogueManager, collisionLayer!);
-                if (npc) {
-                    created.push(npc);
-                    this.physics.add.collider(this.player, npc);
-                    this.physics.add.collider(npc, this.mapWalls); 
-                }
+        const aliased = aliases[spawnName];
+        if (aliased && this.textures.exists(aliased)) {
+            return aliased;
+        }
+
+        if (this.textures.exists(spawnName)) {
+            return spawnName;
+        }
+
+        return null;
+    }
+
+    private getImageKeyFromTiledImage(imagePath: string): string {
+        const normalized = imagePath.replace(/\\/g, '/');
+        const fileName = normalized.split('/').pop() ?? normalized;
+        return fileName.replace(/\.[^.]+$/, '');
+    }
+
+    private createImageLayersFromMap(map: Phaser.Tilemaps.Tilemap): void {
+        const images = (map as unknown as { images?: Array<{ name: string; image: string; x: number; y: number; alpha: number; visible: boolean }> }).images;
+
+        if (!images || images.length === 0) {
+            if (this.textures.exists('background_terrain')) {
+                this.add.image(0, 0, 'background_terrain').setOrigin(0, 0).setDepth(0);
+            }
+            return;
+        }
+
+        images.forEach((imageLayer, index) => {
+            const keyFromLayer = this.getImageKeyFromTiledImage(imageLayer.image);
+            const key = this.textures.exists(keyFromLayer)
+                ? keyFromLayer
+                : (this.textures.exists('background_terrain') ? 'background_terrain' : keyFromLayer);
+
+            const img = this.add.image(imageLayer.x ?? 0, imageLayer.y ?? 0, key)
+                .setOrigin(0, 0)
+                .setDepth(index);
+
+            if (typeof imageLayer.alpha === 'number') {
+                img.setAlpha(imageLayer.alpha);
+            }
+            if (imageLayer.visible === false) {
+                img.setVisible(false);
+            }
+        });
+    }
+
+    private bindTilesetImagesByName(map: Phaser.Tilemaps.Tilemap): Phaser.Tilemaps.Tileset[] {
+        map.tilesets.forEach((tileset) => {
+            const key = tileset.name;
+            if (!this.textures.exists(key)) {
+                console.warn(`[Game] Tileset texture key "${key}" not found for tileset "${tileset.name}".`);
+                return;
+            }
+            tileset.setImage(this.textures.get(key));
+        });
+
+        return map.tilesets;
+    }
+
+    private getFirstFrameName(textureKey: string): string | null {
+        const frames = this.textures.get(textureKey).getFrameNames();
+        return frames.length > 0 ? frames[0] : null;
+    }
+
+    private ensureIdleAnimation(textureKey: string, npcId: string, frameName: string): string {
+        const safeId = npcId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const animKey = `${textureKey}_idle_${safeId}`;
+
+        if (!this.anims.exists(animKey)) {
+            this.anims.create({
+                key: animKey,
+                frames: [{ key: textureKey, frame: frameName }],
+                frameRate: 1,
+                repeat: -1
             });
         }
+
+        return animKey;
+    }
+
+    private copyLayerTiles(
+        source: Phaser.Tilemaps.TilemapLayer,
+        target: Phaser.Tilemaps.TilemapLayer
+    ): void {
+        const data = source.layer.data;
+        for (let y = 0; y < data.length; y += 1) {
+            const row = data[y];
+            for (let x = 0; x < row.length; x += 1) {
+                const tile = row[x];
+                if (tile && tile.index !== -1) {
+                    target.putTileAt(tile.index, x, y);
+                }
+            }
+        }
+    }
+
+    private createNPCs(
+        npcPositions: Record<string, { x?: number; y?: number }>,
+        collisionLayers: Phaser.Tilemaps.TilemapLayer[]
+    ): void {
+        const created: NPC[] = [];
+
+        Object.entries(npcPositions || {}).forEach(([spawnName, rawPos]) => {
+            if (spawnName.toLowerCase() === 'player') return;
+
+            const textureKey = this.resolveNpcTextureKey(spawnName);
+            if (!textureKey) return;
+
+            const frameName = this.getFirstFrameName(textureKey);
+            if (!frameName) {
+                console.warn(`[Game] No frames found for NPC texture "${textureKey}".`);
+                return;
+            }
+
+            const pos = rawPos || {};
+            const x = typeof pos.x === 'number' ? pos.x : 0;
+            const y = typeof pos.y === 'number' ? pos.y : 0;
+
+            const idleKey = this.ensureIdleAnimation(textureKey, spawnName, frameName);
+
+            const npcConfig: NPCConfig = {
+                npcId: spawnName,
+                displayName: spawnName,
+                textureKey,
+                initialFrame: frameName,
+                defaultScale: 1,
+                dialogues: [],
+                movementType: 'idle',
+                speed: 0,
+                animations: {
+                    atlasKey: textureKey,
+                    definitions: [
+                        { keyName: idleKey, frameNames: [frameName], frameRate: 1, repeat: -1 }
+                    ],
+                    idleKey
+                }
+            };
+
+            const npc = new NPC(this, x, y, npcConfig, [], this.dialogueManager);
+            npc.disableInteractive(); // No dialogue interactions in this scene
+            created.push(npc);
+            this.physics.add.collider(this.player, npc);
+            collisionLayers.forEach((layer) => this.physics.add.collider(npc, layer));
+        });
+
         this.npcs = created;
     }
 
-    private createObjects(collisionLayer: Phaser.Tilemaps.TilemapLayer | null): void {
+    private createObjects(): void {
         this.Objects = [];
     }
     
     private setupInteractions(): void {
-        this.interactables = [...this.npcs, ...this.Objects];
+        const npcInteractables = this.npcs.filter((npc) => !!this.dialoguesData?.[npc.npcId]);
+        npcInteractables.forEach((npc) => {
+            if (!npc.input?.enabled) {
+                npc.setInteractive();
+            }
+        });
+        this.interactables = [...npcInteractables, ...this.Objects];
         this.events.on('itemCollected', this.onItemCollected, this);
     }
     

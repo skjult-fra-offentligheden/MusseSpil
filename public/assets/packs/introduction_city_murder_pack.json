@@ -1,8 +1,27 @@
 {
-    "section1": {
-        "files": [
-            { "type": "image", "key": "knifeBlood", "url": "assets/items/knifeBlood.png" },
-            { "type": "image", "key": "deadBody", "url": "assets/items/deadBody.png" }
-        ]
-    }
+  "murder_assets": {
+    "files": [
+      { "type": "tilemapTiledJSON", "key": "scene1", "url": "assets/tilemaps/Introduction_city_murder/introduction_murder_case.tmj" },
+      { "type": "image", "key": "background_terrain", "url": "assets/tilemaps/Introduction_city_murder/background_terrain.png" },
+      { "type": "image", "key": "backgroung_terrain", "url": "assets/tilemaps/Introduction_city_murder/backgroung_terrain.png" },
+      { "type": "image", "key": "house_sprites", "url": "assets/tilemaps/Introduction_city_murder/house_sprites.png" },
+      { "type": "image", "key": "detail_sprites", "url": "assets/tilemaps/Introduction_city_murder/detail_sprites.png" },
+      { "type": "image", "key": "grannyBag", "url": "assets/button/grannyBag.png" },
+      { "type": "image", "key": "gun", "url": "assets/button/gun.png" },
+      { "type": "atlas", "key": "cop2", "textureURL": "assets/npc/cop2Sprite/cop2sprite.png", "atlasURL": "assets/npc/cop2Sprite/cop2sprite.json" },
+      { "type": "atlas", "key": "greysonSprite", "textureURL": "assets/npc/cop Greyson/greysonSprite.png", "atlasURL": "assets/npc/cop Greyson/greysonSprite.json" },
+      { "type": "atlas", "key": "gertrudeSprite", "textureURL": "assets/npc/gertrudeSprite/gertrudeSprite.png", "atlasURL": "assets/npc/gertrudeSprite/gertrudeSprite.json" },
+      { "type": "atlas", "key": "timmyTallowSprite", "textureURL": "assets/npc/timmyTallowSprite/timmyTallowSprite.png", "atlasURL": "assets/npc/timmyTallowSprite/timmyTallowSprite.json" },
+      { "type": "atlas", "key": "malachiMystSprite", "textureURL": "assets/npc/malachiMystSprite/malachiMystSprite.png", "atlasURL": "assets/npc/malachiMystSprite/malachiMystSprite.json" },
+      { "type": "atlas", "key": "rubyBotSprite", "textureURL": "assets/npc/rubyBotSprite/rubyBotSprite.png", "atlasURL": "assets/npc/rubyBotSprite/rubyBotSprite.json" },
+      { "type": "atlas", "key": "rubyVonSqueakSprite", "textureURL": "assets/npc/rubyVonSqueakSprite/rubyVonSqueakSprite.png", "atlasURL": "assets/npc/rubyVonSqueakSprite/rubyVonSqueakSprite.json" },
+      { "type": "atlas", "key": "mrDarcySprite", "textureURL": "assets/npc/mrDarcySprite/mrDarcySprite.png", "atlasURL": "assets/npc/mrDarcySprite/mrDarcySprite.json" },
+      { "type": "atlas", "key": "rustyRussoSprite", "textureURL": "assets/npc/rustyRussoSprite/rustyRussoSprite.png", "atlasURL": "assets/npc/rustyRussoSprite/rustyRussoSprite.json" },
+      { "type": "atlas", "key": "sunnyCheddarSprite", "textureURL": "assets/npc/sunnyCheddarSprite/sunnyCheddarSprite.png", "atlasURL": "assets/npc/sunnyCheddarSprite/sunnyCheddarSprite.json" },
+      { "type": "atlas", "key": "ghostMouse", "textureURL": "assets/npc/ghostMouse/ghostMouse.png", "atlasURL": "assets/npc/ghostMouse/ghostMouse.json" },
+      { "type": "atlas", "key": "rockerMouse", "textureURL": "assets/npc/rockerMouse/rockerMouse.png", "atlasURL": "assets/npc/rockerMouse/rockerMouse.json" },
+      { "type": "image", "key": "knifeBlood", "url": "assets/items/knifeBlood.png" },
+      { "type": "image", "key": "deadBody", "url": "assets/items/deadBody.png" }
+    ]
+  }
 }
