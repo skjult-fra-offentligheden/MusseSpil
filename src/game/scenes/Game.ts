@@ -112,7 +112,10 @@ export class Game extends Phaser.Scene {
         // Background image layer (from Tiled imagelayer)
         this.createImageLayersFromMap(map);
 
-        const tilesets = this.bindTilesetImagesByName(map);
+        const tilesets = [
+            map.addTilesetImage('house_sprites', 'house_sprites'),
+            map.addTilesetImage('detail_sprites', 'detail_sprites')
+        ].filter(t => t !== null) as Phaser.Tilemaps.Tileset[];
 
         if (tilesets.length === 0) {
             console.error('[Game] No tilesets were created for introduction_murder_case.tmj.');
