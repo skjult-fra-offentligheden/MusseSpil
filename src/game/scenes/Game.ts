@@ -136,36 +136,35 @@ export class Game extends Phaser.Scene {
 
         let baseDepth = 1;
         map.layers.forEach((layerData) => {
-            const layerName = layerData.name;
-            
-            // Skip above-player layers for now
-            if (aboveLayerNames.includes(layerName)) return;
+    const layerName = layerData.name;
+    
+    if (aboveLayerNames.includes(layerName)) return;
 
-            const layer = map.createLayer(layerName, tilesets, 0, 0);
-            if (!layer) return;
+    const layer = map.createLayer(layerName, tilesets, 0, 0);
+    if (!layer) return;
 
-            const isCollisionLayer = collisionLayerNames.has(layerName)
-                || layerName.toLowerCase().includes('collision');
+    const isCollisionLayer = collisionLayerNames.has(layerName)
+        || layerName.toLowerCase().includes('collision');
 
-            if (isCollisionLayer) {
-                // 1. Set collision for all tiles except index -1 (empty)
-                layer.setCollisionByExclusion([-1]);
-                
-                // 2. DEBUG: Make them visible but faint so you can see where you're getting stuck
-                layer.setVisible(true);
-                layer.setAlpha(0.5); 
-                
-                // 3. Set a high depth so it sits on top of background but maybe under player
-                layer.setDepth(baseDepth);
-                
-                this.collisionLayers.push(layer);
-            } else {
-                layer.setDepth(baseDepth);
-            }
-            
-            baseDepth += 1;
-        });
-
+    if (isCollisionLayer) {
+        // 1. Mark tiles as collidable in the tilemap data
+        layer.setCollisionByExclusion([-1]);
+        
+        // 2. CRITICAL: Enable physics for this layer specifically
+        this.physics.add.existing(layer, true); // The 'true' makes it a static body
+        
+        // Optional Debugging: Keep them faint so you can verify they exist
+        layer.setVisible(true);
+        layer.setAlpha(0.3); 
+        
+        layer.setDepth(baseDepth);
+        this.collisionLayers.push(layer);
+    } else {
+        layer.setDepth(baseDepth);
+    }
+    
+    baseDepth += 1;
+});
         // --- Above Player Layers (X-Ray Effect) ---
         aboveLayerNames.forEach((layerName, index) => {
             const solidLayer = map.createLayer(layerName, tilesets, 0, 0);
@@ -240,13 +239,19 @@ export class Game extends Phaser.Scene {
         // --- Create Player ---
         this.player = new Player(this, startX, startY);
         this.player.setDepth(5);
-        this.physics.add.overlap(this.player, this.triggers, this.onTriggerOverlap, undefined, this);
+
+        // Ensure the player collides with every layer we identified earlier
         this.collisionLayers.forEach((layer) => {
-            const collider = this.physics.add.collider(this.player, layer);
-            
-            // Optional: add a name for debugging
-            collider.setName(`Collider_${layer.layer.name}`);
+            this.physics.add.collider(this.player, layer);
         });
+        
+        // this.physics.add.overlap(this.player, this.triggers, this.onTriggerOverlap, undefined, this);
+        // this.collisionLayers.forEach((layer) => {
+        //     const collider = this.physics.add.collider(this.player, layer);
+            
+        //     // Optional: add a name for debugging
+        //     collider.setName(`Collider_${layer.layer.name}`);
+        // });
 
         // --- Create NPCs ---
         this.createNPCs(this.npcPositions, this.collisionLayers);
